@@ -1,0 +1,13 @@
+{
+  "project": "CollabAI Backend",
+  "repo_role": "backend",
+  "root": ".",
+  "frontend_root": "../collabai-frontend",
+  "shared_docs_note": "This repo includes a local docs/ copy. If using a separate shared docs repo, place it beside this repo and reference ../collabai.",
+  "status": "separate_backend_folder_created",
+  "code_scaffolded": false,
+  "api_base_url": "http://localhost:4000/api/v1",
+  "socket_url": "http://localhost:4000",
+  "mongodb_uri_dev": "mongodb://127.0.0.1:27017/collabai",
+  "next": "Initialize Express backend and implement health/auth endpoints."
+}
