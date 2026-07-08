@@ -1,0 +1,25 @@
+# Local dev infrastructure for CollabAI backend.
+# The database is hosted on Supabase, so only Redis runs locally here.
+#
+# Published on 6380:6379 — the host side is 6380 to avoid the WSL2 port-forwarding
+# issue where a container publishing :6379 isn't reachable from the Windows host.
+# Matches .env.local -> REDIS_URL=redis://127.0.0.1:6380
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: collabai-redis
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:
