@@ -43,6 +43,7 @@ import { authErrorResponse } from '../swagger-responses';
 
 import {
   PASSWORD_RESET_CODE_TTL_MINUTES,
+  PASSWORD_RESET_SESSION_TTL_MINUTES,
   REFRESH_TOKEN_TTL_SECONDS,
   VERIFICATION_CODE_TTL_MINUTES,
 } from '../../application/auth.constants';
@@ -63,11 +64,9 @@ import { RefreshResult } from '../../application/commands/refresh-token.handler'
 
 import { RegisterDto } from '../../application/dtos/register.dto';
 import { VerifyEmailDto } from '../../application/dtos/verify-email.dto';
-import { ResendEmailVerificationDto } from '../../application/dtos/resend-email-verification.dto';
 import { RequestPasswordResetDto } from '../../application/dtos/request-password-reset.dto';
 import { VerifyPasswordResetDto } from '../../application/dtos/verify-password-reset.dto';
 import { ResetPasswordDto } from '../../application/dtos/reset-password.dto';
-import { ResendPasswordResetVerificationDto } from '../../application/dtos/resend-password-reset-verification.dto';
 import { LoginDto } from '../../application/dtos/login.dto';
 import {
   AuthResponseDto,
@@ -137,7 +136,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = (await this.commandBus.execute(
-      new RegisterCommand(dto.email, dto.password, dto.name),
+      new RegisterCommand(dto.email, dto.password, dto.firstName, dto.lastName),
     )) as { email: string };
     // base64(email) so verify-email knows whose account without a body field.
     this.setCookie(
@@ -190,24 +189,25 @@ export class AuthController {
   @Post('resend-email-verification')
   @RateLimit(THROTTLERS.resend.name)
   @HttpCode(200)
+  @ApiCookieAuth('registration_verification')
   @ApiOperation({
     summary: 'Resend email verification code',
-    description: 'Always returns success (email-enumeration protection).',
+    description:
+      'No request body — the email is read from the `registration_verification` cookie. ' +
+      'Always returns success (email-enumeration protection).',
   })
-  @ApiBody({ type: ResendEmailVerificationDto })
   @ApiOkResponse({ type: MessageResponseDto })
   async resendEmailVerification(
-    @Body() dto: ResendEmailVerificationDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    await this.commandBus.execute(
-      new ResendEmailVerificationCommand(dto.email),
-    );
+    const email = this.readEmailCookie(req, COOKIE.registrationVerification);
+    await this.commandBus.execute(new ResendEmailVerificationCommand(email));
     // Refresh the cookie (always — success regardless of whether the email exists).
     this.setCookie(
       res,
       COOKIE.registrationVerification,
-      encodeEmail(dto.email),
+      encodeEmail(email),
       VERIFICATION_CODE_TTL_MINUTES * MINUTE_MS,
     );
     return { success: true };
@@ -263,13 +263,13 @@ export class AuthController {
   ) {
     const email = this.readEmailCookie(req, COOKIE.passwordResetVerification);
     await this.commandBus.execute(new VerifyPasswordResetCommand(email, dto.code));
-    // Swap: clear the verification cookie, issue the short-lived reset session.
+    // Swap: clear the verification cookie, issue the 10-min reset session.
     this.clearCookie(res, COOKIE.passwordResetVerification);
     this.setCookie(
       res,
       COOKIE.passwordResetSession,
       encodeEmail(email),
-      PASSWORD_RESET_CODE_TTL_MINUTES * MINUTE_MS,
+      PASSWORD_RESET_SESSION_TTL_MINUTES * MINUTE_MS,
     );
     return { success: true };
   }
@@ -311,23 +311,26 @@ export class AuthController {
   @Post('resend-password-reset-verification')
   @RateLimit(THROTTLERS.resend.name)
   @HttpCode(200)
+  @ApiCookieAuth('password_reset_verification')
   @ApiOperation({
     summary: 'Resend password reset code',
-    description: 'Always returns success (email-enumeration protection).',
+    description:
+      'No request body — the email is read from the `password_reset_verification` cookie. ' +
+      'Always returns success (email-enumeration protection).',
   })
-  @ApiBody({ type: ResendPasswordResetVerificationDto })
   @ApiOkResponse({ type: MessageResponseDto })
   async resendPasswordResetVerification(
-    @Body() dto: ResendPasswordResetVerificationDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const email = this.readEmailCookie(req, COOKIE.passwordResetVerification);
     await this.commandBus.execute(
-      new ResendPasswordResetVerificationCommand(dto.email),
+      new ResendPasswordResetVerificationCommand(email),
     );
     this.setCookie(
       res,
       COOKIE.passwordResetVerification,
-      encodeEmail(dto.email),
+      encodeEmail(email),
       PASSWORD_RESET_CODE_TTL_MINUTES * MINUTE_MS,
     );
     return { success: true };

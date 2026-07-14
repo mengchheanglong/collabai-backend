@@ -24,9 +24,15 @@ export class RegisterDto {
   @MaxLength(72) // bcrypt truncates beyond 72 bytes
   password: string;
 
-  @ApiProperty({ example: 'Jane Doe', maxLength: 120 })
+  @ApiProperty({ example: 'Jane', maxLength: 60 })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(120)
-  name: string;
+  @MaxLength(60)
+  firstName: string;
+
+  @ApiProperty({ example: 'Doe', maxLength: 60 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  lastName: string;
 }

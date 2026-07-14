@@ -45,10 +45,14 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     const code = this.authDomain.generateNumericCode(VERIFICATION_CODE_LENGTH);
     const expiry = this.authDomain.computeExpiry(VERIFICATION_CODE_TTL_MINUTES);
 
+    // Spec exposes firstName/lastName on the request; the domain stores a single
+    // display `name` (the DB column shared across the app).
+    const name = `${command.firstName} ${command.lastName}`.trim();
+
     let user: UserEntity;
     if (existing) {
       // Re-registration of an unverified account: refresh credentials + code (same id).
-      existing.name = command.name;
+      existing.name = name;
       existing.passwordHash = passwordHash;
       existing.setVerificationCode(code, expiry);
       user = existing;
@@ -56,7 +60,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       user = UserEntity.create({
         id: uuidv4(),
         email,
-        name: command.name,
+        name,
         passwordHash,
       });
       user.setVerificationCode(code, expiry);
