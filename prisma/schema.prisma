@@ -136,7 +136,8 @@ model Task {
   title     String
   description String?
   status    String   @default("todo") // todo, in_progress, done
-  priority  String   @default("medium") // low, medium, high, critical
+  priority  String   @default("medium") // low, medium, high, urgent
+  position  Float    @default(0) // ordering within a status column (kanban); spaced/fractional
   assignedTo String? @db.Uuid
   createdBy String   @db.Uuid
   dueDate   DateTime?

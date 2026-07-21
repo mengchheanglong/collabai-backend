@@ -1,3 +1,7 @@
-// TODO: implement delete-comment.command.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/comments/application/commands/delete-comment.command.ts
+export class DeleteCommentCommand {
+  constructor(
+    public readonly actingUserId: string,
+    public readonly commentId: string,
+  ) {}
+}

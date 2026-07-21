@@ -1,3 +1,7 @@
-// TODO: implement get-task.query.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/tasks/application/queries/get-task.query.ts
+export class GetTaskQuery {
+  constructor(
+    public readonly userId: string,
+    public readonly taskId: string,
+  ) {}
+}

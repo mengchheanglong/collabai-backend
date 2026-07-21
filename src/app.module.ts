@@ -7,6 +7,8 @@ import { AppService } from './app.service';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { CommentsModule } from './modules/comments/comments.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -24,6 +26,8 @@ import { authThrottlers } from './config/throttler.config';
     SharedModule,
     AuthModule,
     ProjectsModule,
+    TasksModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

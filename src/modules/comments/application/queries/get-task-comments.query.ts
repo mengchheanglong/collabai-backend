@@ -1,3 +1,7 @@
-// TODO: implement get-task-comments.query.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/comments/application/queries/get-task-comments.query.ts
+export class GetTaskCommentsQuery {
+  constructor(
+    public readonly userId: string,
+    public readonly taskId: string,
+  ) {}
+}

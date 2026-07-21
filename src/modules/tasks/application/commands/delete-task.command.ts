@@ -1,3 +1,7 @@
-// TODO: implement delete-task.command.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/tasks/application/commands/delete-task.command.ts
+export class DeleteTaskCommand {
+  constructor(
+    public readonly actingUserId: string,
+    public readonly taskId: string,
+  ) {}
+}

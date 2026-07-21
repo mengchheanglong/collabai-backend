@@ -1,3 +1,10 @@
-// TODO: implement comment-added.event.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/comments/domain/events/comment-added.event.ts
+export class CommentAddedEvent {
+  static readonly eventName = 'comment.added';
+  constructor(
+    public readonly commentId: string,
+    public readonly taskId: string,
+    public readonly projectId: string,
+    public readonly authorId: string,
+  ) {}
+}

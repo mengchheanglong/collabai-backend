@@ -107,8 +107,21 @@ Each phase is independently compilable and testable, wired into `app.module.ts` 
       (list/get/list-members), DTOs + response mappers, exception filter, guarded controller, module
       wired into `app.module.ts`. `TokenBlacklistService` now exported from AuthModule for the guard.
       Domain-service spec added. `tsc --noEmit` clean; 36 tests pass (23 auth + 13 projects).
-- [ ] Phase 2 Tasks
-- [ ] Phase 3 Comments
+- [x] **Phase 2 Tasks — COMPLETE** (awaiting approval). Full vertical slice: `TaskStatus`/`TaskPriority`
+      VOs, `Task`/`Subtask` entities (completedAt kept in sync with done), repository port + Prisma impl
+      (subtasks + label upsert + comment count + filters), pure `TaskDomainService` (kanban position math),
+      `TaskAccessService` (reuses projects' `PROJECT_REPOSITORY` for membership/role), 7 command handlers
+      (create/update/move/delete + add/update/delete-subtask) + 2 query handlers (list/get), domain events
+      (created/assigned/moved) for later phases, DTOs + mapper, exception filter, guarded controller, module
+      wired. **Schema:** added `Task.position Float @default(0)` (prisma client regenerated) — ⚠️ needs a
+      DB migration (`prisma migrate`) when a database is available. `tsc` clean; 42 tests pass.
+- [x] **Phase 3 Comments — COMPLETE** (awaiting approval). Full vertical slice on the `Comment` model
+      (`content`→body, `userId`→authorId, project derived via task): `CommentEntity`, repository port +
+      Prisma impl (author-joined views, hard delete so `commentCount` stays correct), pure
+      `CommentDomainService` (@email mention extraction), `CommentAccessService` (member/writer +
+      author-or-moderator rules, mention→member resolution), 3 command handlers (add/edit/delete) + 1
+      query (list oldest-first), `comment.added` + `comment.mention.created` events for Phase 4, DTOs +
+      mapper, exception filter, guarded controller, module wired. `tsc` clean; 46 tests pass.
 - [ ] Phase 4 Notifications
 - [ ] Phase 5 AI
 - [ ] Phase 6 Analytics (optional)
