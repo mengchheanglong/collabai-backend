@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -22,6 +23,7 @@ import { authThrottlers } from './config/throttler.config';
     ThrottlerModule.forRoot(authThrottlers),
     SharedModule,
     AuthModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

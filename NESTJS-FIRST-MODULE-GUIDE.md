@@ -31,7 +31,11 @@ User Registration/Login Flow:
 
 ---
 
+
+
 ## 📁 STEP 1: PROJECT SETUP (15 minutes)
+
+
 
 ### 1.1 Create NestJS Project
 
@@ -67,6 +71,8 @@ npm install uuid axios
 npm install -D @types/bcryptjs @types/node @nestjs/testing jest ts-jest
 ```
 
+
+
 ### 1.2 Initialize Prisma
 
 ```bash
@@ -87,6 +93,8 @@ PORT=3000
 EOF
 ```
 
+
+
 ### 1.3 Create Directory Structure
 
 ```bash
@@ -103,7 +111,11 @@ mkdir -p src/shared/services
 
 ---
 
+
+
 ## 💾 STEP 2: DATABASE SETUP (10 minutes)
+
+
 
 ### 2.1 Create Prisma Schema
 
@@ -166,6 +178,8 @@ model UserSettings {
 }
 ```
 
+
+
 ### 2.2 Run Migration
 
 ```bash
@@ -183,7 +197,11 @@ npx prisma studio
 
 ---
 
+
+
 ## 🏗️ STEP 3: SHARED INFRASTRUCTURE (20 minutes)
+
+
 
 ### 3.1 Prisma Service
 
@@ -205,6 +223,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 }
 ```
+
+
 
 ### 3.2 JWT Service
 
@@ -256,6 +276,8 @@ export class JwtService {
 }
 ```
 
+
+
 ### 3.3 Shared Module
 
 ```typescript
@@ -284,7 +306,11 @@ export class SharedModule {}
 
 ---
 
+
+
 ## 💎 STEP 4: DOMAIN LAYER (40 minutes)
+
+
 
 ### 4.1 Create User Entity
 
@@ -381,6 +407,8 @@ interface CreateUserProps {
 }
 ```
 
+
+
 ### 4.2 Password Service
 
 ```typescript
@@ -401,6 +429,8 @@ export async function comparePassword(
 }
 ```
 
+
+
 ### 4.3 User Repository Interface
 
 ```typescript
@@ -418,6 +448,8 @@ export interface IUserRepository {
 
 export const USER_REPOSITORY = Symbol('IUserRepository');
 ```
+
+
 
 ### 4.4 Auth Domain Service
 
@@ -485,7 +517,11 @@ export class AuthDomainService {
 
 ---
 
+
+
 ## 🔄 STEP 5: APPLICATION LAYER - CQRS (45 minutes)
+
+
 
 ### 5.1 Register Command & Handler
 
@@ -543,6 +579,8 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 }
 ```
 
+
+
 ### 5.2 Login Command & Handler
 
 ```typescript
@@ -592,6 +630,8 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   }
 }
 ```
+
+
 
 ### 5.3 DTOs
 
@@ -645,7 +685,11 @@ export class AuthResponseDto {
 
 ---
 
+
+
 ## 🗄️ STEP 6: INFRASTRUCTURE LAYER (20 minutes)
+
+
 
 ### 6.1 User Repository Implementation
 
@@ -706,7 +750,11 @@ export class UserRepository implements IUserRepository {
 
 ---
 
+
+
 ## 🎯 STEP 7: PRESENTATION LAYER (20 minutes)
+
+
 
 ### 7.1 Auth Controller
 
@@ -744,7 +792,11 @@ export class AuthController {
 
 ---
 
+
+
 ## 📦 STEP 8: AUTH MODULE (15 minutes)
+
+
 
 ### 8.1 Create Auth Module
 
@@ -789,7 +841,11 @@ export class AuthModule {}
 
 ---
 
+
+
 ## 🌳 STEP 9: ROOT MODULE & MAIN (15 minutes)
+
+
 
 ### 9.1 App Module
 
@@ -816,6 +872,8 @@ import { AuthModule } from './modules/auth/auth.module';
 })
 export class AppModule {}
 ```
+
+
 
 ### 9.2 Main Entry Point
 
@@ -855,7 +913,11 @@ bootstrap();
 
 ---
 
+
+
 ## ✅ STEP 10: TEST & RUN (15 minutes)
+
+
 
 ### 10.1 Start Application
 
@@ -868,9 +930,12 @@ npm run start:dev
 # 🚀 Server running on http://localhost:3000
 ```
 
+
+
 ### 10.2 Test with Postman/Insomnia
 
 **Register User**
+
 ```
 POST http://localhost:3000/auth/register
 Content-Type: application/json
@@ -897,6 +962,7 @@ Response (201 Created):
 ```
 
 **Login User**
+
 ```
 POST http://localhost:3000/auth/login
 Content-Type: application/json
@@ -922,7 +988,11 @@ Response (200 OK):
 
 ---
 
+
+
 ## 🧪 STEP 11: ADD UNIT TESTS (20 minutes)
+
+
 
 ### 11.1 Test User Entity
 
@@ -983,6 +1053,8 @@ describe('UserEntity', () => {
 });
 ```
 
+
+
 ### 11.2 Run Tests
 
 ```bash
@@ -998,6 +1070,8 @@ npm run test:watch
 
 ---
 
+
+
 ## 🎉 COMPLETE! NEXT STEPS
 
 Congratulations! You've successfully built the Auth module. Now:
@@ -1005,16 +1079,16 @@ Congratulations! You've successfully built the Auth module. Now:
 ### Next Modules to Build
 
 1. **Projects Module** (similar structure)
-   - CreateProject, ListProjects, UpdateProject, DeleteProject
-   - ProjectEntity, ProjectMember
-
+  - CreateProject, ListProjects, UpdateProject, DeleteProject
+  - ProjectEntity, ProjectMember
 2. **Tasks Module**
-   - CreateTask, UpdateTask, MoveTask, DeleteTask
-   - TaskEntity with Status and Priority value objects
-
+  - CreateTask, UpdateTask, MoveTask, DeleteTask
+  - TaskEntity with Status and Priority value objects
 3. **Comments Module**
-   - AddComment, EditComment, DeleteComment
-   - CommentEntity with mention support
+  - AddComment, EditComment, DeleteComment
+  - CommentEntity with mention support
+
+
 
 ### Add JWT Guard
 
@@ -1038,6 +1112,8 @@ export class ProjectsController {
 }
 ```
 
+
+
 ### Add Global Exception Filter
 
 ```typescript
@@ -1046,6 +1122,8 @@ export class ProjectsController {
 ```
 
 ---
+
+
 
 ## 📊 ARCHITECTURE SUMMARY
 
@@ -1075,6 +1153,8 @@ Request Flow for Register:
 
 ---
 
+
+
 ## ✅ CHECKLIST
 
 - [ ] Created NestJS project
@@ -1099,4 +1179,3 @@ Request Flow for Register:
 **Estimated Time**: 3-4 hours total
 **Difficulty**: Intermediate
 **Next Step**: Build Projects Module (similar pattern)
-

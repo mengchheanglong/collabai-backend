@@ -81,6 +81,8 @@ const CommandHandlers = [
     ACCOUNT_LOCKOUT_SERVICE,
     AuthDomainService,
     AuthTokenService,
+    // Exported so other modules applying JwtAuthGuard can resolve its dependency.
+    TokenBlacklistService,
   ],
 })
 export class AuthModule {}

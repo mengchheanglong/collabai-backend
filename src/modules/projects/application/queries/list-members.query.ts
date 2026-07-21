@@ -1,3 +1,7 @@
-// TODO: implement list-members.query.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/projects/application/queries/list-members.query.ts
+export class ListMembersQuery {
+  constructor(
+    public readonly userId: string,
+    public readonly projectId: string,
+  ) {}
+}

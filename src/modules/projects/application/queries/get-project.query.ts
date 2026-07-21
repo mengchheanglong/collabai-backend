@@ -1,3 +1,7 @@
-// TODO: implement get-project.query.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/projects/application/queries/get-project.query.ts
+export class GetProjectQuery {
+  constructor(
+    public readonly userId: string,
+    public readonly projectId: string,
+  ) {}
+}
