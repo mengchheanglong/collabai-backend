@@ -122,6 +122,13 @@ Each phase is independently compilable and testable, wired into `app.module.ts` 
       author-or-moderator rules, mention→member resolution), 3 command handlers (add/edit/delete) + 1
       query (list oldest-first), `comment.added` + `comment.mention.created` events for Phase 4, DTOs +
       mapper, exception filter, guarded controller, module wired. `tsc` clean; 46 tests pass.
-- [ ] Phase 4 Notifications
+- [x] **Phase 4 Notifications — COMPLETE** (awaiting approval). Full vertical slice on the `Notification`
+      model (`message`→body, `isRead`→read): `NotificationType` VO, `NotificationEntity` (idempotent
+      markRead), repository port + Prisma impl (paginated, unreadOnly, markAll returns count), pure
+      `NotificationDomainService` (message templates), **`NotificationEventsListener` that consumes
+      `task.assigned` + `comment.mention.created`** and creates notifications (skips self-assignment,
+      fail-safe so a notification error never breaks the source action), 3 command handlers
+      (create/mark-read/mark-all) + 1 query, exception filter, guarded controller (list/read/read-all),
+      module wired. This closes the loop on the events emitted in Phases 2–3. `tsc` clean; 49 tests pass.
 - [ ] Phase 5 AI
 - [ ] Phase 6 Analytics (optional)

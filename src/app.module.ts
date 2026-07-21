@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -28,6 +29,7 @@ import { authThrottlers } from './config/throttler.config';
     ProjectsModule,
     TasksModule,
     CommentsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

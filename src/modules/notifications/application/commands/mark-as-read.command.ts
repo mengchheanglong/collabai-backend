@@ -1,3 +1,7 @@
-// TODO: implement mark-as-read.command.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/notifications/application/commands/mark-as-read.command.ts
+export class MarkAsReadCommand {
+  constructor(
+    public readonly userId: string,
+    public readonly notificationId: string,
+  ) {}
+}
