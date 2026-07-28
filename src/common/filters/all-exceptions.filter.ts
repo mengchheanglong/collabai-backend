@@ -1,8 +1,9 @@
 // src/common/filters/all-exceptions.filter.ts
 //
-// Catch-all exception filter (based on NESTJS-QUICK-START-GUIDE.md, hardened a bit).
-// Normalises every error — HttpException or otherwise — into a consistent JSON body
-// and logs it. Fully generic; no domain/auth coupling.
+// Global fallback exception filter. Domain errors are handled by each module's own filter;
+// this catches everything else — HttpException (incl. class-validator 400s), and unknown
+// errors — and normalises them into the API contract's error envelope
+//   { success: false, error: { code, message, details? } }.
 
 import {
   ArgumentsHost,
@@ -13,6 +14,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import {
+  buildErrorBody,
+  codeForStatus,
+  ContractErrorDetail,
+} from '../http/error-body';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -24,15 +30,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] = 'Internal server error';
+    let message = 'Internal server error';
+    let details: ContractErrorDetail[] | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
-      message =
-        typeof res === 'string'
-          ? res
-          : ((res as Record<string, any>).message ?? exception.message);
+      if (typeof res === 'string') {
+        message = res;
+      } else {
+        const body = res as Record<string, unknown>;
+        const rawMessage = body.message;
+        if (Array.isArray(rawMessage)) {
+          // class-validator produces string[]; surface as details + a summary message.
+          details = rawMessage.map((m) => ({ message: String(m) }));
+          message = 'Validation failed';
+        } else {
+          message = String(rawMessage ?? exception.message);
+        }
+      }
     } else if (exception instanceof Error) {
       message = exception.message;
     }
@@ -41,11 +57,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `[${request.method}] ${request.url} -> ${status} - ${JSON.stringify(message)}`,
     );
 
-    response.status(status).json({
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      message,
-    });
+    response
+      .status(status)
+      .json(buildErrorBody(codeForStatus(status), message, details));
   }
 }

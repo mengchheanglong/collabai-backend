@@ -5,9 +5,19 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Contract base path: the frontend targets http://localhost:4000/api/v1.
+  app.setGlobalPrefix('api/v1');
+
+  // Allow the Angular dev server, with credentials so the refresh cookie flows.
+  app.enableCors({
+    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    credentials: true,
+  });
 
   // Parse cookies so guards/handlers can read httpOnly auth cookies.
   app.use(cookieParser());
@@ -21,11 +31,13 @@ async function bootstrap() {
     }),
   );
 
-  // Global cross-cutting concerns.
+  // Global cross-cutting concerns. The envelope interceptor wraps every success response
+  // in the contract shape; AllExceptionsFilter does the same for errors.
   app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
-  // Opt-in response envelope (changes every response body), enable if desired:
-  //   app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseEnvelopeInterceptor(),
+  );
 
   // Swagger / OpenAPI — served at /api/docs (JSON at /api/docs-json).
   const swaggerConfig = new DocumentBuilder()
@@ -49,6 +61,6 @@ async function bootstrap() {
     swaggerOptions: { withCredentials: true, persistAuthorization: true },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 4000);
 }
 bootstrap();

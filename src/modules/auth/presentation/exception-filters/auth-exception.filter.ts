@@ -16,6 +16,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import {
+  buildErrorBody,
+  ContractErrorDetail,
+} from '../../../../common/http/error-body';
+import {
   AuthError,
   CodeExpiredError,
   EmailAlreadyRegisteredError,
@@ -44,7 +48,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
     // Client-facing shape. Reuse is masked as a plain invalid-token response.
     let clientCode = exception.code;
     let clientMessage = exception.message;
-    const extra: Record<string, unknown> = {};
+    let details: ContractErrorDetail[] | undefined;
 
     if (exception instanceof RefreshTokenReuseDetectedError) {
       // Indistinguishable from a normal invalid refresh token to the caller.
@@ -63,17 +67,12 @@ export class AuthExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof WeakPasswordError) {
-      extra.violations = exception.violations;
+      details = exception.violations.map((v) => ({ message: v }));
     }
 
-    response.status(status).json({
-      statusCode: status,
-      code: clientCode,
-      message: clientMessage,
-      ...extra,
-      timestamp: new Date().toISOString(),
-      path: request.originalUrl,
-    });
+    response
+      .status(status)
+      .json(buildErrorBody(clientCode, clientMessage, details));
   }
 
   private statusFor(exception: AuthError): number {

@@ -9,6 +9,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { buildErrorBody } from '../../../../common/http/error-body';
 import {
   CommentError,
   CommentModerationForbiddenError,
@@ -32,13 +33,9 @@ export class CommentExceptionFilter implements ExceptionFilter {
       `${exception.code} (${status}) [${request.method} ${request.originalUrl}]`,
     );
 
-    response.status(status).json({
-      statusCode: status,
-      code: exception.code,
-      message: exception.message,
-      timestamp: new Date().toISOString(),
-      path: request.originalUrl,
-    });
+    response
+      .status(status)
+      .json(buildErrorBody(exception.code, exception.message));
   }
 
   private statusFor(exception: CommentError): number {
