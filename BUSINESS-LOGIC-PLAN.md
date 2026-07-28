@@ -130,5 +130,16 @@ Each phase is independently compilable and testable, wired into `app.module.ts` 
       fail-safe so a notification error never breaks the source action), 3 command handlers
       (create/mark-read/mark-all) + 1 query, exception filter, guarded controller (list/read/read-all),
       module wired. This closes the loop on the events emitted in Phases 2–3. `tsc` clean; 49 tests pass.
-- [ ] Phase 5 AI
-- [ ] Phase 6 Analytics (optional)
+- [x] **Phase 5 AI — COMPLETE** (awaiting approval). Full vertical slice behind a swappable `AI_PROVIDER`
+      port: `OpenAiProvider` (uses installed `openai` SDK, server-side key, graceful fallback to stub on
+      any error) + deterministic `StubAiProvider` (used when `OPENAI_API_KEY` unset — dev/tests run with
+      no key). Factory in the module picks the provider from config. 4 command handlers — suggest-subtasks,
+      generate/improve/shorten description, summarize-comments (reuses `COMMENT_REPOSITORY`), NL
+      search-tasks (interpret → filter → `TASK_REPOSITORY.list`). Project-scoped calls require membership
+      via `AiAccessService`. DTOs, exception filter (403/404/503), guarded controller (4 routes), module
+      wired. Added `OPENAI_API_KEY`/`OPENAI_MODEL` to `.env.example`. `tsc` clean; 54 unit tests pass.
+- [ ] Phase 6 Analytics (optional — deferred)
+
+**All 5 business-logic modules are now implemented and wired.** The one failing test is auth's
+pre-existing `refresh-token.handler.spec.ts` — a live-DB integration test failing on DB state in this
+environment (no clean database), unrelated to the modules built here.
