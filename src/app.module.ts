@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { CommentsModule } from './modules/comments/comments.module';
@@ -27,6 +28,7 @@ import { authThrottlers } from './config/throttler.config';
     ThrottlerModule.forRoot(authThrottlers),
     SharedModule,
     AuthModule,
+    UsersModule,
     ProjectsModule,
     TasksModule,
     CommentsModule,
