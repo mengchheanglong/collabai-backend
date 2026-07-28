@@ -10,6 +10,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthModule } from '../auth/auth.module';
 import { ProjectsController } from './presentation/controllers/projects.controller';
+import { ProjectAnalyticsController } from './presentation/controllers/project-analytics.controller';
 
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
 import { ProjectRepository } from './infrastructure/persistence/project.repository';
@@ -24,6 +25,8 @@ import { RemoveMemberHandler } from './application/commands/remove-member.handle
 import { GetAllProjectsHandler } from './application/queries/get-all-projects.handler';
 import { GetProjectHandler } from './application/queries/get-project.handler';
 import { ListMembersHandler } from './application/queries/list-members.handler';
+import { GetProjectAnalyticsSummaryHandler } from './application/queries/get-project-analytics-summary.handler';
+import { GetProjectAnalyticsBurndownHandler } from './application/queries/get-project-analytics-burndown.handler';
 
 const CommandHandlers = [
   CreateProjectHandler,
@@ -38,11 +41,13 @@ const QueryHandlers = [
   GetAllProjectsHandler,
   GetProjectHandler,
   ListMembersHandler,
+  GetProjectAnalyticsSummaryHandler,
+  GetProjectAnalyticsBurndownHandler,
 ];
 
 @Module({
   imports: [CqrsModule, SharedModule, AuthModule],
-  controllers: [ProjectsController],
+  controllers: [ProjectsController, ProjectAnalyticsController],
   providers: [
     { provide: PROJECT_REPOSITORY, useClass: ProjectRepository },
     ProjectDomainService,

@@ -99,6 +99,7 @@ model Project {
   owner             User           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members           ProjectMember[]
   tasks             Task[]
+  boards            Board[]
   labels            Label[]
   activities        Activity[]
 
@@ -128,11 +129,30 @@ model ProjectMember {
   @@index([userId])
 }
 
+// ============ BOARDS ============
+
+model Board {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  name        String
+  description String?
+  columns     Json     @default("[{\"key\":\"todo\",\"title\":\"To Do\",\"position\":0},{\"key\":\"in_progress\",\"title\":\"In Progress\",\"position\":1},{\"key\":\"done\",\"title\":\"Done\",\"position\":2}]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([projectId])
+}
+
 // ============ TASKS ============
 
 model Task {
   id        String   @id @default(uuid()) @db.Uuid
   projectId String   @db.Uuid
+  boardId   String?  @db.Uuid
   title     String
   description String?
   status    String   @default("todo") // todo, in_progress, done
@@ -148,6 +168,7 @@ model Task {
 
   // Relations
   project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  board     Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
   assignee  User?       @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
   creator   User        @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   comments  Comment[]

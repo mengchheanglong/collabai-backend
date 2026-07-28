@@ -2,9 +2,10 @@
 // Create a project; the creator is inserted as its owner member atomically.
 
 import { Inject } from '@nestjs/common';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateProjectCommand } from './create-project.command';
+import { CreateBoardCommand } from '../../../boards/application/commands/create-board.command';
 import {
   type IProjectRepository,
   PROJECT_REPOSITORY,
@@ -23,6 +24,7 @@ export class CreateProjectHandler
 {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute(command: CreateProjectCommand): Promise<ProjectView> {
@@ -47,6 +49,16 @@ export class CreateProjectHandler
     });
 
     await this.repo.createWithOwner(project, owner);
+
+    // Auto-create the main board
+    await this.commandBus.execute(
+      new CreateBoardCommand(
+        command.ownerId,
+        project.id,
+        'Main Board',
+        'Default project board',
+      ),
+    );
 
     const view = await this.repo.findViewById(project.id);
     if (!view) throw new ProjectNotFoundError();
