@@ -21,6 +21,7 @@ export interface SubtaskView {
 export interface TaskView {
   id: string;
   projectId: string;
+  boardId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;

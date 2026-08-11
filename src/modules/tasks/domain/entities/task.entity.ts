@@ -15,6 +15,7 @@ import { TaskPriority } from '../value-objects/task-priority.value-object';
 export interface TaskProps {
   id: string;
   projectId: string;
+  boardId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -32,6 +33,7 @@ export interface TaskProps {
 export interface CreateTaskProps {
   id: string;
   projectId: string;
+  boardId: string;
   title: string;
   createdById: string;
   description?: string | null;
@@ -45,6 +47,7 @@ export interface CreateTaskProps {
 export class TaskEntity {
   id: string;
   projectId: string;
+  boardId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -61,6 +64,7 @@ export class TaskEntity {
   private constructor(props: TaskProps) {
     this.id = props.id;
     this.projectId = props.projectId;
+    this.boardId = props.boardId;
     this.title = props.title;
     this.description = props.description;
     this.status = props.status;
@@ -81,6 +85,7 @@ export class TaskEntity {
     return new TaskEntity({
       id: props.id,
       projectId: props.projectId,
+      boardId: props.boardId,
       title: props.title.trim(),
       description: props.description?.trim() ?? null,
       status,

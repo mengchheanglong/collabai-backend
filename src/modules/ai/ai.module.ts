@@ -17,6 +17,7 @@ import { AiController } from './presentation/controllers/ai.controller';
 
 import { AI_PROVIDER } from './domain/services/ai-provider.interface';
 import { OpenAiProvider } from './infrastructure/providers/openai.provider';
+import { DeepSeekProvider } from './infrastructure/providers/deepseek.provider';
 import { StubAiProvider } from './infrastructure/providers/stub-ai.provider';
 import { AiAccessService } from './application/services/ai-access.service';
 
@@ -46,6 +47,15 @@ const CommandHandlers = [
     {
       provide: AI_PROVIDER,
       useFactory: (config: ConfigService) => {
+        const provider = config.get<string>('AI_PROVIDER')?.toLowerCase();
+
+        if (provider === 'deepseek') {
+          const apiKey = config.get<string>('DEEPSEEK_API_KEY');
+          const model = config.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat';
+          if (apiKey) return new DeepSeekProvider(apiKey, model);
+        }
+
+        // Default: OpenAI (fallback to stub if no key).
         const apiKey = config.get<string>('OPENAI_API_KEY');
         const model = config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini';
         return apiKey ? new OpenAiProvider(apiKey, model) : new StubAiProvider();
