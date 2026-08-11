@@ -103,6 +103,7 @@ export class TasksController {
       new CreateTaskCommand(
         userId,
         dto.projectId,
+        dto.boardId,
         dto.title,
         dto.description,
         dto.status,

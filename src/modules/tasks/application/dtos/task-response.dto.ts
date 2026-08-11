@@ -19,6 +19,7 @@ export interface SubtaskResponse {
 export interface TaskResponse {
   id: string;
   projectId: string;
+  boardId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -43,6 +44,7 @@ export function toTaskResponse(t: TaskView): TaskResponse {
   return {
     id: t.id,
     projectId: t.projectId,
+    boardId: t.boardId,
     title: t.title,
     description: t.description,
     status: t.status,

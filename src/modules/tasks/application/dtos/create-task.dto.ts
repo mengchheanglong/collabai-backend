@@ -19,6 +19,10 @@ export class CreateTaskDto {
   @IsUUID()
   projectId: string;
 
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  boardId: string;
+
   @ApiProperty({ example: 'Build login page', minLength: 2, maxLength: 150 })
   @IsString()
   @MinLength(2)

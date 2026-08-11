@@ -222,6 +222,7 @@ export class TaskRepository implements ITaskRepository {
     return {
       id: task.id,
       projectId: task.projectId,
+      boardId: task.boardId,
       title: task.title,
       description: task.description,
       status: task.status,
@@ -237,6 +238,7 @@ export class TaskRepository implements ITaskRepository {
   private toDomain(row: {
     id: string;
     projectId: string;
+    boardId: string | null;
     title: string;
     description: string | null;
     status: string;
@@ -253,6 +255,7 @@ export class TaskRepository implements ITaskRepository {
     return TaskEntity.fromPersistence({
       id: row.id,
       projectId: row.projectId,
+      boardId: row.boardId,
       title: row.title,
       description: row.description,
       status: this.asStatus(row.status),
@@ -272,6 +275,7 @@ export class TaskRepository implements ITaskRepository {
     return {
       id: row.id,
       projectId: row.projectId,
+      boardId: row.boardId,
       title: row.title,
       description: row.description,
       status: this.asStatus(row.status),

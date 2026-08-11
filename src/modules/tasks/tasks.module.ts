@@ -10,6 +10,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthModule } from '../auth/auth.module';
 import { ProjectsModule } from '../projects/projects.module';
+import { BoardsModule } from '../boards/boards.module';
 import { TasksController } from './presentation/controllers/tasks.controller';
 
 import { TASK_REPOSITORY } from './domain/repositories/task.repository.interface';
@@ -40,7 +41,7 @@ const CommandHandlers = [
 const QueryHandlers = [GetTasksHandler, GetTaskHandler];
 
 @Module({
-  imports: [CqrsModule, SharedModule, AuthModule, ProjectsModule],
+  imports: [CqrsModule, SharedModule, AuthModule, ProjectsModule, BoardsModule],
   controllers: [TasksController],
   providers: [
     { provide: TASK_REPOSITORY, useClass: TaskRepository },

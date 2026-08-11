@@ -23,6 +23,10 @@ export const THROTTLERS = {
   login: { name: 'loginRateLimiter', ttl: 15 * MIN, limit: 10 },
   refreshToken: { name: 'refreshTokenRateLimiter', ttl: 15 * MIN, limit: 30 },
   logout: { name: 'logoutRateLimiter', ttl: 15 * MIN, limit: 20 },
+  // /auth/me is called on every authenticated page load (session restore), so it
+  // needs a generous limit — without a route-level limiter the class-wide guard
+  // would apply the first configured limiter (register: 5/hour) and lock users out.
+  me: { name: 'meRateLimiter', ttl: 15 * MIN, limit: 120 },
 } as const;
 
 export const authThrottlers: ThrottlerOptions[] = Object.values(THROTTLERS).map(

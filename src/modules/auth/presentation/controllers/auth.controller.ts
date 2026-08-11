@@ -107,6 +107,7 @@ export class AuthController {
 
   // ---- Current user (for the frontend to identify the signed-in user) ----
   @Get('me')
+  @RateLimit(THROTTLERS.me.name)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get the current authenticated user' })

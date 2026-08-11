@@ -15,10 +15,15 @@ import {
 import { TaskEntity } from '../../domain/entities/task.entity';
 import { TaskDomainService } from '../../domain/services/task.domain.service';
 import { TaskAccessService } from '../services/task-access.service';
+import {
+  BOARD_REPOSITORY,
+  type IBoardRepository,
+} from '../../../boards/domain/repositories/board.repository.interface';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
 import { TaskAssignedEvent } from '../../domain/events/task-assigned.event';
 import {
   AssigneeNotMemberError,
+  InvalidTaskFieldError,
   TaskNotFoundError,
 } from '../errors/task.errors';
 
@@ -26,6 +31,7 @@ import {
 export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
+    @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
     private readonly access: TaskAccessService,
     private readonly domain: TaskDomainService,
     private readonly events: EventEmitter2,
@@ -33,6 +39,11 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
 
   async execute(command: CreateTaskCommand): Promise<TaskView> {
     await this.access.requireWriter(command.projectId, command.actingUserId);
+
+    const board = await this.boardRepo.findById(command.boardId);
+    if (!board || board.projectId !== command.projectId) {
+      throw new InvalidTaskFieldError('The selected board does not belong to this project');
+    }
 
     if (command.assigneeId) {
       const ok = await this.access.isMember(
@@ -47,6 +58,7 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
     const task = TaskEntity.create({
       id: uuidv4(),
       projectId: command.projectId,
+      boardId: command.boardId,
       title: command.title,
       description: command.description,
       status,
