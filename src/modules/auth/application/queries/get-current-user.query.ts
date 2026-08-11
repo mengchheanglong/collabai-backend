@@ -1,3 +1,4 @@
-// TODO: implement get-current-user.query.ts
-// Placeholder scaffold — no logic yet (see NESTJS-DDD-PROJECT-STRUCTURE.md)
-export {};
+// src/modules/auth/application/queries/get-current-user.query.ts
+export class GetCurrentUserQuery {
+  constructor(public readonly userId: string) {}
+}

@@ -11,6 +11,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   Post,
@@ -19,7 +20,7 @@ import {
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import {
@@ -35,6 +36,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { RateLimit } from '../../../../common/decorators/rate-limit.decorator';
 import { buildAuthCookieOptions } from '../../../../common/utils/cookie.util';
 import { THROTTLERS } from '../../../../config/throttler.config';
@@ -59,6 +61,7 @@ import { ResendPasswordResetVerificationCommand } from '../../application/comman
 import { LoginCommand } from '../../application/commands/login.command';
 import { RefreshTokenCommand } from '../../application/commands/refresh-token.command';
 import { LogoutCommand } from '../../application/commands/logout.command';
+import { GetCurrentUserQuery } from '../../application/queries/get-current-user.query';
 import { LoginResult } from '../../application/commands/login.handler';
 import { RefreshResult } from '../../application/commands/refresh-token.handler';
 
@@ -96,9 +99,22 @@ export class AuthController {
 
   constructor(
     private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
     private readonly config: ConfigService,
   ) {
     this.nodeEnv = this.config.get<string>('NODE_ENV');
+  }
+
+  // ---- Current user (for the frontend to identify the signed-in user) ----
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get the current authenticated user' })
+  async me(@CurrentUser('id') userId: string) {
+    const user = (await this.queryBus.execute(
+      new GetCurrentUserQuery(userId),
+    )) as Record<string, unknown>;
+    return { user: { ...user, avatarUrl: user['avatarUrl'] ?? null } };
   }
 
   // ---- Flow 1: Registration ----

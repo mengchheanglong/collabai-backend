@@ -13,9 +13,11 @@ async function bootstrap() {
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
   app.setGlobalPrefix('api/v1');
 
-  // Allow the Angular dev server, with credentials so the refresh cookie flows.
+  // CORS with credentials (so the httpOnly auth cookies flow). In dev, reflect the
+  // request origin so any localhost port/host works; in prod, lock to FRONTEND_ORIGIN.
+  const isProd = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    origin: isProd ? (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200') : true,
     credentials: true,
   });
 

@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SharedModule } from '../../shared/shared.module';
+import { AuthModule } from '../auth/auth.module';
 import { ProjectsModule } from '../projects/projects.module';
 
 import { BOARD_REPOSITORY } from './domain/repositories/board.repository.interface';
@@ -27,7 +28,7 @@ const QueryHandlers = [
 ];
 
 @Module({
-  imports: [CqrsModule, SharedModule, ProjectsModule],
+  imports: [CqrsModule, SharedModule, AuthModule, ProjectsModule],
   controllers: [BoardsController],
   providers: [
     { provide: BOARD_REPOSITORY, useClass: BoardRepository },

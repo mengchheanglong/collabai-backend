@@ -40,6 +40,9 @@ import { ResendPasswordResetVerificationHandler } from './application/commands/r
 import { LoginHandler } from './application/commands/login.handler';
 import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
 import { LogoutHandler } from './application/commands/logout.handler';
+import { GetCurrentUserHandler } from './application/queries/get-current-user.handler';
+
+const QueryHandlers = [GetCurrentUserHandler];
 
 const CommandHandlers = [
   RegisterHandler,
@@ -71,8 +74,9 @@ const CommandHandlers = [
     AuthTokenService,
     // @OnEvent handlers are picked up because this listener is a provider
     AuthEventsListener,
-    // CQRS command handlers
+    // CQRS command + query handlers
     ...CommandHandlers,
+    ...QueryHandlers,
   ],
   exports: [
     USER_REPOSITORY,
