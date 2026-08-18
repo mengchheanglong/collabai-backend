@@ -11,7 +11,8 @@ describe('CommentDomainService.extractMentionEmails', () => {
   });
 
   it('extracts multiple mentions and de-duplicates + lowercases', () => {
-    const body = 'cc @Alice@Example.com and @bob@example.com and @alice@example.com';
+    const body =
+      'cc @Alice@Example.com and @bob@example.com and @alice@example.com';
     expect(svc.extractMentionEmails(body).sort()).toEqual([
       'alice@example.com',
       'bob@example.com',

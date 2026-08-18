@@ -2,11 +2,15 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { DeleteBoardCommand } from './delete-board.command';
+import { BOARD_REPOSITORY } from '../../domain/repositories/board.repository.interface';
 import {
-  BOARD_REPOSITORY,
-} from '../../domain/repositories/board.repository.interface';
-import { BoardNotFoundError, BoardForbiddenError } from '../errors/board.errors';
-import { PROJECT_REPOSITORY, type IProjectRepository } from '../../../projects/domain/repositories/project.repository.interface';
+  BoardNotFoundError,
+  BoardForbiddenError,
+} from '../errors/board.errors';
+import {
+  PROJECT_REPOSITORY,
+  type IProjectRepository,
+} from '../../../projects/domain/repositories/project.repository.interface';
 import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 
 import type { IBoardRepository } from '../../domain/repositories/board.repository.interface';
@@ -15,7 +19,8 @@ import type { IBoardRepository } from '../../domain/repositories/board.repositor
 export class DeleteBoardHandler implements ICommandHandler<DeleteBoardCommand> {
   constructor(
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
-    @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectRepo: IProjectRepository,
   ) {}
 
   async execute(command: DeleteBoardCommand): Promise<void> {

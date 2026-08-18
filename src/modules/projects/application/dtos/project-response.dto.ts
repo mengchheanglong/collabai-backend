@@ -20,6 +20,7 @@ export interface ProjectMemberResponse {
 
 export interface ProjectResponse {
   id: string;
+  _id: string;
   name: string;
   description: string | null;
   color: string | null;
@@ -45,6 +46,7 @@ export function toMemberResponse(m: ProjectMemberView): ProjectMemberResponse {
 export function toProjectResponse(p: ProjectView): ProjectResponse {
   return {
     id: p.id,
+    _id: p.id,
     name: p.name,
     description: p.description,
     color: p.color,

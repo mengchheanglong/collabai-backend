@@ -15,9 +15,7 @@ import {
 } from '../errors/project.errors';
 
 @CommandHandler(DeleteProjectCommand)
-export class DeleteProjectHandler
-  implements ICommandHandler<DeleteProjectCommand>
-{
+export class DeleteProjectHandler implements ICommandHandler<DeleteProjectCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
   ) {}
@@ -29,7 +27,9 @@ export class DeleteProjectHandler
     );
     if (!membership) throw new NotProjectMemberError();
     if (!ProjectRoles.canDeleteProject(membership.role)) {
-      throw new InsufficientProjectPermissionError('Only the owner can delete a project');
+      throw new InsufficientProjectPermissionError(
+        'Only the owner can delete a project',
+      );
     }
 
     await this.repo.delete(command.projectId);

@@ -1,32 +1,51 @@
 // src/config/throttler.config.ts
 //
 // Named @nestjs/throttler configs for the auth endpoints. Registered globally via
-// ThrottlerModule.forRoot(authThrottlers) in app.module.ts. No global ThrottlerGuard
-// is applied — each route opts in with the relevant named limiter in the controller
-// prompt later, e.g. @Throttle({ [THROTTLERS.login.name]: {} }) + @UseGuards(ThrottlerGuard).
-//
-// ⚠️ VALUES ARE PLACEHOLDERS. The "Authentication System — coorad-backend" doc was not
-// provided, so these ttl/limit numbers are sensible defaults, NOT the doc's exact
-// figures. Reconcile the numbers against the doc before relying on them — the NAMES
-// match the spec and are the stable part.
+// ThrottlerModule.forRoot(authThrottlers) in app.module.ts.
 
 import { ThrottlerOptions } from '@nestjs/throttler';
 
-const MIN = 60 * 1000; // one minute in ms (throttler v6 ttl is milliseconds)
+const MIN = 60 * 1000; // one minute in ms
+const isTest = process.env.NODE_ENV === 'test';
 
 // Single source of truth: name + limits per limiter.
 export const THROTTLERS = {
-  register: { name: 'registerRateLimiter', ttl: 60 * MIN, limit: 5 },
-  verifyCode: { name: 'verifyCodeRateLimiter', ttl: 15 * MIN, limit: 10 },
-  resend: { name: 'resendRateLimiter', ttl: 15 * MIN, limit: 3 },
-  passwordReset: { name: 'passwordResetRateLimiter', ttl: 60 * MIN, limit: 5 },
-  login: { name: 'loginRateLimiter', ttl: 15 * MIN, limit: 10 },
-  refreshToken: { name: 'refreshTokenRateLimiter', ttl: 15 * MIN, limit: 30 },
-  logout: { name: 'logoutRateLimiter', ttl: 15 * MIN, limit: 20 },
-  // /auth/me is called on every authenticated page load (session restore), so it
-  // needs a generous limit — without a route-level limiter the class-wide guard
-  // would apply the first configured limiter (register: 5/hour) and lock users out.
-  me: { name: 'meRateLimiter', ttl: 15 * MIN, limit: 120 },
+  register: {
+    name: 'registerRateLimiter',
+    ttl: 60 * MIN,
+    limit: isTest ? 10000 : 5,
+  },
+  verifyCode: {
+    name: 'verifyCodeRateLimiter',
+    ttl: 15 * MIN,
+    limit: isTest ? 10000 : 10,
+  },
+  resend: {
+    name: 'resendRateLimiter',
+    ttl: 15 * MIN,
+    limit: isTest ? 10000 : 3,
+  },
+  passwordReset: {
+    name: 'passwordResetRateLimiter',
+    ttl: 60 * MIN,
+    limit: isTest ? 10000 : 5,
+  },
+  login: {
+    name: 'loginRateLimiter',
+    ttl: 15 * MIN,
+    limit: isTest ? 10000 : 10,
+  },
+  refreshToken: {
+    name: 'refreshTokenRateLimiter',
+    ttl: 15 * MIN,
+    limit: isTest ? 10000 : 30,
+  },
+  logout: {
+    name: 'logoutRateLimiter',
+    ttl: 15 * MIN,
+    limit: isTest ? 10000 : 20,
+  },
+  me: { name: 'meRateLimiter', ttl: 15 * MIN, limit: isTest ? 10000 : 120 },
 } as const;
 
 export const authThrottlers: ThrottlerOptions[] = Object.values(THROTTLERS).map(

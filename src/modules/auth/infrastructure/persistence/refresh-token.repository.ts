@@ -86,31 +86,37 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
     let oldTokenId: string | undefined;
 
     // Atomic soft-revoke-old + create-new, with theft detection on a lookup miss.
-    const outcome = await this.prisma.$transaction<RotateOutcome>(async (tx) => {
-      const live = await tx.refreshToken.findFirst({
-        where: { tokenHash: oldTokenHash, userId, revokedAt: null },
-        select: { id: true },
-      });
-
-      if (!live) {
-        // No LIVE token. Was this hash already spent (revoked)? -> reuse/theft.
-        const spent = await tx.refreshToken.findFirst({
-          where: { tokenHash: oldTokenHash, userId, revokedAt: { not: null } },
+    const outcome = await this.prisma.$transaction<RotateOutcome>(
+      async (tx) => {
+        const live = await tx.refreshToken.findFirst({
+          where: { tokenHash: oldTokenHash, userId, revokedAt: null },
           select: { id: true },
         });
-        return spent ? 'reuse' : 'not_found';
-      }
 
-      oldTokenId = live.id;
-      await tx.refreshToken.update({
-        where: { id: live.id },
-        data: { revokedAt: new Date() }, // soft-delete (kept for reuse detection)
-      });
-      await tx.refreshToken.create({
-        data: { id: newToken.id, createdAt: newToken.createdAt, ...data },
-      });
-      return 'rotated';
-    });
+        if (!live) {
+          // No LIVE token. Was this hash already spent (revoked)? -> reuse/theft.
+          const spent = await tx.refreshToken.findFirst({
+            where: {
+              tokenHash: oldTokenHash,
+              userId,
+              revokedAt: { not: null },
+            },
+            select: { id: true },
+          });
+          return spent ? 'reuse' : 'not_found';
+        }
+
+        oldTokenId = live.id;
+        await tx.refreshToken.update({
+          where: { id: live.id },
+          data: { revokedAt: new Date() }, // soft-delete (kept for reuse detection)
+        });
+        await tx.refreshToken.create({
+          data: { id: newToken.id, createdAt: newToken.createdAt, ...data },
+        });
+        return 'rotated';
+      },
+    );
 
     if (outcome === 'rotated' && oldTokenId) {
       await this.cacheDel(
@@ -143,7 +149,11 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
     return Math.floor((date.getTime() - Date.now()) / 1000);
   }
 
-  private async cacheSet(key: string, value: string, ttl: number): Promise<void> {
+  private async cacheSet(
+    key: string,
+    value: string,
+    ttl: number,
+  ): Promise<void> {
     try {
       await this.redis.set(key, value, ttl);
     } catch (err) {
@@ -163,7 +173,9 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
     try {
       await this.redis.deleteByPrefix(prefix);
     } catch (err) {
-      this.logger.warn(`prefix cache invalidation failed (${prefix}): ${(err as Error).message}`);
+      this.logger.warn(
+        `prefix cache invalidation failed (${prefix}): ${(err as Error).message}`,
+      );
     }
   }
 

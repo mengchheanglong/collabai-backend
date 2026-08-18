@@ -5,6 +5,7 @@
 // membership/role. Domain errors -> TaskExceptionFilter.
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -64,6 +65,7 @@ export class TasksController {
   async list(
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
+    @Query('boardId') boardId?: string,
     @Query('status') status?: string,
     @Query('assigneeId') assigneeId?: string,
     @Query('q') q?: string,
@@ -72,8 +74,9 @@ export class TasksController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const result = (await this.queryBus.execute(
+    const result = await this.queryBus.execute(
       new GetTasksQuery(userId, projectId, {
+        boardId,
         status: asStatus(status),
         assigneeId,
         q,
@@ -82,7 +85,7 @@ export class TasksController {
         page: toInt(page, 1),
         limit: toInt(limit, 50),
       }),
-    )) as Paginated<TaskView>;
+    );
 
     return {
       items: result.items.map(toTaskResponse),
@@ -99,7 +102,7 @@ export class TasksController {
   @HttpCode(201)
   @ApiOperation({ summary: 'Create a task' })
   async create(@CurrentUser('id') userId: string, @Body() dto: CreateTaskDto) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new CreateTaskCommand(
         userId,
         dto.projectId,
@@ -111,8 +114,9 @@ export class TasksController {
         dto.assigneeId,
         dto.dueDate ? new Date(dto.dueDate) : undefined,
         dto.labels,
+        dto.subtasks,
       ),
-    )) as TaskView;
+    );
     return { task: toTaskResponse(view) };
   }
 
@@ -122,9 +126,7 @@ export class TasksController {
     @CurrentUser('id') userId: string,
     @Param('taskId') taskId: string,
   ) {
-    const view = (await this.queryBus.execute(
-      new GetTaskQuery(userId, taskId),
-    )) as TaskView;
+    const view = await this.queryBus.execute(new GetTaskQuery(userId, taskId));
     return { task: toTaskResponse(view) };
   }
 
@@ -135,7 +137,7 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Body() dto: UpdateTaskDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new UpdateTaskCommand(
         userId,
         taskId,
@@ -153,7 +155,7 @@ export class TasksController {
         },
         dto.labels,
       ),
-    )) as TaskView;
+    );
     return { task: toTaskResponse(view) };
   }
 
@@ -164,10 +166,36 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Body() dto: MoveTaskDto,
   ) {
-    const view = (await this.commandBus.execute(
-      new MoveTaskCommand(userId, taskId, dto.status, dto.position),
-    )) as TaskView;
+    const status = dto.status ?? dto.destinationStatus;
+    if (!status) {
+      throw new BadRequestException('Status or destinationStatus is required');
+    }
+    const position = dto.position ?? dto.destinationPosition;
+    const view = await this.commandBus.execute(
+      new MoveTaskCommand(userId, taskId, status, position),
+    );
     return { task: toTaskResponse(view) };
+  }
+
+  @Patch('tasks/:taskId/move')
+  @ApiOperation({ summary: 'Move a task between columns (PATCH alias)' })
+  async movePatch(
+    @CurrentUser('id') userId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: MoveTaskDto,
+  ) {
+    return this.move(userId, taskId, dto);
+  }
+
+  @Post('tasks/:taskId/move')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Move a task between columns (POST alias)' })
+  async movePost(
+    @CurrentUser('id') userId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: MoveTaskDto,
+  ) {
+    return this.move(userId, taskId, dto);
   }
 
   @Delete('tasks/:taskId')
@@ -190,10 +218,12 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Body() dto: AddSubtaskDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new AddSubtaskCommand(userId, taskId, dto.title),
-    )) as TaskView;
-    return { task: toTaskResponse(view) };
+    );
+    const task = toTaskResponse(view);
+    const subtask = task.subtasks[task.subtasks.length - 1];
+    return { task, subtask };
   }
 
   @Patch('tasks/:taskId/subtasks/:subtaskId')
@@ -204,10 +234,12 @@ export class TasksController {
     @Param('subtaskId') subtaskId: string,
     @Body() dto: UpdateSubtaskDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new UpdateSubtaskCommand(userId, taskId, subtaskId, dto.title, dto.done),
-    )) as TaskView;
-    return { task: toTaskResponse(view) };
+    );
+    const task = toTaskResponse(view);
+    const subtask = task.subtasks.find((s) => s.id === subtaskId);
+    return { task, subtask };
   }
 
   @Delete('tasks/:taskId/subtasks/:subtaskId')
@@ -217,10 +249,14 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Param('subtaskId') subtaskId: string,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new DeleteSubtaskCommand(userId, taskId, subtaskId),
-    )) as TaskView;
-    return { task: toTaskResponse(view) };
+    );
+    return {
+      task: toTaskResponse(view),
+      success: true,
+      message: 'Subtask deleted',
+    };
   }
 }
 

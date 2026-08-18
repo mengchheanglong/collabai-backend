@@ -24,9 +24,7 @@ import {
 } from '../errors/project.errors';
 
 @CommandHandler(InviteMemberCommand)
-export class InviteMemberHandler
-  implements ICommandHandler<InviteMemberCommand>
-{
+export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,

@@ -25,12 +25,14 @@ import { SuggestSubtasksHandler } from './application/commands/suggest-subtasks.
 import { GenerateDescriptionHandler } from './application/commands/generate-description.handler';
 import { SummarizeCommentsHandler } from './application/commands/summarize-comments.handler';
 import { SearchTasksHandler } from './application/commands/search-tasks.handler';
+import { GenerateTasksHandler } from './application/commands/generate-tasks.handler';
 
 const CommandHandlers = [
   SuggestSubtasksHandler,
   GenerateDescriptionHandler,
   SummarizeCommentsHandler,
   SearchTasksHandler,
+  GenerateTasksHandler,
 ];
 
 @Module({
@@ -58,7 +60,9 @@ const CommandHandlers = [
         // Default: OpenAI (fallback to stub if no key).
         const apiKey = config.get<string>('OPENAI_API_KEY');
         const model = config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini';
-        return apiKey ? new OpenAiProvider(apiKey, model) : new StubAiProvider();
+        return apiKey
+          ? new OpenAiProvider(apiKey, model)
+          : new StubAiProvider();
       },
       inject: [ConfigService],
     },

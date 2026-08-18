@@ -68,9 +68,9 @@ export class ProjectsController {
     @Query('limit') limit?: string,
     @Query('q') q?: string,
   ) {
-    const result = (await this.queryBus.execute(
+    const result = await this.queryBus.execute(
       new GetAllProjectsQuery(userId, toInt(page, 1), toInt(limit, 20), q),
-    )) as Paginated<ProjectView>;
+    );
 
     return {
       items: result.items.map(toProjectResponse),
@@ -90,7 +90,7 @@ export class ProjectsController {
     @CurrentUser('id') userId: string,
     @Body() dto: CreateProjectDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new CreateProjectCommand(
         userId,
         dto.name,
@@ -98,7 +98,7 @@ export class ProjectsController {
         dto.color,
         dto.icon,
       ),
-    )) as ProjectView;
+    );
     return { project: toProjectResponse(view) };
   }
 
@@ -108,9 +108,9 @@ export class ProjectsController {
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
   ) {
-    const view = (await this.queryBus.execute(
+    const view = await this.queryBus.execute(
       new GetProjectQuery(userId, projectId),
-    )) as ProjectView;
+    );
     return { project: toProjectResponse(view) };
   }
 
@@ -121,14 +121,14 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
     @Body() dto: UpdateProjectDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new UpdateProjectCommand(userId, projectId, {
         name: dto.name,
         description: dto.description,
         color: dto.color,
         icon: dto.icon,
       }),
-    )) as ProjectView;
+    );
     return { project: toProjectResponse(view) };
   }
 
@@ -150,23 +150,30 @@ export class ProjectsController {
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
   ) {
-    const members = (await this.queryBus.execute(
+    const members = await this.queryBus.execute(
       new ListMembersQuery(userId, projectId),
-    )) as ProjectMemberView[];
+    );
     return { members: members.map(toMemberResponse) };
   }
 
   @Post(':projectId/members')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Add an existing user to the project (admin/owner)' })
+  @ApiOperation({
+    summary: 'Add an existing user to the project (admin/owner)',
+  })
   async addMember(
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
     @Body() dto: InviteMemberDto,
   ) {
-    const view = (await this.commandBus.execute(
-      new InviteMemberCommand(userId, projectId, dto.email, dto.role ?? 'member'),
-    )) as ProjectView;
+    const view = await this.commandBus.execute(
+      new InviteMemberCommand(
+        userId,
+        projectId,
+        dto.email,
+        dto.role ?? 'member',
+      ),
+    );
     return { project: toProjectResponse(view), message: 'Member added' };
   }
 
@@ -178,9 +185,9 @@ export class ProjectsController {
     @Param('memberUserId') memberUserId: string,
     @Body() dto: UpdateMemberRoleDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new UpdateMemberRoleCommand(userId, projectId, memberUserId, dto.role),
-    )) as ProjectView;
+    );
     return { project: toProjectResponse(view) };
   }
 
@@ -191,9 +198,9 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
     @Param('memberUserId') memberUserId: string,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new RemoveMemberCommand(userId, projectId, memberUserId),
-    )) as ProjectView;
+    );
     return { project: toProjectResponse(view), message: 'Member removed' };
   }
 }

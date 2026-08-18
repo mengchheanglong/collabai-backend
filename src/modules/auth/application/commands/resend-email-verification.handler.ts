@@ -17,9 +17,7 @@ import {
 } from '../auth.constants';
 
 @CommandHandler(ResendEmailVerificationCommand)
-export class ResendEmailVerificationHandler
-  implements ICommandHandler<ResendEmailVerificationCommand>
-{
+export class ResendEmailVerificationHandler implements ICommandHandler<ResendEmailVerificationCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,
@@ -32,8 +30,12 @@ export class ResendEmailVerificationHandler
     const user = await this.userRepo.findByEmail(command.email);
     // Only regenerate for an existing, still-unverified account.
     if (user && !user.isVerified) {
-      const code = this.authDomain.generateNumericCode(VERIFICATION_CODE_LENGTH);
-      const expiry = this.authDomain.computeExpiry(VERIFICATION_CODE_TTL_MINUTES);
+      const code = this.authDomain.generateNumericCode(
+        VERIFICATION_CODE_LENGTH,
+      );
+      const expiry = this.authDomain.computeExpiry(
+        VERIFICATION_CODE_TTL_MINUTES,
+      );
       user.setVerificationCode(code, expiry);
       await this.userRepo.save(user);
       this.eventEmitter.emit(

@@ -27,6 +27,8 @@ import {
   TaskNotFoundError,
 } from '../errors/task.errors';
 
+import { SubtaskEntity } from '../../domain/entities/subtask.entity';
+
 @CommandHandler(CreateTaskCommand)
 export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
   constructor(
@@ -40,9 +42,19 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
   async execute(command: CreateTaskCommand): Promise<TaskView> {
     await this.access.requireWriter(command.projectId, command.actingUserId);
 
-    const board = await this.boardRepo.findById(command.boardId);
+    let board = command.boardId
+      ? await this.boardRepo.findById(command.boardId)
+      : null;
     if (!board || board.projectId !== command.projectId) {
-      throw new InvalidTaskFieldError('The selected board does not belong to this project');
+      const projectBoards = await this.boardRepo.listForProject(
+        command.projectId,
+      );
+      if (projectBoards.length > 0) {
+        board = await this.boardRepo.findById(projectBoards[0].id);
+      }
+    }
+    if (!board) {
+      throw new InvalidTaskFieldError('No board found for this project');
     }
 
     if (command.assigneeId) {
@@ -58,7 +70,7 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
     const task = TaskEntity.create({
       id: uuidv4(),
       projectId: command.projectId,
-      boardId: command.boardId,
+      boardId: board.id,
       title: command.title,
       description: command.description,
       status,
@@ -70,13 +82,28 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
     });
 
     await this.repo.create(task);
-    if (command.labels) {
+    if (command.labels && command.labels.length > 0) {
       await this.repo.setLabels(
         task.id,
         task.projectId,
         command.actingUserId,
         command.labels,
       );
+    }
+    if (command.subtasks && command.subtasks.length > 0) {
+      let order = 0;
+      for (const st of command.subtasks) {
+        if (typeof st === 'string' && st.trim()) {
+          order += 1;
+          const subtask = SubtaskEntity.create({
+            id: uuidv4(),
+            taskId: task.id,
+            title: st.trim(),
+            orderIndex: order,
+          });
+          await this.repo.addSubtask(subtask);
+        }
+      }
     }
 
     this.events.emit(

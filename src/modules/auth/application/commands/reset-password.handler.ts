@@ -16,9 +16,7 @@ import { PasswordResetSuccessEvent } from '../../domain/events/password-reset-su
 import { UserNotFoundError, WeakPasswordError } from '../errors/auth.errors';
 
 @CommandHandler(ResetPasswordCommand)
-export class ResetPasswordHandler
-  implements ICommandHandler<ResetPasswordCommand>
-{
+export class ResetPasswordHandler implements ICommandHandler<ResetPasswordCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,

@@ -23,9 +23,11 @@ import { SuggestSubtasksCommand } from '../../application/commands/suggest-subta
 import { GenerateDescriptionCommand } from '../../application/commands/generate-description.command';
 import { SummarizeCommentsCommand } from '../../application/commands/summarize-comments.command';
 import { SearchTasksCommand } from '../../application/commands/search-tasks.command';
+import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
 
 import {
   GenerateDescriptionDto,
+  GenerateTasksDto,
   SearchTasksDto,
   SuggestSubtasksDto,
   SummarizeCommentsDto,
@@ -69,7 +71,7 @@ export class AiController {
         userId,
         dto.title,
         dto.mode,
-        dto.currentDescription,
+        dto.currentDescription ?? dto.description,
         dto.projectId,
       ),
     );
@@ -96,6 +98,18 @@ export class AiController {
   ) {
     return this.commandBus.execute(
       new SearchTasksCommand(userId, dto.projectId, dto.query),
+    );
+  }
+
+  @Post('generate-tasks')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Generate structured tasks with subtasks from prompt' })
+  async generateTasks(
+    @CurrentUser('id') userId: string,
+    @Body() dto: GenerateTasksDto,
+  ) {
+    return this.commandBus.execute(
+      new GenerateTasksCommand(userId, dto.projectId, dto.prompt, dto.count ?? 5),
     );
   }
 }

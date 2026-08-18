@@ -23,9 +23,7 @@ import { GetUserNotificationsQuery } from '../../application/queries/get-user-no
 import { MarkAsReadCommand } from '../../application/commands/mark-as-read.command';
 import { MarkAllReadCommand } from '../../application/commands/mark-all-read.command';
 import { toNotificationResponse } from '../../application/dtos/notification-response.dto';
-import {
-  Paginated,
-} from '../../domain/repositories/notification.repository.interface';
+import { Paginated } from '../../domain/repositories/notification.repository.interface';
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 
 @ApiTags('Notifications')
@@ -40,21 +38,23 @@ export class NotificationsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: "List the current user's notifications (newest first)" })
+  @ApiOperation({
+    summary: "List the current user's notifications (newest first)",
+  })
   async list(
     @CurrentUser('id') userId: string,
     @Query('unreadOnly') unreadOnly?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const result = (await this.queryBus.execute(
+    const result = await this.queryBus.execute(
       new GetUserNotificationsQuery(
         userId,
         unreadOnly === 'true',
         toInt(page, 1),
         toInt(limit, 20),
       ),
-    )) as Paginated<NotificationEntity>;
+    );
 
     return {
       items: result.items.map(toNotificationResponse),

@@ -19,9 +19,7 @@ import {
 } from '../errors/project.errors';
 
 @CommandHandler(CreateProjectCommand)
-export class CreateProjectHandler
-  implements ICommandHandler<CreateProjectCommand>
-{
+export class CreateProjectHandler implements ICommandHandler<CreateProjectCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly commandBus: CommandBus,

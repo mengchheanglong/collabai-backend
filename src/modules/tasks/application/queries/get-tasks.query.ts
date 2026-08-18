@@ -6,6 +6,7 @@ export class GetTasksQuery {
     public readonly userId: string,
     public readonly projectId: string,
     public readonly filters: {
+      boardId?: string;
       status?: TaskStatus;
       assigneeId?: string;
       q?: string;

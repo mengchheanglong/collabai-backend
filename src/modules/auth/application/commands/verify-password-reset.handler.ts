@@ -12,9 +12,7 @@ import { AuthDomainService } from '../../domain/services/auth.domain.service';
 import { CodeExpiredError, InvalidCodeError } from '../errors/auth.errors';
 
 @CommandHandler(VerifyPasswordResetCommand)
-export class VerifyPasswordResetHandler
-  implements ICommandHandler<VerifyPasswordResetCommand>
-{
+export class VerifyPasswordResetHandler implements ICommandHandler<VerifyPasswordResetCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,

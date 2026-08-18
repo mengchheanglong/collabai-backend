@@ -6,8 +6,14 @@ import {
   BOARD_REPOSITORY,
   type BoardView,
 } from '../../domain/repositories/board.repository.interface';
-import { BoardNotFoundError, BoardForbiddenError } from '../errors/board.errors';
-import { PROJECT_REPOSITORY, type IProjectRepository } from '../../../projects/domain/repositories/project.repository.interface';
+import {
+  BoardNotFoundError,
+  BoardForbiddenError,
+} from '../errors/board.errors';
+import {
+  PROJECT_REPOSITORY,
+  type IProjectRepository,
+} from '../../../projects/domain/repositories/project.repository.interface';
 import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 
 import type { IBoardRepository } from '../../domain/repositories/board.repository.interface';
@@ -16,7 +22,8 @@ import type { IBoardRepository } from '../../domain/repositories/board.repositor
 export class UpdateBoardHandler implements ICommandHandler<UpdateBoardCommand> {
   constructor(
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
-    @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectRepo: IProjectRepository,
   ) {}
 
   async execute(command: UpdateBoardCommand): Promise<BoardView> {

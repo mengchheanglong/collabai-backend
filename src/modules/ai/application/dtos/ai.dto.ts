@@ -52,7 +52,10 @@ export class GenerateDescriptionDto {
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ enum: ['generate', 'improve', 'shorten'], default: 'generate' })
+  @ApiProperty({
+    enum: ['generate', 'improve', 'shorten'],
+    default: 'generate',
+  })
   @IsIn(['generate', 'improve', 'shorten'])
   mode: DescriptionMode;
 
@@ -61,6 +64,12 @@ export class GenerateDescriptionDto {
   @IsString()
   @MaxLength(5000)
   currentDescription?: string;
+
+  @ApiPropertyOptional({ maxLength: 5000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  description?: string;
 }
 
 export class SummarizeCommentsDto {
@@ -79,4 +88,23 @@ export class SearchTasksDto {
   @MinLength(2)
   @MaxLength(300)
   query: string;
+}
+
+export class GenerateTasksDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  projectId: string;
+
+  @ApiProperty({ example: 'Create 10 experimental tasks for psychology study' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(5000)
+  prompt: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 15, default: 5 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(15)
+  count?: number;
 }

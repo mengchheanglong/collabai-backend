@@ -12,9 +12,7 @@ import {
 } from '../../domain/repositories/project.repository.interface';
 
 @QueryHandler(GetAllProjectsQuery)
-export class GetAllProjectsHandler
-  implements IQueryHandler<GetAllProjectsQuery>
-{
+export class GetAllProjectsHandler implements IQueryHandler<GetAllProjectsQuery> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
   ) {}

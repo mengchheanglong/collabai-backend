@@ -28,7 +28,6 @@ describe('TaskDomainService', () => {
 });
 
 describe('TaskEntity move()', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { TaskEntity } = require('../entities/task.entity');
 
   it('sets completedAt when moved to done and clears it when moved back', () => {

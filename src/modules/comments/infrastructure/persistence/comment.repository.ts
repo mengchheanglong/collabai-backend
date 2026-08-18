@@ -7,6 +7,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { CommentEntity } from '../../domain/entities/comment.entity';
 import {
   CommentView,
@@ -27,6 +28,7 @@ export class CommentRepository implements ICommentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getTaskProjectId(taskId: string): Promise<string | null> {
+    if (!isValidUuid(taskId)) return null;
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, deletedAt: null },
       select: { projectId: true },
@@ -35,6 +37,12 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async create(comment: CommentEntity): Promise<void> {
+    if (
+      !isValidUuid(comment.id) ||
+      !isValidUuid(comment.taskId) ||
+      !isValidUuid(comment.authorId)
+    )
+      return;
     await this.prisma.comment.create({
       data: {
         id: comment.id,
@@ -48,6 +56,7 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async findById(id: string): Promise<CommentEntity | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.comment.findFirst({
       where: { id, deletedAt: null },
     });
@@ -64,6 +73,7 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async findViewById(id: string): Promise<CommentView | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.comment.findFirst({
       where: { id, deletedAt: null },
       include: commentInclude,
@@ -72,6 +82,7 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async listForTask(taskId: string): Promise<CommentView[]> {
+    if (!isValidUuid(taskId)) return [];
     const rows = await this.prisma.comment.findMany({
       where: { taskId, deletedAt: null },
       include: commentInclude,
@@ -81,6 +92,7 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async update(comment: CommentEntity): Promise<void> {
+    if (!isValidUuid(comment.id)) return;
     await this.prisma.comment.update({
       where: { id: comment.id },
       data: { content: comment.body, editedAt: comment.editedAt },
@@ -88,6 +100,7 @@ export class CommentRepository implements ICommentRepository {
   }
 
   async delete(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
     await this.prisma.comment.delete({ where: { id } });
   }
 

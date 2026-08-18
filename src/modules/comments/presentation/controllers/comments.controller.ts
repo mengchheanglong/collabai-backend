@@ -45,14 +45,14 @@ export class CommentsController {
   ) {}
 
   @Get('tasks/:taskId/comments')
-  @ApiOperation({ summary: 'List a task\'s comments (oldest first)' })
+  @ApiOperation({ summary: "List a task's comments (oldest first)" })
   async list(
     @CurrentUser('id') userId: string,
     @Param('taskId') taskId: string,
   ) {
-    const comments = (await this.queryBus.execute(
+    const comments = await this.queryBus.execute(
       new GetTaskCommentsQuery(userId, taskId),
-    )) as CommentView[];
+    );
     return { comments: comments.map(toCommentResponse) };
   }
 
@@ -64,9 +64,9 @@ export class CommentsController {
     @Param('taskId') taskId: string,
     @Body() dto: AddCommentDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new AddCommentCommand(userId, taskId, dto.body),
-    )) as CommentView;
+    );
     return { comment: toCommentResponse(view) };
   }
 
@@ -77,10 +77,20 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @Body() dto: EditCommentDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new EditCommentCommand(userId, commentId, dto.body),
-    )) as CommentView;
+    );
     return { comment: toCommentResponse(view) };
+  }
+
+  @Patch('tasks/:taskId/comments/:commentId')
+  @ApiOperation({ summary: 'Edit a comment nested route' })
+  async editNested(
+    @CurrentUser('id') userId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: EditCommentDto,
+  ) {
+    return this.edit(userId, commentId, dto);
   }
 
   @Delete('comments/:commentId')
@@ -91,5 +101,14 @@ export class CommentsController {
   ) {
     await this.commandBus.execute(new DeleteCommentCommand(userId, commentId));
     return { success: true, message: 'Comment deleted' };
+  }
+
+  @Delete('tasks/:taskId/comments/:commentId')
+  @ApiOperation({ summary: 'Delete a comment nested route' })
+  async removeNested(
+    @CurrentUser('id') userId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.remove(userId, commentId);
   }
 }

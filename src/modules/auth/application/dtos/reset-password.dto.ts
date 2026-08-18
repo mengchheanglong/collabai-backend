@@ -8,7 +8,8 @@ export class ResetPasswordDto {
     example: 'N3wS3curePass',
     minLength: 8,
     maxLength: 72,
-    description: 'New password. Min 8 chars, must include upper, lower and a number.',
+    description:
+      'New password. Min 8 chars, must include upper, lower and a number.',
   })
   @IsString()
   @MinLength(8)
