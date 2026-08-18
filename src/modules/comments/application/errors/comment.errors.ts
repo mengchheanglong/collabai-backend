@@ -39,7 +39,9 @@ export class NotProjectMemberError extends CommentError {
 /** Caller is a viewer — cannot post comments. */
 export class CommentWriteForbiddenError extends CommentError {
   readonly code = 'COMMENT_WRITE_FORBIDDEN';
-  constructor(message = 'You do not have permission to comment in this project') {
+  constructor(
+    message = 'You do not have permission to comment in this project',
+  ) {
     super(message);
   }
 }
@@ -47,9 +49,7 @@ export class CommentWriteForbiddenError extends CommentError {
 /** Caller is neither the author nor a project moderator (owner/admin). */
 export class CommentModerationForbiddenError extends CommentError {
   readonly code = 'COMMENT_MODERATION_FORBIDDEN';
-  constructor(
-    message = 'You can only edit or delete your own comments',
-  ) {
+  constructor(message = 'You can only edit or delete your own comments') {
     super(message);
   }
 }

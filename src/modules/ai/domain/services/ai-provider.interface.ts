@@ -36,9 +36,25 @@ export interface TaskSearchInterpretation {
   raw: Record<string, unknown>;
 }
 
+export interface StructuredTask {
+  title: string;
+  description: string;
+  subtasks: string[];
+  status?: 'todo' | 'in_progress' | 'done';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  labels?: string[];
+  dueDate?: string;
+}
+
+export interface GenerateTasksInput {
+  prompt: string;
+  count: number;
+}
+
 export interface IAiProvider {
   suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]>;
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
   summarizeComments(input: SummarizeCommentsInput): Promise<string>;
   interpretSearch(query: string): Promise<TaskSearchInterpretation>;
+  generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]>;
 }

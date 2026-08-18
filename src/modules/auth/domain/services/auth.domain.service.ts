@@ -136,8 +136,6 @@ export class AuthDomainService {
   /** Secure zero-padded numeric code (default 6 digits) for verification/reset. */
   generateNumericCode(length = 6): string {
     const max = 10 ** length;
-    return randomInt(0, max)
-      .toString()
-      .padStart(length, '0');
+    return randomInt(0, max).toString().padStart(length, '0');
   }
 }

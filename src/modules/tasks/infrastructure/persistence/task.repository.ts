@@ -8,6 +8,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { TaskEntity } from '../../domain/entities/task.entity';
 import { SubtaskEntity } from '../../domain/entities/subtask.entity';
 import {
@@ -48,6 +49,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async findById(id: string): Promise<TaskEntity | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.task.findFirst({
       where: { id, deletedAt: null },
     });
@@ -55,6 +57,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async findViewById(id: string): Promise<TaskView | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.task.findFirst({
       where: { id, deletedAt: null },
       include: taskInclude,
@@ -63,6 +66,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async update(task: TaskEntity): Promise<void> {
+    if (!isValidUuid(task.id)) return;
     await this.prisma.task.update({
       where: { id: task.id },
       data: {
@@ -79,6 +83,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async delete(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
     await this.prisma.task.delete({ where: { id } });
   }
 
@@ -86,9 +91,13 @@ export class TaskRepository implements ITaskRepository {
     projectId: string,
     filters: TaskFilters,
   ): Promise<Paginated<TaskView>> {
+    if (!isValidUuid(projectId)) {
+      return { items: [], total: 0, page: filters.page, limit: filters.limit };
+    }
     const where: Prisma.TaskWhereInput = {
       projectId,
       deletedAt: null,
+      ...(filters.boardId ? { boardId: filters.boardId } : {}),
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.assigneeId ? { assignedTo: filters.assigneeId } : {}),
       ...(filters.q
@@ -120,6 +129,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async maxPosition(projectId: string, status: TaskStatus): Promise<number> {
+    if (!isValidUuid(projectId)) return 0;
     const result = await this.prisma.task.aggregate({
       where: { projectId, status, deletedAt: null },
       _max: { position: true },
@@ -133,6 +143,12 @@ export class TaskRepository implements ITaskRepository {
     createdById: string,
     labelNames: string[],
   ): Promise<void> {
+    if (
+      !isValidUuid(taskId) ||
+      !isValidUuid(projectId) ||
+      !isValidUuid(createdById)
+    )
+      return;
     const names = Array.from(
       new Set(labelNames.map((n) => n.trim()).filter((n) => n.length > 0)),
     );
@@ -166,6 +182,7 @@ export class TaskRepository implements ITaskRepository {
   // ----- subtasks -----
 
   async addSubtask(subtask: SubtaskEntity): Promise<void> {
+    if (!isValidUuid(subtask.id) || !isValidUuid(subtask.taskId)) return;
     await this.prisma.subtask.create({
       data: {
         id: subtask.id,
@@ -179,6 +196,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async findSubtask(subtaskId: string): Promise<SubtaskEntity | null> {
+    if (!isValidUuid(subtaskId)) return null;
     const row = await this.prisma.subtask.findUnique({
       where: { id: subtaskId },
     });
@@ -194,6 +212,7 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async updateSubtask(subtask: SubtaskEntity): Promise<void> {
+    if (!isValidUuid(subtask.id)) return;
     await this.prisma.subtask.update({
       where: { id: subtask.id },
       data: {
@@ -205,10 +224,12 @@ export class TaskRepository implements ITaskRepository {
   }
 
   async deleteSubtask(subtaskId: string): Promise<void> {
+    if (!isValidUuid(subtaskId)) return;
     await this.prisma.subtask.delete({ where: { id: subtaskId } });
   }
 
   async maxSubtaskOrder(taskId: string): Promise<number> {
+    if (!isValidUuid(taskId)) return -1;
     const result = await this.prisma.subtask.aggregate({
       where: { taskId },
       _max: { orderIndex: true },

@@ -20,9 +20,7 @@ import {
 } from '../errors/project.errors';
 
 @CommandHandler(UpdateMemberRoleCommand)
-export class UpdateMemberRoleHandler
-  implements ICommandHandler<UpdateMemberRoleCommand>
-{
+export class UpdateMemberRoleHandler implements ICommandHandler<UpdateMemberRoleCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,

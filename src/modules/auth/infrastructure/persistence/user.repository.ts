@@ -32,7 +32,9 @@ export class UserRepository implements IUserRepository {
   async findById(id: string): Promise<UserEntity | null> {
     const cached = await this.cacheGet(authCacheKeys.authUserEntity(id));
     if (cached) {
-      return UserEntity.fromPersistence(this.reviveUserProps(JSON.parse(cached)));
+      return UserEntity.fromPersistence(
+        this.reviveUserProps(JSON.parse(cached)),
+      );
     }
 
     const row = await this.prisma.user.findUnique({ where: { id } });
@@ -54,12 +56,18 @@ export class UserRepository implements IUserRepository {
       // Stale lookup pointing at a missing entity — fall through to DB.
     }
 
-    const row = await this.prisma.user.findUnique({ where: { email: normEmail } });
+    const row = await this.prisma.user.findUnique({
+      where: { email: normEmail },
+    });
     if (!row) return null;
 
     const user = this.toDomain(row);
     await this.populateCache(user);
-    await this.cacheSet(lookupKey, user.id, CACHE_TTL.USER_EMAIL_LOOKUP_SECONDS);
+    await this.cacheSet(
+      lookupKey,
+      user.id,
+      CACHE_TTL.USER_EMAIL_LOOKUP_SECONDS,
+    );
     return user;
   }
 
@@ -110,7 +118,9 @@ export class UserRepository implements IUserRepository {
     try {
       await this.redis.deleteByPrefix(authCacheKeys.refreshUserPrefix(user.id));
     } catch (err) {
-      this.logger.warn(`refresh cache invalidation failed: ${(err as Error).message}`);
+      this.logger.warn(
+        `refresh cache invalidation failed: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -143,12 +153,18 @@ export class UserRepository implements IUserRepository {
     try {
       return await this.redis.get(key);
     } catch (err) {
-      this.logger.warn(`cache get failed (${key}) — treating as miss: ${(err as Error).message}`);
+      this.logger.warn(
+        `cache get failed (${key}) — treating as miss: ${(err as Error).message}`,
+      );
       return null;
     }
   }
 
-  private async cacheSet(key: string, value: string, ttl: number): Promise<void> {
+  private async cacheSet(
+    key: string,
+    value: string,
+    ttl: number,
+  ): Promise<void> {
     try {
       await this.redis.set(key, value, ttl);
     } catch (err) {

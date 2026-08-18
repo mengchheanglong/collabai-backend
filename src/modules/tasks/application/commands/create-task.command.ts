@@ -6,7 +6,7 @@ export class CreateTaskCommand {
   constructor(
     public readonly actingUserId: string,
     public readonly projectId: string,
-    public readonly boardId: string,
+    public readonly boardId: string | undefined,
     public readonly title: string,
     public readonly description?: string,
     public readonly status?: TaskStatus,
@@ -14,5 +14,6 @@ export class CreateTaskCommand {
     public readonly assigneeId?: string,
     public readonly dueDate?: Date,
     public readonly labels?: string[],
+    public readonly subtasks?: string[],
   ) {}
 }

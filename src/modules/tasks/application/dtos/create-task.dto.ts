@@ -19,9 +19,10 @@ export class CreateTaskDto {
   @IsUUID()
   projectId: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
   @IsUUID()
-  boardId: string;
+  boardId?: string;
 
   @ApiProperty({ example: 'Build login page', minLength: 2, maxLength: 150 })
   @IsString()
@@ -61,4 +62,11 @@ export class CreateTaskDto {
   @IsString({ each: true })
   @ArrayMaxSize(20)
   labels?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['Write unit tests', 'Code review'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(50)
+  subtasks?: string[];
 }

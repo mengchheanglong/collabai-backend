@@ -25,7 +25,13 @@ import { RedisService } from './services/redis.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [PrismaService, JwtService, EmailService, LoggerService, RedisService],
+  providers: [
+    PrismaService,
+    JwtService,
+    EmailService,
+    LoggerService,
+    RedisService,
+  ],
   exports: [
     PrismaService,
     JwtService,

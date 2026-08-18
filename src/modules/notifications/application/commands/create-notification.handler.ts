@@ -12,9 +12,7 @@ import {
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 
 @CommandHandler(CreateNotificationCommand)
-export class CreateNotificationHandler
-  implements ICommandHandler<CreateNotificationCommand>
-{
+export class CreateNotificationHandler implements ICommandHandler<CreateNotificationCommand> {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly repo: INotificationRepository,

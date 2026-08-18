@@ -6,7 +6,10 @@ import {
   BOARD_REPOSITORY,
   type BoardView,
 } from '../../domain/repositories/board.repository.interface';
-import { PROJECT_REPOSITORY, type IProjectRepository } from '../../../projects/domain/repositories/project.repository.interface';
+import {
+  PROJECT_REPOSITORY,
+  type IProjectRepository,
+} from '../../../projects/domain/repositories/project.repository.interface';
 import { BoardForbiddenError } from '../errors/board.errors';
 
 import type { IBoardRepository } from '../../domain/repositories/board.repository.interface';
@@ -15,7 +18,8 @@ import type { IBoardRepository } from '../../domain/repositories/board.repositor
 export class GetBoardsHandler implements IQueryHandler<GetBoardsQuery> {
   constructor(
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
-    @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectRepo: IProjectRepository,
   ) {}
 
   async execute(query: GetBoardsQuery): Promise<BoardView[]> {

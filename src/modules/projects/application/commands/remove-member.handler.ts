@@ -20,9 +20,7 @@ import {
 } from '../errors/project.errors';
 
 @CommandHandler(RemoveMemberCommand)
-export class RemoveMemberHandler
-  implements ICommandHandler<RemoveMemberCommand>
-{
+export class RemoveMemberHandler implements ICommandHandler<RemoveMemberCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,

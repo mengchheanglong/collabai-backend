@@ -22,10 +22,7 @@ const CommandHandlers = [
   DeleteBoardHandler,
 ];
 
-const QueryHandlers = [
-  GetBoardsHandler,
-  GetBoardHandler,
-];
+const QueryHandlers = [GetBoardsHandler, GetBoardHandler];
 
 @Module({
   imports: [CqrsModule, SharedModule, AuthModule, ProjectsModule],

@@ -11,9 +11,7 @@ import {
 import { AiAccessService } from '../services/ai-access.service';
 
 @CommandHandler(SuggestSubtasksCommand)
-export class SuggestSubtasksHandler
-  implements ICommandHandler<SuggestSubtasksCommand>
-{
+export class SuggestSubtasksHandler implements ICommandHandler<SuggestSubtasksCommand> {
   constructor(
     @Inject(AI_PROVIDER) private readonly ai: IAiProvider,
     private readonly access: AiAccessService,

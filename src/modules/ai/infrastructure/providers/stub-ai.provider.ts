@@ -6,13 +6,34 @@
 
 import {
   GenerateDescriptionInput,
+  GenerateTasksInput,
   IAiProvider,
+  StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
   TaskSearchInterpretation,
 } from '../../domain/services/ai-provider.interface';
 
 export class StubAiProvider implements IAiProvider {
+  async generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]> {
+    const count = Math.min(Math.max(input.count, 1), 15);
+    const results: StructuredTask[] = [];
+    for (let i = 1; i <= count; i++) {
+      results.push({
+        title: `Task ${i}: ${input.prompt.slice(0, 60)}`,
+        description: `Execute part ${i} for "${input.prompt}": define objectives, methodology, and outcome measures.`,
+        subtasks: [
+          `Prepare materials and setup for phase ${i}`,
+          `Execute step ${i} procedures`,
+          `Record outcomes and observations`,
+          `Review findings and finalize phase ${i}`,
+        ],
+        priority: i === 1 ? 'high' : 'medium',
+        labels: ['plan', 'ai-generated'],
+      });
+    }
+    return results;
+  }
   async suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]> {
     const base = [
       `Break down "${input.title}" into concrete steps`,
@@ -26,9 +47,7 @@ export class StubAiProvider implements IAiProvider {
     return base.slice(0, Math.min(input.count, base.length));
   }
 
-  async generateDescription(
-    input: GenerateDescriptionInput,
-  ): Promise<string> {
+  async generateDescription(input: GenerateDescriptionInput): Promise<string> {
     switch (input.mode) {
       case 'improve':
         return `${(input.currentDescription ?? '').trim()} (clarified: goals, acceptance criteria, and edge cases for "${input.title}".)`.trim();

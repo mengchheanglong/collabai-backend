@@ -17,9 +17,7 @@ import {
 import { TaskNotFoundError } from '../errors/ai.errors';
 
 @CommandHandler(SummarizeCommentsCommand)
-export class SummarizeCommentsHandler
-  implements ICommandHandler<SummarizeCommentsCommand>
-{
+export class SummarizeCommentsHandler implements ICommandHandler<SummarizeCommentsCommand> {
   constructor(
     @Inject(AI_PROVIDER) private readonly ai: IAiProvider,
     @Inject(COMMENT_REPOSITORY) private readonly comments: ICommentRepository,
