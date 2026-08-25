@@ -108,3 +108,20 @@ export class GenerateTasksDto {
   @Max(15)
   count?: number;
 }
+
+export class ChatDto {
+  @ApiProperty({ example: 'What tasks do we need to finish this sprint?' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(5000)
+  message: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}

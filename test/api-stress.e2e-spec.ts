@@ -759,6 +759,25 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
       expect(res.body.tasks.length).toBe(3);
       expect(res.body.tasks[0].title).toBeDefined();
     });
+
+    it('1.5.6 Conversational AI chat with project context', async () => {
+      const res = await request(server)
+        .post('/ai/chat')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          message: 'What tasks do we have planned for this project?',
+          history: [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Hi! How can I help?' },
+          ],
+        })
+        .expect(200);
+
+      expect(res.body.reply).toBeDefined();
+      expect(typeof res.body.reply).toBe('string');
+      expect(res.body.reply.length).toBeGreaterThan(0);
+    });
   });
 
   // ==========================================

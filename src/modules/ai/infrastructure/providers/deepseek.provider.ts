@@ -5,6 +5,7 @@
 import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import {
+  ChatInput,
   GenerateDescriptionInput,
   GenerateTasksInput,
   IAiProvider,
@@ -121,6 +122,46 @@ Respond with ONLY a JSON object with optional keys: q, status, label, dueBefore 
       this.warn('interpretSearch', err);
     }
     return this.fallback.interpretSearch(query);
+  }
+
+  async chat(input: ChatInput): Promise<string> {
+    try {
+      const systemPrompt = `You are CollabAI, an intelligent, helpful, and highly capable AI assistant built directly into the project workspace.
+You assist team members with project planning, task management, brainstorming, answering technical/domain questions, summarizing progress, and having natural, productive conversations.
+Reply clearly and concisely using GitHub-flavored markdown.
+
+Context Information:
+- Active Project: ${input.context?.projectName ?? 'None'}
+- Project Description: ${input.context?.projectDescription ?? 'None'}
+- Team Members: ${input.context?.membersSummary ?? 'None'}
+- Tasks Overview: ${input.context?.tasksSummary ?? 'None'}`;
+
+      const messages: Array<{
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+      }> = [{ role: 'system', content: systemPrompt }];
+
+      if (input.history && input.history.length > 0) {
+        for (const h of input.history.slice(-8)) {
+          messages.push({ role: h.role, content: h.content });
+        }
+      }
+
+      messages.push({ role: 'user', content: input.message });
+
+      const res = await this.client.chat.completions.create({
+        model: this.modelName,
+        messages,
+        temperature: 0.7,
+        max_tokens: 2048,
+      });
+
+      const reply = res.choices[0]?.message?.content?.trim();
+      if (reply) return reply;
+    } catch (err) {
+      this.warn('chat', err);
+    }
+    return this.fallback.chat(input);
   }
 
   private async complete(system: string, user: string): Promise<string> {
