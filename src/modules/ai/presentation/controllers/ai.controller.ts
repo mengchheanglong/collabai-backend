@@ -24,8 +24,10 @@ import { GenerateDescriptionCommand } from '../../application/commands/generate-
 import { SummarizeCommentsCommand } from '../../application/commands/summarize-comments.command';
 import { SearchTasksCommand } from '../../application/commands/search-tasks.command';
 import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
+import { ChatCommand } from '../../application/commands/chat.command';
 
 import {
+  ChatDto,
   GenerateDescriptionDto,
   GenerateTasksDto,
   SearchTasksDto,
@@ -110,6 +112,18 @@ export class AiController {
   ) {
     return this.commandBus.execute(
       new GenerateTasksCommand(userId, dto.projectId, dto.prompt, dto.count ?? 5),
+    );
+  }
+
+  @Post('chat')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Conversational project assistant chat' })
+  async chat(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ChatDto,
+  ) {
+    return this.commandBus.execute(
+      new ChatCommand(userId, dto.message, dto.projectId, dto.history),
     );
   }
 }

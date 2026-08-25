@@ -759,6 +759,25 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
       expect(res.body.tasks.length).toBe(3);
       expect(res.body.tasks[0].title).toBeDefined();
     });
+
+    it('1.5.6 Conversational AI chat with project context', async () => {
+      const res = await request(server)
+        .post('/ai/chat')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          message: 'What tasks do we have planned for this project?',
+          history: [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Hi! How can I help?' },
+          ],
+        })
+        .expect(200);
+
+      expect(res.body.reply).toBeDefined();
+      expect(typeof res.body.reply).toBe('string');
+      expect(res.body.reply.length).toBeGreaterThan(0);
+    });
   });
 
   // ==========================================
@@ -825,6 +844,114 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
         where: { email: freshEmail },
       });
       expect(verifiedUser?.emailVerified).toBe(true);
+    });
+
+    it('1.6.6 Ingests XSS, script tags, and Unicode in task creation safely', async () => {
+      const xssTitle = '<script>alert("XSS")</script> & 🚀 កិច្ចការពិសេស #1';
+      const xssDesc = '<img src="x" onerror="alert(1)"> Multi-byte UTF-8: 汉字, العربية, 🚀, $100 & %20';
+
+      const res = await request(server)
+        .post('/tasks')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          boardId: projectABoardId,
+          title: xssTitle,
+          description: xssDesc,
+          priority: 'high',
+          labels: ['<script>', 'unicode-🏷️', 'test'],
+        })
+        .expect(201);
+
+      expect(res.body.task).toBeDefined();
+      expect(res.body.task.title).toBe(xssTitle);
+      expect(res.body.task.description).toBe(xssDesc);
+      expect(res.body.task.labels).toContain('unicode-🏷️');
+    });
+
+    it('1.6.7 Handles 2,500+ character string lengths in task description without truncation', async () => {
+      const longDesc = 'A'.repeat(2500);
+      const res = await request(server)
+        .post('/tasks')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          boardId: projectABoardId,
+          title: 'Extreme String Length Task',
+          description: longDesc,
+          priority: 'medium',
+        })
+        .expect(201);
+
+      expect(res.body.task.description.length).toBe(2500);
+    });
+
+    it('1.6.8 Rejects forged and malformed JWT tokens with 401', async () => {
+      await request(server)
+        .get('/auth/me')
+        .set('Authorization', 'Bearer null')
+        .expect(401);
+
+      const forgedJwt =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTYiLCJlbWFpbCI6ImhhY2tlckBleGFtcGxlLmNvbSJ9.InvalidSignatureHere12345';
+      await request(server)
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${forgedJwt}`)
+        .expect(401);
+    });
+
+    it('1.6.9 Handles SQL/NoSQL injection payloads in task search queries safely', async () => {
+      const injectionQueries = [
+        "' OR '1'='1",
+        "'; DROP TABLE tasks; --",
+        '{"$gt": ""}',
+        "admin'--",
+        '<script>/*test*/</script>',
+      ];
+
+      for (const q of injectionQueries) {
+        const res = await request(server)
+          .get(`/projects/${projectAId}/tasks?q=${encodeURIComponent(q)}`)
+          .set('Authorization', `Bearer ${userA.token}`)
+          .expect(200);
+
+        expect(res.body.items).toBeDefined();
+        expect(Array.isArray(res.body.items)).toBe(true);
+      }
+    });
+
+    it('1.6.10 State Machine: Moving task to done sets completedAt; moving back resets completedAt', async () => {
+      const createRes = await request(server)
+        .post('/tasks')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          boardId: projectABoardId,
+          title: 'State Machine Timestamp Lifecycle Task',
+          status: 'todo',
+        })
+        .expect(201);
+      const stateTaskId = createRes.body.task._id || createRes.body.task.id;
+
+      // Move to done
+      const doneRes = await request(server)
+        .patch(`/tasks/${stateTaskId}/move`)
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({ status: 'done', position: 5000 })
+        .expect(200);
+
+      expect(doneRes.body.task.status).toBe('done');
+      expect(doneRes.body.task.completedAt).toBeDefined();
+
+      // Move back to in_progress
+      const inProgRes = await request(server)
+        .patch(`/tasks/${stateTaskId}/move`)
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({ status: 'in_progress', position: 1000 })
+        .expect(200);
+
+      expect(inProgRes.body.task.status).toBe('in_progress');
+      expect(inProgRes.body.task.completedAt).toBeNull();
     });
   });
 });

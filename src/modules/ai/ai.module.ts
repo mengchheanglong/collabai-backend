@@ -26,6 +26,7 @@ import { GenerateDescriptionHandler } from './application/commands/generate-desc
 import { SummarizeCommentsHandler } from './application/commands/summarize-comments.handler';
 import { SearchTasksHandler } from './application/commands/search-tasks.handler';
 import { GenerateTasksHandler } from './application/commands/generate-tasks.handler';
+import { ChatHandler } from './application/commands/chat.handler';
 
 const CommandHandlers = [
   SuggestSubtasksHandler,
@@ -33,6 +34,7 @@ const CommandHandlers = [
   SummarizeCommentsHandler,
   SearchTasksHandler,
   GenerateTasksHandler,
+  ChatHandler,
 ];
 
 @Module({

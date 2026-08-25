@@ -106,6 +106,37 @@ export class StubAiProvider implements IAiProvider {
       },
     };
   }
+
+  async chat(input: {
+    message: string;
+    context?: {
+      projectName?: string;
+      projectDescription?: string;
+      tasksSummary?: string;
+      membersSummary?: string;
+    };
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  }): Promise<string> {
+    const msg = input.message.toLowerCase();
+    const proj = input.context?.projectName ?? 'your project';
+
+    if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+      return `Hello! I'm CollabAI. How can I help you manage **${proj}** today? You can ask me to create tasks, update priorities, assign work, or brainstorm project ideas.`;
+    }
+    if (msg.includes('how are you')) {
+      return `I'm doing great and ready to assist you with **${proj}**! What would you like to work on next?`;
+    }
+    if (msg.includes('summary') || msg.includes('status') || msg.includes('progress')) {
+      if (input.context?.tasksSummary) {
+        return `### 📋 Project Overview for **${proj}**\n\n${input.context.tasksSummary}\n\nLet me know if you want to organize, prioritize, or assign any of these tasks!`;
+      }
+      return `Here to help track **${proj}**. Let me know what specific tasks or team members you'd like to check on.`;
+    }
+    if (msg.includes('help') || msg.includes('what can you do')) {
+      return `I can help you:\n- **Manage tasks**: create, assign, change status/priority, and set due dates.\n- **Brainstorm**: generate structured task lists and breakdown complex goals.\n- **Search & Filter**: find specific tasks and filter your board.\n- **Collaborate**: post comments and summarize team discussions.\n\nYou can talk to me naturally (e.g. *"create a task for Sunday outing"*, *"set priority to high and assign it to Mengchheang"*), or use slash commands like \`/create\`, \`/task\`, and \`/filter\`.`;
+    }
+    return `I understand you're asking about "${input.message}". For **${proj}**, I can assist with planning, task updates, role assignments, and team coordination. How would you like to proceed?`;
+  }
 }
 
 function addDays(date: Date, days: number): Date {

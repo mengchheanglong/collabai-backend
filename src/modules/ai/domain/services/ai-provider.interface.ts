@@ -51,10 +51,24 @@ export interface GenerateTasksInput {
   count: number;
 }
 
+export interface ChatContext {
+  projectName?: string;
+  projectDescription?: string;
+  tasksSummary?: string;
+  membersSummary?: string;
+}
+
+export interface ChatInput {
+  message: string;
+  context?: ChatContext;
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
 export interface IAiProvider {
   suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]>;
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
   summarizeComments(input: SummarizeCommentsInput): Promise<string>;
   interpretSearch(query: string): Promise<TaskSearchInterpretation>;
   generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]>;
+  chat(input: ChatInput): Promise<string>;
 }
