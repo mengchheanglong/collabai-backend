@@ -27,7 +27,9 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
     const policy = this.authDomain.validatePasswordPolicy(command.newPassword);
     if (!policy.valid) throw new WeakPasswordError(policy.errors);
 
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (!user) throw new UserNotFoundError();
 
     const passwordHash = (await Password.fromPlain(command.newPassword)).value;

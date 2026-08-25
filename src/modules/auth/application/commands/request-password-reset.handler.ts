@@ -27,7 +27,9 @@ export class RequestPasswordResetHandler implements ICommandHandler<RequestPassw
   async execute(
     command: RequestPasswordResetCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (user) {
       const code = this.authDomain.generateNumericCode(
         VERIFICATION_CODE_LENGTH,

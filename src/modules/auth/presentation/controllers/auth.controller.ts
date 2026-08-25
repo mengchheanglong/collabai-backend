@@ -197,7 +197,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.readEmailCookie(req, COOKIE.registrationVerification);
+    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto.email);
     await this.commandBus.execute(new VerifyEmailCommand(email, dto.code));
     this.clearCookie(res, COOKIE.registrationVerification);
     return { success: true };
@@ -210,15 +210,16 @@ export class AuthController {
   @ApiOperation({
     summary: 'Resend email verification code',
     description:
-      'No request body — the email is read from the `registration_verification` cookie. ' +
+      'The email is read from the `registration_verification` cookie or optional request body/query. ' +
       'Always returns success (email-enumeration protection).',
   })
   @ApiOkResponse({ type: MessageResponseDto })
   async resendEmailVerification(
+    @Body() dto: Partial<VerifyEmailDto>,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.readEmailCookie(req, COOKIE.registrationVerification);
+    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto?.email);
     await this.commandBus.execute(new ResendEmailVerificationCommand(email));
     // Refresh the cookie (always — success regardless of whether the email exists).
     this.setCookie(
@@ -500,6 +501,21 @@ export class AuthController {
     ];
   }
 
+  private resolveEmail(
+    req: Request,
+    name: string,
+    fallbackEmail?: string,
+  ): string {
+    const raw = this.cookie(req, name);
+    if (raw) return decodeEmail(raw).trim().toLowerCase();
+    if (fallbackEmail?.trim()) return fallbackEmail.trim().toLowerCase();
+    const queryEmail = (req.query?.['email'] as string)?.trim().toLowerCase();
+    if (queryEmail) return queryEmail;
+    throw new BadRequestException(
+      'No verification session in progress. Please restart the flow.',
+    );
+  }
+
   private readEmailCookie(req: Request, name: string): string {
     const raw = this.cookie(req, name);
     if (!raw) {
@@ -507,7 +523,7 @@ export class AuthController {
         'No verification session in progress. Please restart the flow.',
       );
     }
-    return decodeEmail(raw);
+    return decodeEmail(raw).trim().toLowerCase();
   }
 
   private setCookie(
