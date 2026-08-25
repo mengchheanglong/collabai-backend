@@ -1,7 +1,5 @@
-// src/modules/auth/application/dtos/verify-email.dto.ts
-// The email is read from the `registration_verification` httpOnly cookie, not the body.
-import { IsString, Matches } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class VerifyEmailDto {
   @ApiProperty({
@@ -12,4 +10,12 @@ export class VerifyEmailDto {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'code must be a 6-digit number' })
   code: string;
+
+  @ApiPropertyOptional({
+    example: 'user@example.com',
+    description: 'Optional email fallback if registration_verification cookie is absent.',
+  })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }

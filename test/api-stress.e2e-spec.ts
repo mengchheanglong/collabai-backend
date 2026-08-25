@@ -742,6 +742,23 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
       expect(res.body.taskIds).toBeDefined();
       expect(Array.isArray(res.body.taskIds)).toBe(true);
     });
+
+    it('1.5.5 Generates structured tasks via AI endpoint', async () => {
+      const res = await request(server)
+        .post('/ai/generate-tasks')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({
+          projectId: projectAId,
+          prompt: 'Implement end-to-end integration tests for payment module',
+          count: 3,
+        })
+        .expect(200);
+
+      expect(res.body.tasks).toBeDefined();
+      expect(Array.isArray(res.body.tasks)).toBe(true);
+      expect(res.body.tasks.length).toBe(3);
+      expect(res.body.tasks[0].title).toBeDefined();
+    });
   });
 
   // ==========================================
@@ -767,6 +784,47 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
         .get('/boards/invalid-uuid-format')
         .set('Authorization', `Bearer ${userA.token}`)
         .expect(404);
+    });
+
+    it('1.6.4 Case-insensitive email login works seamlessly', async () => {
+      const upperEmail = userA.email.toUpperCase();
+      const loginRes = await request(server)
+        .post('/auth/login')
+        .send({ email: upperEmail, password: 'StrongPassword123!' })
+        .expect(200);
+
+      expect(loginRes.body.accessToken).toBeDefined();
+    });
+
+    it('1.6.5 Verify-email with body fallback succeeds without cookies', async () => {
+      const freshEmail = `fallback_verify_${Date.now()}@example.com`;
+      testEmails.push(freshEmail);
+
+      // Register without cookie persistence
+      await request(server)
+        .post('/auth/register')
+        .send({
+          email: freshEmail,
+          password: 'StrongPassword123!',
+          firstName: 'Fallback',
+          lastName: 'Tester',
+        })
+        .expect(201);
+
+      const code = (
+        await prisma.user.findUnique({ where: { email: freshEmail } })
+      )?.verificationCode;
+
+      // Call verify-email directly without cookie, providing email in body
+      await request(server)
+        .post('/auth/verify-email')
+        .send({ code, email: freshEmail.toUpperCase() })
+        .expect(200);
+
+      const verifiedUser = await prisma.user.findUnique({
+        where: { email: freshEmail },
+      });
+      expect(verifiedUser?.emailVerified).toBe(true);
     });
   });
 });

@@ -21,7 +21,9 @@ export class VerifyPasswordResetHandler implements ICommandHandler<VerifyPasswor
   async execute(
     command: VerifyPasswordResetCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (!user) throw new InvalidCodeError();
     if (user.passwordResetCode !== command.code) throw new InvalidCodeError();
     if (this.authDomain.isCodeExpired(user.passwordResetCodeExpiry)) {

@@ -27,7 +27,9 @@ export class ResendEmailVerificationHandler implements ICommandHandler<ResendEma
   async execute(
     command: ResendEmailVerificationCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     // Only regenerate for an existing, still-unverified account.
     if (user && !user.isVerified) {
       const code = this.authDomain.generateNumericCode(

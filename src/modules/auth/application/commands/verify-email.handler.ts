@@ -23,7 +23,9 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
   ) {}
 
   async execute(command: VerifyEmailCommand): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (!user) throw new InvalidCodeError();
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
     if (user.verificationCode !== command.code) throw new InvalidCodeError();
