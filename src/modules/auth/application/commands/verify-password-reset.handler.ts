@@ -12,9 +12,7 @@ import { AuthDomainService } from '../../domain/services/auth.domain.service';
 import { CodeExpiredError, InvalidCodeError } from '../errors/auth.errors';
 
 @CommandHandler(VerifyPasswordResetCommand)
-export class VerifyPasswordResetHandler
-  implements ICommandHandler<VerifyPasswordResetCommand>
-{
+export class VerifyPasswordResetHandler implements ICommandHandler<VerifyPasswordResetCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,
@@ -23,7 +21,9 @@ export class VerifyPasswordResetHandler
   async execute(
     command: VerifyPasswordResetCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (!user) throw new InvalidCodeError();
     if (user.passwordResetCode !== command.code) throw new InvalidCodeError();
     if (this.authDomain.isCodeExpired(user.passwordResetCodeExpiry)) {

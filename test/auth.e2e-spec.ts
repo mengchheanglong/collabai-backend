@@ -74,7 +74,7 @@ describe('Auth flows (e2e)', () => {
 
     await agent
       .post('/auth/register')
-      .send({ email, password, name: 'Flow One' })
+      .send({ email, password, firstName: 'Flow', lastName: 'One' })
       .expect(201);
 
     const code = await verificationCode(email);
@@ -112,7 +112,7 @@ describe('Auth flows (e2e)', () => {
 
     await agent
       .post('/auth/register')
-      .send({ email, password, name: 'Flow Two' })
+      .send({ email, password, firstName: 'Flow', lastName: 'Two' })
       .expect(201);
     await agent
       .post('/auth/verify-email')
@@ -121,7 +121,10 @@ describe('Auth flows (e2e)', () => {
     await agent.post('/auth/login').send({ email, password }).expect(200);
 
     // 3-step reset.
-    await agent.post('/auth/request-password-reset').send({ email }).expect(200);
+    await agent
+      .post('/auth/request-password-reset')
+      .send({ email })
+      .expect(200);
     const code = await resetCode(email);
     expect(code).toMatch(/^\d{6}$/);
     await agent.post('/auth/verify-password-reset').send({ code }).expect(200);
@@ -149,7 +152,7 @@ describe('Auth flows (e2e)', () => {
 
     await agent
       .post('/auth/register')
-      .send({ email, password, name: 'Flow Three' })
+      .send({ email, password, firstName: 'Flow', lastName: 'Three' })
       .expect(201);
     await agent
       .post('/auth/verify-email')
@@ -179,7 +182,7 @@ describe('Auth flows (e2e)', () => {
       .expect(401);
 
     // Client sees a generic invalid-token response (NOT "reuse") — no extra info leaked.
-    expect(replay.body.code).toBe('INVALID_REFRESH_TOKEN');
+    expect(replay.body.error.code).toBe('INVALID_REFRESH_TOKEN');
 
     // Server-side: a distinct security-alert log line fired.
     const alerted = securitySpy.mock.calls.some((args) =>

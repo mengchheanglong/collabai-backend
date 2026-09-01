@@ -39,6 +39,7 @@ export interface TaskView {
 }
 
 export interface TaskFilters {
+  boardId?: string;
   status?: TaskStatus;
   assigneeId?: string;
   q?: string;

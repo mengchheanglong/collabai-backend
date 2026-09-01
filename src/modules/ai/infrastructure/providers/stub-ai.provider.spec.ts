@@ -19,7 +19,9 @@ describe('StubAiProvider', () => {
   });
 
   it('summarize handles an empty thread', async () => {
-    expect(await provider.summarizeComments({ comments: [] })).toMatch(/no comments/i);
+    expect(await provider.summarizeComments({ comments: [] })).toMatch(
+      /no comments/i,
+    );
   });
 
   describe('interpretSearch', () => {

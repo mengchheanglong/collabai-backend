@@ -11,15 +11,10 @@ import {
   TaskView,
 } from '../../domain/repositories/task.repository.interface';
 import { TaskAccessService } from '../services/task-access.service';
-import {
-  SubtaskNotFoundError,
-  TaskNotFoundError,
-} from '../errors/task.errors';
+import { SubtaskNotFoundError, TaskNotFoundError } from '../errors/task.errors';
 
 @CommandHandler(UpdateSubtaskCommand)
-export class UpdateSubtaskHandler
-  implements ICommandHandler<UpdateSubtaskCommand>
-{
+export class UpdateSubtaskHandler implements ICommandHandler<UpdateSubtaskCommand> {
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,

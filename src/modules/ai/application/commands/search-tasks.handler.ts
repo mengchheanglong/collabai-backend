@@ -22,12 +22,11 @@ import {
 export interface SearchTasksResult {
   interpretedQuery: Record<string, unknown>;
   tasks: TaskResponse[];
+  taskIds: string[];
 }
 
 @CommandHandler(SearchTasksCommand)
-export class SearchTasksHandler
-  implements ICommandHandler<SearchTasksCommand>
-{
+export class SearchTasksHandler implements ICommandHandler<SearchTasksCommand> {
   constructor(
     @Inject(AI_PROVIDER) private readonly ai: IAiProvider,
     @Inject(TASK_REPOSITORY) private readonly tasks: ITaskRepository,
@@ -50,6 +49,7 @@ export class SearchTasksHandler
     return {
       interpretedQuery: interpretation.raw,
       tasks: result.items.map(toTaskResponse),
+      taskIds: result.items.map((i) => i.id),
     };
   }
 }

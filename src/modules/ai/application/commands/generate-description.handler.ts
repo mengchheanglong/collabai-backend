@@ -11,9 +11,7 @@ import {
 import { AiAccessService } from '../services/ai-access.service';
 
 @CommandHandler(GenerateDescriptionCommand)
-export class GenerateDescriptionHandler
-  implements ICommandHandler<GenerateDescriptionCommand>
-{
+export class GenerateDescriptionHandler implements ICommandHandler<GenerateDescriptionCommand> {
   constructor(
     @Inject(AI_PROVIDER) private readonly ai: IAiProvider,
     private readonly access: AiAccessService,

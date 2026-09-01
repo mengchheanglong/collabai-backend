@@ -12,9 +12,7 @@ import {
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 
 @QueryHandler(GetUserNotificationsQuery)
-export class GetUserNotificationsHandler
-  implements IQueryHandler<GetUserNotificationsQuery>
-{
+export class GetUserNotificationsHandler implements IQueryHandler<GetUserNotificationsQuery> {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly repo: INotificationRepository,

@@ -17,9 +17,7 @@ import {
 } from '../auth.constants';
 
 @CommandHandler(RequestPasswordResetCommand)
-export class RequestPasswordResetHandler
-  implements ICommandHandler<RequestPasswordResetCommand>
-{
+export class RequestPasswordResetHandler implements ICommandHandler<RequestPasswordResetCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,
@@ -29,9 +27,13 @@ export class RequestPasswordResetHandler
   async execute(
     command: RequestPasswordResetCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (user) {
-      const code = this.authDomain.generateNumericCode(VERIFICATION_CODE_LENGTH);
+      const code = this.authDomain.generateNumericCode(
+        VERIFICATION_CODE_LENGTH,
+      );
       const expiry = this.authDomain.computeExpiry(
         PASSWORD_RESET_CODE_TTL_MINUTES,
       );

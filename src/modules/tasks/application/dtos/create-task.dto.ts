@@ -15,13 +15,22 @@ import { TASK_STATUSES } from '../../domain/value-objects/task-status.value-obje
 import { TASK_PRIORITIES } from '../../domain/value-objects/task-priority.value-object';
 
 export class CreateTaskDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Client-assigned UUID for offline mutation sync',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   projectId: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
   @IsUUID()
-  boardId: string;
+  boardId?: string;
 
   @ApiProperty({ example: 'Build login page', minLength: 2, maxLength: 150 })
   @IsString()
@@ -61,4 +70,11 @@ export class CreateTaskDto {
   @IsString({ each: true })
   @ArrayMaxSize(20)
   labels?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['Write unit tests', 'Code review'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(50)
+  subtasks?: string[];
 }

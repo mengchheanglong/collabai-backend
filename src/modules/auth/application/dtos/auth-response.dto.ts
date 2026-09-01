@@ -7,7 +7,8 @@ import { ApiProperty } from '@nestjs/swagger';
 /** login / refresh-token success body. */
 export class AuthResponseDto {
   @ApiProperty({
-    description: 'Short-lived JWT access token. Send as `Authorization: Bearer <token>`.',
+    description:
+      'Short-lived JWT access token. Send as `Authorization: Bearer <token>`.',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   accessToken: string;

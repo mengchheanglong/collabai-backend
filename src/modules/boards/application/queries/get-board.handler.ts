@@ -7,8 +7,14 @@ import {
   type BoardView,
   type BoardWithTasksView,
 } from '../../domain/repositories/board.repository.interface';
-import { PROJECT_REPOSITORY, type IProjectRepository } from '../../../projects/domain/repositories/project.repository.interface';
-import { BoardForbiddenError, BoardNotFoundError } from '../errors/board.errors';
+import {
+  PROJECT_REPOSITORY,
+  type IProjectRepository,
+} from '../../../projects/domain/repositories/project.repository.interface';
+import {
+  BoardForbiddenError,
+  BoardNotFoundError,
+} from '../errors/board.errors';
 
 import type { IBoardRepository } from '../../domain/repositories/board.repository.interface';
 
@@ -16,7 +22,8 @@ import type { IBoardRepository } from '../../domain/repositories/board.repositor
 export class GetBoardHandler implements IQueryHandler<GetBoardQuery> {
   constructor(
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
-    @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectRepo: IProjectRepository,
   ) {}
 
   async execute(query: GetBoardQuery): Promise<BoardView | BoardWithTasksView> {

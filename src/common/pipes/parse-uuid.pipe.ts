@@ -3,11 +3,7 @@
 // Generic UUID validation pipe for route params (e.g. @Param('id', ParseUuidPipe)).
 // Uses class-validator's isUUID so there's no extra dependency wiring. Reusable.
 
-import {
-  BadRequestException,
-  Injectable,
-  PipeTransform,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
 @Injectable()

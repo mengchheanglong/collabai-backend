@@ -17,9 +17,7 @@ import {
 } from '../auth.constants';
 
 @CommandHandler(ResendPasswordResetVerificationCommand)
-export class ResendPasswordResetVerificationHandler
-  implements ICommandHandler<ResendPasswordResetVerificationCommand>
-{
+export class ResendPasswordResetVerificationHandler implements ICommandHandler<ResendPasswordResetVerificationCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,
@@ -31,7 +29,9 @@ export class ResendPasswordResetVerificationHandler
   ): Promise<{ success: true }> {
     const user = await this.userRepo.findByEmail(command.email);
     if (user) {
-      const code = this.authDomain.generateNumericCode(VERIFICATION_CODE_LENGTH);
+      const code = this.authDomain.generateNumericCode(
+        VERIFICATION_CODE_LENGTH,
+      );
       const expiry = this.authDomain.computeExpiry(
         PASSWORD_RESET_CODE_TTL_MINUTES,
       );

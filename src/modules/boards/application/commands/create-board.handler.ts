@@ -8,8 +8,14 @@ import {
   type BoardView,
 } from '../../domain/repositories/board.repository.interface';
 import { BoardEntity } from '../../domain/entities/board.entity';
-import { DuplicateBoardNameError, BoardForbiddenError } from '../errors/board.errors';
-import { PROJECT_REPOSITORY, type IProjectRepository } from '../../../projects/domain/repositories/project.repository.interface';
+import {
+  DuplicateBoardNameError,
+  BoardForbiddenError,
+} from '../errors/board.errors';
+import {
+  PROJECT_REPOSITORY,
+  type IProjectRepository,
+} from '../../../projects/domain/repositories/project.repository.interface';
 import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 
 import type { IBoardRepository } from '../../domain/repositories/board.repository.interface';
@@ -18,7 +24,8 @@ import type { IBoardRepository } from '../../domain/repositories/board.repositor
 export class CreateBoardHandler implements ICommandHandler<CreateBoardCommand> {
   constructor(
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
-    @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectRepo: IProjectRepository,
   ) {}
 
   async execute(command: CreateBoardCommand): Promise<BoardView> {
@@ -33,7 +40,7 @@ export class CreateBoardHandler implements ICommandHandler<CreateBoardCommand> {
     const name = command.name.trim();
     // In a real app we might want to check for duplicate board names within the project
     // but for now we'll just allow it unless explicitly specified otherwise.
-    
+
     const board = BoardEntity.create({
       id: uuidv4(),
       projectId: command.projectId,

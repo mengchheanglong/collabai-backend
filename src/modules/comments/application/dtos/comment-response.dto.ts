@@ -5,11 +5,13 @@ import { CommentView } from '../../domain/repositories/comment.repository.interf
 
 export interface CommentResponse {
   id: string;
+  _id?: string;
   taskId: string;
   projectId: string;
   authorId: string;
   author: {
     id: string;
+    _id?: string;
     name: string;
     email: string;
     avatarUrl: string | null;
@@ -22,11 +24,13 @@ export interface CommentResponse {
 export function toCommentResponse(c: CommentView): CommentResponse {
   return {
     id: c.id,
+    _id: c.id,
     taskId: c.taskId,
     projectId: c.projectId,
     authorId: c.authorId,
     author: {
       id: c.author.id,
+      _id: c.author.id,
       name: c.author.name,
       email: c.author.email,
       avatarUrl: c.author.avatarUrl,

@@ -13,9 +13,7 @@ import { CommentAccessService } from '../services/comment-access.service';
 import { TaskNotFoundError } from '../errors/comment.errors';
 
 @QueryHandler(GetTaskCommentsQuery)
-export class GetTaskCommentsHandler
-  implements IQueryHandler<GetTaskCommentsQuery>
-{
+export class GetTaskCommentsHandler implements IQueryHandler<GetTaskCommentsQuery> {
   constructor(
     @Inject(COMMENT_REPOSITORY) private readonly repo: ICommentRepository,
     private readonly access: CommentAccessService,

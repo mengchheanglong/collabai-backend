@@ -4,5 +4,6 @@ export class AddCommentCommand {
     public readonly actingUserId: string,
     public readonly taskId: string,
     public readonly body: string,
+    public readonly id?: string,
   ) {}
 }

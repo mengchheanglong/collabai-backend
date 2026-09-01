@@ -7,11 +7,7 @@ import {
   DuplicateBoardNameError,
 } from '../../application/errors/board.errors';
 
-@Catch(
-  BoardNotFoundError,
-  BoardForbiddenError,
-  DuplicateBoardNameError,
-)
+@Catch(BoardNotFoundError, BoardForbiddenError, DuplicateBoardNameError)
 export class BoardExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();

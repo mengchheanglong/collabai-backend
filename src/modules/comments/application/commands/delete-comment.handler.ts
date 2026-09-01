@@ -16,9 +16,7 @@ import {
 } from '../errors/comment.errors';
 
 @CommandHandler(DeleteCommentCommand)
-export class DeleteCommentHandler
-  implements ICommandHandler<DeleteCommentCommand>
-{
+export class DeleteCommentHandler implements ICommandHandler<DeleteCommentCommand> {
   constructor(
     @Inject(COMMENT_REPOSITORY) private readonly repo: ICommentRepository,
     private readonly access: CommentAccessService,

@@ -3,7 +3,14 @@
 // Analytics endpoints for the project. Uses CQRS queries with Prisma aggregations
 // for the dashboard summary and burndown chart data.
 
-import { Controller, Get, Param, Query, UseGuards, UseFilters } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  UseFilters,
+} from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
@@ -28,7 +35,9 @@ export class ProjectAnalyticsController {
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
   ): Promise<ProjectAnalyticsSummary> {
-    return this.queryBus.execute(new GetProjectAnalyticsSummaryQuery(userId, projectId));
+    return this.queryBus.execute(
+      new GetProjectAnalyticsSummaryQuery(userId, projectId),
+    );
   }
 
   @Get('burndown')

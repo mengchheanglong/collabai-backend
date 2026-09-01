@@ -11,7 +11,10 @@ import {
   type IProjectRepository,
   PROJECT_REPOSITORY,
 } from '../../domain/repositories/project.repository.interface';
-import { NotProjectMemberError, ProjectNotFoundError } from '../errors/project.errors';
+import {
+  NotProjectMemberError,
+  ProjectNotFoundError,
+} from '../errors/project.errors';
 
 export interface BurndownPoint {
   date: string;
@@ -20,16 +23,19 @@ export interface BurndownPoint {
 }
 
 @QueryHandler(GetProjectAnalyticsBurndownQuery)
-export class GetProjectAnalyticsBurndownHandler
-  implements IQueryHandler<GetProjectAnalyticsBurndownQuery>
-{
+export class GetProjectAnalyticsBurndownHandler implements IQueryHandler<GetProjectAnalyticsBurndownQuery> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly prisma: PrismaService,
   ) {}
 
-  async execute(query: GetProjectAnalyticsBurndownQuery): Promise<BurndownPoint[]> {
-    const membership = await this.repo.findMembership(query.projectId, query.userId);
+  async execute(
+    query: GetProjectAnalyticsBurndownQuery,
+  ): Promise<BurndownPoint[]> {
+    const membership = await this.repo.findMembership(
+      query.projectId,
+      query.userId,
+    );
     if (!membership) {
       const exists = await this.repo.findById(query.projectId);
       if (!exists) throw new ProjectNotFoundError();
@@ -70,7 +76,10 @@ export class GetProjectAnalyticsBurndownHandler
 
       // Tasks completed by end of this day
       const completed = tasksOnDay.filter(
-        (t) => t.status === 'done' && t.completedAt != null && t.completedAt <= dayEnd,
+        (t) =>
+          t.status === 'done' &&
+          t.completedAt != null &&
+          t.completedAt <= dayEnd,
       );
       const completedTasks = completed.length;
       const remainingTasks = tasksOnDay.length - completedTasks;

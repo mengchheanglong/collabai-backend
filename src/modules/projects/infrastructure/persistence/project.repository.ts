@@ -6,6 +6,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { ProjectEntity } from '../../domain/entities/project.entity';
 import { ProjectMemberEntity } from '../../domain/entities/project-member.entity';
 import {
@@ -65,6 +66,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async findById(id: string): Promise<ProjectEntity | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.project.findFirst({
       where: { id, deletedAt: null },
     });
@@ -72,6 +74,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async findViewById(id: string): Promise<ProjectView | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.project.findFirst({
       where: { id, deletedAt: null },
       include: projectInclude,
@@ -80,6 +83,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async existsByOwnerAndName(ownerId: string, name: string): Promise<boolean> {
+    if (!isValidUuid(ownerId)) return false;
     const count = await this.prisma.project.count({
       where: { ownerId, name: name.trim(), deletedAt: null },
     });
@@ -87,6 +91,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async update(project: ProjectEntity): Promise<void> {
+    if (!isValidUuid(project.id)) return;
     await this.prisma.project.update({
       where: { id: project.id },
       data: {
@@ -100,6 +105,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async delete(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
     await this.prisma.project.delete({ where: { id } });
   }
 
@@ -107,6 +113,9 @@ export class ProjectRepository implements IProjectRepository {
     userId: string,
     options: ListProjectsOptions,
   ): Promise<Paginated<ProjectView>> {
+    if (!isValidUuid(userId)) {
+      return { items: [], total: 0, page: options.page, limit: options.limit };
+    }
     const where: Prisma.ProjectWhereInput = {
       deletedAt: null,
       members: { some: { userId, isActive: true } },
@@ -140,6 +149,7 @@ export class ProjectRepository implements IProjectRepository {
     projectId: string,
     userId: string,
   ): Promise<ProjectMemberEntity | null> {
+    if (!isValidUuid(projectId) || !isValidUuid(userId)) return null;
     const row = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },
     });
@@ -147,6 +157,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async listMembers(projectId: string): Promise<ProjectMemberView[]> {
+    if (!isValidUuid(projectId)) return [];
     const rows = await this.prisma.projectMember.findMany({
       where: { projectId },
       include: { user: true },
@@ -156,6 +167,12 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async addMember(member: ProjectMemberEntity): Promise<void> {
+    if (
+      !isValidUuid(member.id) ||
+      !isValidUuid(member.projectId) ||
+      !isValidUuid(member.userId)
+    )
+      return;
     await this.prisma.projectMember.create({
       data: {
         id: member.id,
@@ -174,6 +191,7 @@ export class ProjectRepository implements IProjectRepository {
     userId: string,
     role: ProjectRole,
   ): Promise<void> {
+    if (!isValidUuid(projectId) || !isValidUuid(userId)) return;
     await this.prisma.projectMember.update({
       where: { projectId_userId: { projectId, userId } },
       data: { role },
@@ -181,12 +199,14 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   async removeMember(projectId: string, userId: string): Promise<void> {
+    if (!isValidUuid(projectId) || !isValidUuid(userId)) return;
     await this.prisma.projectMember.delete({
       where: { projectId_userId: { projectId, userId } },
     });
   }
 
   async countOwners(projectId: string): Promise<number> {
+    if (!isValidUuid(projectId)) return 0;
     return this.prisma.projectMember.count({
       where: { projectId, role: 'owner' },
     });

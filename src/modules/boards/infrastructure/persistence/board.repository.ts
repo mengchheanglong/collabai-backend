@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { BoardColumn, BoardEntity } from '../../domain/entities/board.entity';
 import {
   IBoardRepository,
@@ -14,6 +15,7 @@ export class BoardRepository implements IBoardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(board: BoardEntity): Promise<void> {
+    if (!isValidUuid(board.id) || !isValidUuid(board.projectId)) return;
     await this.prisma.board.create({
       data: {
         id: board.id,
@@ -26,6 +28,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async findById(id: string): Promise<BoardEntity | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.board.findUnique({
       where: { id },
     });
@@ -33,6 +36,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async findViewById(id: string): Promise<BoardView | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.board.findUnique({
       where: { id },
     });
@@ -40,6 +44,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async findViewWithTasks(id: string): Promise<BoardWithTasksView | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.board.findUnique({
       where: { id },
       include: {
@@ -86,6 +91,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async listForProject(projectId: string): Promise<BoardView[]> {
+    if (!isValidUuid(projectId)) return [];
     const rows = await this.prisma.board.findMany({
       where: { projectId },
       orderBy: { createdAt: 'asc' },
@@ -94,6 +100,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async update(board: BoardEntity): Promise<void> {
+    if (!isValidUuid(board.id)) return;
     await this.prisma.board.update({
       where: { id: board.id },
       data: {
@@ -105,6 +112,7 @@ export class BoardRepository implements IBoardRepository {
   }
 
   async delete(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
     await this.prisma.board.delete({ where: { id } });
   }
 

@@ -13,6 +13,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AiModule } from './modules/ai/ai.module';
 import { BoardsModule } from './modules/boards/boards.module';
+import { SyncModule } from './modules/sync/sync.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -36,6 +37,7 @@ import { authThrottlers } from './config/throttler.config';
     NotificationsModule,
     AiModule,
     BoardsModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],

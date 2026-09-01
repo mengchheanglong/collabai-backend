@@ -34,7 +34,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       lazyConnect: true, // don't connect at construction; onModuleInit does it non-fatally
       enableOfflineQueue: false, // reject commands immediately when down (fail-fast)
       maxRetriesPerRequest: 1,
-      retryStrategy: (times) => (times > 10 ? null : Math.min(times * 200, 2000)),
+      retryStrategy: (times) =>
+        times > 10 ? null : Math.min(times * 200, 2000),
     });
 
     this.client.on('error', (err: Error) => {

@@ -1,14 +1,13 @@
 // src/modules/boards/application/dtos/update-board.dto.ts
-import {
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateBoardDto {
-  @ApiPropertyOptional({ example: 'Sprint 1 Updated', minLength: 2, maxLength: 100 })
+  @ApiPropertyOptional({
+    example: 'Sprint 1 Updated',
+    minLength: 2,
+    maxLength: 100,
+  })
   @IsOptional()
   @IsString()
   @MinLength(2)

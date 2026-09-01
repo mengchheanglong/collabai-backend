@@ -8,8 +8,11 @@
 import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import {
+  ChatInput,
   GenerateDescriptionInput,
+  GenerateTasksInput,
   IAiProvider,
+  StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
   TaskSearchInterpretation,
@@ -28,6 +31,20 @@ export class OpenAiProvider implements IAiProvider {
     this.client = new OpenAI({ apiKey });
   }
 
+  async generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]> {
+    try {
+      const content = await this.complete(
+        'You are an expert project planner and researcher. Break down the request into comprehensive, structured tasks. Reply ONLY with a valid JSON array of objects with the exact schema: [{"title": string, "description": string, "subtasks": string[], "priority": "low"|"medium"|"high"|"urgent", "labels": string[]}]. Do NOT wrap with markdown fences.',
+        `User Prompt / Requirement: "${input.prompt}"\nGenerate exactly ${input.count} distinct, comprehensive, and production-grade tasks. Each task MUST include a concise descriptive title, detailed structured description (e.g. purpose, methodology, outcome measures), 3-5 concrete actionable subtasks, appropriate priority, and relevant tags/labels.`,
+      );
+      const parsed = safeStructuredTasks(content);
+      if (parsed && parsed.length > 0) return parsed.slice(0, input.count);
+    } catch (err) {
+      this.warn('generateTasks', err);
+    }
+    return this.fallback.generateTasks(input);
+  }
+
   async suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]> {
     try {
       const content = await this.complete(
@@ -42,9 +59,7 @@ export class OpenAiProvider implements IAiProvider {
     return this.fallback.suggestSubtasks(input);
   }
 
-  async generateDescription(
-    input: GenerateDescriptionInput,
-  ): Promise<string> {
+  async generateDescription(input: GenerateDescriptionInput): Promise<string> {
     try {
       const instruction =
         input.mode === 'improve'
@@ -116,6 +131,46 @@ export class OpenAiProvider implements IAiProvider {
     return this.fallback.interpretSearch(query);
   }
 
+  async chat(input: ChatInput): Promise<string> {
+    try {
+      const systemPrompt = `You are CollabAI, an intelligent, helpful, and highly capable AI assistant built directly into the project workspace.
+You assist team members with project planning, task management, brainstorming, answering technical/domain questions, summarizing progress, and having natural, productive conversations.
+Reply clearly and concisely using GitHub-flavored markdown.
+
+Context Information:
+- Active Project: ${input.context?.projectName ?? 'None'}
+- Project Description: ${input.context?.projectDescription ?? 'None'}
+- Team Members: ${input.context?.membersSummary ?? 'None'}
+- Tasks Overview: ${input.context?.tasksSummary ?? 'None'}`;
+
+      const messages: Array<{
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+      }> = [{ role: 'system', content: systemPrompt }];
+
+      if (input.history && input.history.length > 0) {
+        for (const h of input.history.slice(-8)) {
+          messages.push({ role: h.role, content: h.content });
+        }
+      }
+
+      messages.push({ role: 'user', content: input.message });
+
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 2048,
+        messages,
+      });
+
+      const reply = response.choices[0]?.message?.content?.trim();
+      if (reply) return reply;
+    } catch (err) {
+      this.warn('chat', err);
+    }
+    return this.fallback.chat(input);
+  }
+
   private async complete(system: string, user: string): Promise<string> {
     const response = await this.client.chat.completions.create({
       model: this.model,
@@ -167,4 +222,32 @@ function safeJsonObject(text: string): Record<string, unknown> | null {
 function extractJson(text: string): string | null {
   const match = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
   return match ? match[0] : null;
+}
+
+function safeStructuredTasks(text: string): StructuredTask[] | null {
+  const json = extractJson(text);
+  if (!json) return null;
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item: any) => ({
+          title: String(item.title || item.name || 'Untitled Task').trim(),
+          description: String(item.description || item.details || '').trim(),
+          subtasks: Array.isArray(item.subtasks)
+            ? item.subtasks.map((s: any) => String(s).trim()).filter(Boolean)
+            : [],
+          priority: ['low', 'medium', 'high', 'urgent'].includes(item.priority)
+            ? item.priority
+            : 'medium',
+          labels: Array.isArray(item.labels)
+            ? item.labels.map((l: any) => String(l).trim()).filter(Boolean)
+            : [],
+        }))
+        .filter((t) => t.title.length > 0);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
 }

@@ -10,7 +10,11 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProjectDto {
-  @ApiPropertyOptional({ example: 'Renamed Project', minLength: 2, maxLength: 100 })
+  @ApiPropertyOptional({
+    example: 'Renamed Project',
+    minLength: 2,
+    maxLength: 100,
+  })
   @IsOptional()
   @IsString()
   @MinLength(2)

@@ -35,7 +35,9 @@ const noopRedis = {
 
 const config = {
   get: (k: string) =>
-    k === 'JWT_SECRET' || k === 'JWT_REFRESH_SECRET' ? 'test-secret' : undefined,
+    k === 'JWT_SECRET' || k === 'JWT_REFRESH_SECRET'
+      ? 'test-secret'
+      : undefined,
 } as any;
 
 describe('RefreshTokenHandler — rotation theft detection (integration)', () => {
@@ -43,11 +45,7 @@ describe('RefreshTokenHandler — rotation theft detection (integration)', () =>
   const tokenService = new AuthTokenService(new JwtService({}), config);
   const userRepo = new UserRepository(prisma as any, noopRedis);
   const refreshRepo = new RefreshTokenRepository(prisma as any, noopRedis);
-  const handler = new RefreshTokenHandler(
-    userRepo as any,
-    refreshRepo as any,
-    tokenService,
-  );
+  const handler = new RefreshTokenHandler(userRepo, refreshRepo, tokenService);
 
   const userId = randomUUID();
   const email = `theft_${Date.now()}@example.com`;
@@ -69,7 +67,7 @@ describe('RefreshTokenHandler — rotation theft detection (integration)', () =>
     await prisma.$disconnect();
   });
 
-  it('rotates once, detects replay as reuse, and wipes all of the user\'s tokens', async () => {
+  it("rotates once, detects replay as reuse, and wipes all of the user's tokens", async () => {
     // Issue + persist an initial refresh token.
     const first = tokenService.signRefreshToken(userId);
     await refreshRepo.save(

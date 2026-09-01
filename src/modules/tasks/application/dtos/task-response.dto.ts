@@ -12,12 +12,14 @@ import { TaskStatus } from '../../domain/value-objects/task-status.value-object'
 
 export interface SubtaskResponse {
   id: string;
+  _id?: string;
   title: string;
   done: boolean;
 }
 
 export interface TaskResponse {
   id: string;
+  _id?: string;
   projectId: string;
   boardId: string | null;
   title: string;
@@ -37,12 +39,13 @@ export interface TaskResponse {
 }
 
 function toSubtaskResponse(s: SubtaskView): SubtaskResponse {
-  return { id: s.id, title: s.title, done: s.done };
+  return { id: s.id, _id: s.id, title: s.title, done: s.done };
 }
 
 export function toTaskResponse(t: TaskView): TaskResponse {
   return {
     id: t.id,
+    _id: t.id,
     projectId: t.projectId,
     boardId: t.boardId,
     title: t.title,

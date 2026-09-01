@@ -10,15 +10,10 @@ import {
   TaskView,
 } from '../../domain/repositories/task.repository.interface';
 import { TaskAccessService } from '../services/task-access.service';
-import {
-  SubtaskNotFoundError,
-  TaskNotFoundError,
-} from '../errors/task.errors';
+import { SubtaskNotFoundError, TaskNotFoundError } from '../errors/task.errors';
 
 @CommandHandler(DeleteSubtaskCommand)
-export class DeleteSubtaskHandler
-  implements ICommandHandler<DeleteSubtaskCommand>
-{
+export class DeleteSubtaskHandler implements ICommandHandler<DeleteSubtaskCommand> {
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,

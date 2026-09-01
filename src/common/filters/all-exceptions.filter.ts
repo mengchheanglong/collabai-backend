@@ -50,7 +50,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      const err = exception as Error & { code?: string };
+      if (err.code === 'P2023') {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Invalid UUID format provided';
+      } else if (err.code === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        message = 'Resource not found';
+      } else if (err.code === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        message = 'Unique constraint violation';
+      } else {
+        message = exception.message;
+      }
     }
 
     this.logger.error(

@@ -39,7 +39,9 @@ export class NotProjectMemberError extends TaskError {
 /** Caller is a member but a viewer — content is read-only for viewers. */
 export class TaskWriteForbiddenError extends TaskError {
   readonly code = 'TASK_WRITE_FORBIDDEN';
-  constructor(message = 'You do not have permission to modify tasks in this project') {
+  constructor(
+    message = 'You do not have permission to modify tasks in this project',
+  ) {
     super(message);
   }
 }

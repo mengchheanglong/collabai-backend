@@ -12,9 +12,7 @@ import { SafeUser } from '../../domain/entities/safe-user.entity';
 import { UserNotFoundError } from '../errors/auth.errors';
 
 @QueryHandler(GetCurrentUserQuery)
-export class GetCurrentUserHandler
-  implements IQueryHandler<GetCurrentUserQuery>
-{
+export class GetCurrentUserHandler implements IQueryHandler<GetCurrentUserQuery> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}

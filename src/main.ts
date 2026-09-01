@@ -17,7 +17,9 @@ async function bootstrap() {
   // request origin so any localhost port/host works; in prod, lock to FRONTEND_ORIGIN.
   const isProd = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: isProd ? (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200') : true,
+    origin: isProd
+      ? (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200')
+      : true,
     credentials: true,
   });
 

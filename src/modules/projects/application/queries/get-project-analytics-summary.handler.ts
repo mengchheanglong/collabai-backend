@@ -7,7 +7,10 @@ import {
   type IProjectRepository,
   PROJECT_REPOSITORY,
 } from '../../domain/repositories/project.repository.interface';
-import { NotProjectMemberError, ProjectNotFoundError } from '../errors/project.errors';
+import {
+  NotProjectMemberError,
+  ProjectNotFoundError,
+} from '../errors/project.errors';
 
 export interface ProjectAnalyticsSummary {
   totalTasks: number;
@@ -31,16 +34,19 @@ export interface ProjectAnalyticsSummary {
 }
 
 @QueryHandler(GetProjectAnalyticsSummaryQuery)
-export class GetProjectAnalyticsSummaryHandler
-  implements IQueryHandler<GetProjectAnalyticsSummaryQuery>
-{
+export class GetProjectAnalyticsSummaryHandler implements IQueryHandler<GetProjectAnalyticsSummaryQuery> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly prisma: PrismaService,
   ) {}
 
-  async execute(query: GetProjectAnalyticsSummaryQuery): Promise<ProjectAnalyticsSummary> {
-    const membership = await this.repo.findMembership(query.projectId, query.userId);
+  async execute(
+    query: GetProjectAnalyticsSummaryQuery,
+  ): Promise<ProjectAnalyticsSummary> {
+    const membership = await this.repo.findMembership(
+      query.projectId,
+      query.userId,
+    );
     if (!membership) {
       const exists = await this.repo.findById(query.projectId);
       if (!exists) throw new ProjectNotFoundError();
@@ -49,35 +55,72 @@ export class GetProjectAnalyticsSummaryHandler
 
     const { projectId } = query;
 
-    const [totalTasks, completedTasks, inProgressTasks, todoTasks, overdueTasks] = await Promise.all([
+    const [
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      todoTasks,
+      overdueTasks,
+    ] = await Promise.all([
       this.prisma.task.count({ where: { projectId, deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, status: 'done', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, status: 'in_progress', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, status: 'todo', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, status: { not: 'done' }, dueDate: { lt: new Date() }, deletedAt: null } }),
+      this.prisma.task.count({
+        where: { projectId, status: 'done', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: { projectId, status: 'in_progress', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: { projectId, status: 'todo', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: {
+          projectId,
+          status: { not: 'done' },
+          dueDate: { lt: new Date() },
+          deletedAt: null,
+        },
+      }),
     ]);
 
-    const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    const completionRate =
+      totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
     const [low, medium, high, urgent] = await Promise.all([
-      this.prisma.task.count({ where: { projectId, priority: 'low', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, priority: 'medium', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, priority: 'high', deletedAt: null } }),
-      this.prisma.task.count({ where: { projectId, priority: 'urgent', deletedAt: null } }),
+      this.prisma.task.count({
+        where: { projectId, priority: 'low', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: { projectId, priority: 'medium', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: { projectId, priority: 'high', deletedAt: null },
+      }),
+      this.prisma.task.count({
+        where: { projectId, priority: 'urgent', deletedAt: null },
+      }),
     ]);
 
     // Tasks by user
     const members = await this.prisma.projectMember.findMany({
       where: { projectId },
-      include: { user: true }
+      include: { user: true },
     });
-    const users = members.map(m => m.user);
+    const users = members.map((m) => m.user);
 
     const tasksByUser = await Promise.all(
       users.map(async (user) => {
         const [total, done] = await Promise.all([
-          this.prisma.task.count({ where: { projectId, assignedTo: user.id, deletedAt: null } }),
-          this.prisma.task.count({ where: { projectId, assignedTo: user.id, status: 'done', deletedAt: null } }),
+          this.prisma.task.count({
+            where: { projectId, assignedTo: user.id, deletedAt: null },
+          }),
+          this.prisma.task.count({
+            where: {
+              projectId,
+              assignedTo: user.id,
+              status: 'done',
+              deletedAt: null,
+            },
+          }),
         ]);
         return {
           userId: user.id,
@@ -85,7 +128,7 @@ export class GetProjectAnalyticsSummaryHandler
           total,
           done,
         };
-      })
+      }),
     );
 
     return {

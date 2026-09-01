@@ -19,6 +19,7 @@ import { CommentAddedEvent } from '../../domain/events/comment-added.event';
 import { MentionCreatedEvent } from '../../domain/events/mention-created.event';
 import {
   CommentNotFoundError,
+  InvalidCommentFieldError,
   TaskNotFoundError,
 } from '../errors/comment.errors';
 
@@ -36,13 +37,42 @@ export class AddCommentHandler implements ICommandHandler<AddCommentCommand> {
     if (!projectId) throw new TaskNotFoundError();
     await this.access.requireWriter(projectId, command.actingUserId);
 
+    // Idempotent replay check for offline mutation sync
+    if (command.id) {
+      const existing = await this.repo.findViewById(command.id);
+      if (existing) {
+        if (existing.taskId === command.taskId) {
+          return existing;
+        }
+        throw new InvalidCommentFieldError(
+          'Comment ID already exists on a different task',
+        );
+      }
+    }
+
     const comment = CommentEntity.create({
-      id: uuidv4(),
+      id: command.id || uuidv4(),
       taskId: command.taskId,
       authorId: command.actingUserId,
       body: command.body,
     });
-    await this.repo.create(comment);
+
+    try {
+      await this.repo.create(comment);
+    } catch (err: any) {
+      if (command.id) {
+        const existing = await this.repo.findViewById(command.id);
+        if (existing) {
+          if (existing.taskId === command.taskId) {
+            return existing;
+          }
+          throw new InvalidCommentFieldError(
+            'Comment ID already exists on a different task',
+          );
+        }
+      }
+      throw err;
+    }
 
     this.events.emit(
       CommentAddedEvent.eventName,

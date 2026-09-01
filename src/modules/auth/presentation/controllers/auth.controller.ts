@@ -112,10 +112,8 @@ export class AuthController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get the current authenticated user' })
   async me(@CurrentUser('id') userId: string) {
-    const user = (await this.queryBus.execute(
-      new GetCurrentUserQuery(userId),
-    )) as Record<string, unknown>;
-    return { user: { ...user, avatarUrl: user['avatarUrl'] ?? null } };
+    const user = await this.queryBus.execute(new GetCurrentUserQuery(userId));
+    return { user: { ...user, id: user.id, _id: user.id, avatarUrl: user['avatarUrl'] ?? null } };
   }
 
   // ---- Flow 1: Registration ----
@@ -152,9 +150,9 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = (await this.commandBus.execute(
+    const result = await this.commandBus.execute(
       new RegisterCommand(dto.email, dto.password, dto.firstName, dto.lastName),
-    )) as { email: string };
+    );
     // base64(email) so verify-email knows whose account without a body field.
     this.setCookie(
       res,
@@ -184,7 +182,9 @@ export class AuthController {
       'The code has expired. Please request a new one.',
     ),
   )
-  @ApiResponse(authErrorResponse(401, 'INVALID_CODE', 'Invalid or incorrect code'))
+  @ApiResponse(
+    authErrorResponse(401, 'INVALID_CODE', 'Invalid or incorrect code'),
+  )
   @ApiResponse(
     authErrorResponse(
       409,
@@ -197,7 +197,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.readEmailCookie(req, COOKIE.registrationVerification);
+    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto.email);
     await this.commandBus.execute(new VerifyEmailCommand(email, dto.code));
     this.clearCookie(res, COOKIE.registrationVerification);
     return { success: true };
@@ -210,15 +210,16 @@ export class AuthController {
   @ApiOperation({
     summary: 'Resend email verification code',
     description:
-      'No request body — the email is read from the `registration_verification` cookie. ' +
+      'The email is read from the `registration_verification` cookie or optional request body/query. ' +
       'Always returns success (email-enumeration protection).',
   })
   @ApiOkResponse({ type: MessageResponseDto })
   async resendEmailVerification(
+    @Body() dto: Partial<VerifyEmailDto>,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.readEmailCookie(req, COOKIE.registrationVerification);
+    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto?.email);
     await this.commandBus.execute(new ResendEmailVerificationCommand(email));
     // Refresh the cookie (always — success regardless of whether the email exists).
     this.setCookie(
@@ -236,7 +237,8 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({
     summary: 'Request a password reset code',
-    description: 'Always returns success regardless of whether the email exists.',
+    description:
+      'Always returns success regardless of whether the email exists.',
   })
   @ApiBody({ type: RequestPasswordResetDto })
   @ApiOkResponse({ type: MessageResponseDto })
@@ -272,14 +274,18 @@ export class AuthController {
       'The code has expired. Please request a new one.',
     ),
   )
-  @ApiResponse(authErrorResponse(401, 'INVALID_CODE', 'Invalid or incorrect code'))
+  @ApiResponse(
+    authErrorResponse(401, 'INVALID_CODE', 'Invalid or incorrect code'),
+  )
   async verifyPasswordReset(
     @Body() dto: VerifyPasswordResetDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const email = this.readEmailCookie(req, COOKIE.passwordResetVerification);
-    await this.commandBus.execute(new VerifyPasswordResetCommand(email, dto.code));
+    await this.commandBus.execute(
+      new VerifyPasswordResetCommand(email, dto.code),
+    );
     // Swap: clear the verification cookie, issue the 10-min reset session.
     this.clearCookie(res, COOKIE.passwordResetVerification);
     this.setCookie(
@@ -298,7 +304,7 @@ export class AuthController {
     summary: 'Reset password',
     description:
       'Reads the `password_reset_session` cookie, sets the new password, and revokes ' +
-      'ALL of the user\'s refresh tokens.',
+      "ALL of the user's refresh tokens.",
   })
   @ApiBody({ type: ResetPasswordDto })
   @ApiOkResponse({
@@ -320,7 +326,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const email = this.readEmailCookie(req, COOKIE.passwordResetSession);
-    await this.commandBus.execute(new ResetPasswordCommand(email, dto.password));
+    await this.commandBus.execute(
+      new ResetPasswordCommand(email, dto.password),
+    );
     this.clearCookie(res, COOKIE.passwordResetSession);
     return { success: true };
   }
@@ -387,9 +395,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = (await this.commandBus.execute(
+    const result = await this.commandBus.execute(
       new LoginCommand(dto.email, dto.password, req.ip ?? ''),
-    )) as LoginResult;
+    );
     // Refresh token -> httpOnly cookie only. Access token -> body only.
     this.setCookie(
       res,
@@ -410,7 +418,7 @@ export class AuthController {
     description:
       'Reads the `refresh_token` cookie, rotates it (the old one is single-use), returns ' +
       'a new access token and replaces the cookie. Replaying a spent token returns 401 ' +
-      'and revokes all of the user\'s sessions (theft detection).',
+      "and revokes all of the user's sessions (theft detection).",
   })
   @ApiOkResponse({ description: 'Rotated.', type: AuthResponseDto })
   @ApiResponse(
@@ -427,9 +435,9 @@ export class AuthController {
     const raw = this.cookie(req, COOKIE.refreshToken);
     if (!raw) throw new InvalidRefreshTokenError();
     try {
-      const result = (await this.commandBus.execute(
+      const result = await this.commandBus.execute(
         new RefreshTokenCommand(raw),
-      )) as RefreshResult;
+      );
       this.setCookie(
         res,
         COOKIE.refreshToken,
@@ -456,12 +464,13 @@ export class AuthController {
     summary: 'Log out',
     description:
       'Requires a valid access token. Deletes the current refresh token and blacklists ' +
-      'the access token\'s jti for its remaining lifetime.',
+      "the access token's jti for its remaining lifetime.",
   })
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiResponse({
     status: 401,
-    description: 'Missing, invalid, or revoked access token (from JwtAuthGuard).',
+    description:
+      'Missing, invalid, or revoked access token (from JwtAuthGuard).',
     schema: {
       example: {
         statusCode: 401,
@@ -492,6 +501,21 @@ export class AuthController {
     ];
   }
 
+  private resolveEmail(
+    req: Request,
+    name: string,
+    fallbackEmail?: string,
+  ): string {
+    const raw = this.cookie(req, name);
+    if (raw) return decodeEmail(raw).trim().toLowerCase();
+    if (fallbackEmail?.trim()) return fallbackEmail.trim().toLowerCase();
+    const queryEmail = (req.query?.['email'] as string)?.trim().toLowerCase();
+    if (queryEmail) return queryEmail;
+    throw new BadRequestException(
+      'No verification session in progress. Please restart the flow.',
+    );
+  }
+
   private readEmailCookie(req: Request, name: string): string {
     const raw = this.cookie(req, name);
     if (!raw) {
@@ -499,7 +523,7 @@ export class AuthController {
         'No verification session in progress. Please restart the flow.',
       );
     }
-    return decodeEmail(raw);
+    return decodeEmail(raw).trim().toLowerCase();
   }
 
   private setCookie(

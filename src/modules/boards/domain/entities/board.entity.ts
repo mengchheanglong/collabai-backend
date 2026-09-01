@@ -4,7 +4,7 @@
 // (stored as JSON). Maps 1:1 to the Prisma `Board` model.
 
 export interface BoardColumn {
-  key: string;   // 'todo' | 'in_progress' | 'done'
+  key: string; // 'todo' | 'in_progress' | 'done'
   title: string;
   position: number;
 }

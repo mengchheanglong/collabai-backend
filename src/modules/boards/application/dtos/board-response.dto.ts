@@ -17,12 +17,14 @@ export interface BoardColumnResponse {
 }
 
 export interface SubtaskInBoardResponse {
+  id?: string;
   _id: string;
   title: string;
   done: boolean;
 }
 
 export interface TaskInBoardResponse {
+  id?: string;
   _id: string;
   projectId: string;
   boardId: string | null;
@@ -42,6 +44,7 @@ export interface TaskInBoardResponse {
 }
 
 export interface BoardResponse {
+  id?: string;
   _id: string;
   projectId: string;
   name: string;
@@ -57,11 +60,12 @@ export interface BoardWithTasksResponse extends BoardResponse {
 
 export function toBoardResponse(v: BoardView): BoardResponse {
   return {
+    id: v.id,
     _id: v.id,
     projectId: v.projectId,
     name: v.name,
     description: v.description,
-    columns: (v.columns as BoardColumn[]).map((c) => ({
+    columns: v.columns.map((c) => ({
       key: c.key,
       title: c.title,
       position: c.position,
@@ -73,6 +77,7 @@ export function toBoardResponse(v: BoardView): BoardResponse {
 
 export function toTaskInBoardResponse(t: TaskInBoardView): TaskInBoardResponse {
   return {
+    id: t.id,
     _id: t.id,
     projectId: t.projectId,
     boardId: t.boardId,
@@ -86,6 +91,7 @@ export function toTaskInBoardResponse(t: TaskInBoardView): TaskInBoardResponse {
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     labels: t.labels,
     subtasks: t.subtasks.map((s) => ({
+      id: s.id,
       _id: s.id,
       title: s.title,
       done: s.done,

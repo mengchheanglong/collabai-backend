@@ -53,9 +53,9 @@ export class BoardsController {
     @CurrentUser('id') userId: string,
     @Param('projectId') projectId: string,
   ) {
-    const views = (await this.queryBus.execute(
+    const views = await this.queryBus.execute(
       new GetBoardsQuery(userId, projectId),
-    )) as BoardView[];
+    );
     return views.map(toBoardResponse);
   }
 
@@ -67,9 +67,9 @@ export class BoardsController {
     @Param('projectId') projectId: string,
     @Body() dto: CreateBoardDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new CreateBoardCommand(userId, projectId, dto.name, dto.description),
-    )) as BoardView;
+    );
     return { board: toBoardResponse(view) };
   }
 
@@ -121,12 +121,12 @@ export class BoardsController {
     @Param('boardId') boardId: string,
     @Body() dto: UpdateBoardDto,
   ) {
-    const view = (await this.commandBus.execute(
+    const view = await this.commandBus.execute(
       new UpdateBoardCommand(userId, boardId, {
         name: dto.name,
         description: dto.description,
       }),
-    )) as BoardView;
+    );
     return { board: toBoardResponse(view) };
   }
 
