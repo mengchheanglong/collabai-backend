@@ -1,7 +1,7 @@
 // src/shared/services/email.service.ts
 //
 // SMTP email delivery (nodemailer) for verification / password-reset codes.
-// Config comes from EMAIL_HOST/EMAIL_PORT/EMAIL_USER/EMAIL_PASS/SMTP_FROM (see .env.local).
+// Config comes from EMAIL_HOST/EMAIL_PORT/EMAIL_USER/EMAIL_PASS/SMTP_FROM (see .env).
 // If SMTP isn't configured, sends are skipped (logged) rather than throwing — email
 // failures must never break the auth flow (they're triggered from an event listener).
 

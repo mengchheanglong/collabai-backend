@@ -73,7 +73,7 @@ Day 1-2: Setup
 ├─ Read NESTJS-QUICK-START-GUIDE.md
 ├─ Install dependencies
 ├─ Setup Prisma & PostgreSQL
-└─ Create .env.local
+└─ Create .env
 
 Day 3-4: First Module (Auth)
 ├─ Follow NESTJS-FIRST-MODULE-GUIDE.md
@@ -106,8 +106,8 @@ npm install @nestjs/core @nestjs/common ...
 # Initialize Prisma
 npx prisma init
 
-# Create .env.local
-cat > .env.local << 'EOF'
+# Create .env
+cat > .env << 'EOF'
 DATABASE_URL="postgresql://user:password@localhost:5432/collabai"
 JWT_SECRET="your-secret-key"
 JWT_REFRESH_SECRET="your-refresh-secret"
@@ -477,7 +477,7 @@ collabai-backend/
 ├── prisma/
 │   └── schema.prisma       ← Database schema
 ├── test/                   ← Tests
-├── .env.local              ← Your environment
+├── .env                    ← Your environment
 └── package.json            ← Dependencies
 ```
 

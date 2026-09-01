@@ -3,7 +3,7 @@
 #
 # Published on 6380:6379 — the host side is 6380 to avoid the WSL2 port-forwarding
 # issue where a container publishing :6379 isn't reachable from the Windows host.
-# Matches .env.local -> REDIS_URL=redis://127.0.0.1:6380
+# Matches .env -> REDIS_URL=redis://127.0.0.1:6380
 
 services:
   redis:

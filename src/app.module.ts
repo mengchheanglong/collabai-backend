@@ -20,7 +20,7 @@ import { authThrottlers } from './config/throttler.config';
     // Global config — required so SharedModule's JwtModule factory can inject ConfigService.
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: '.env',
     }),
     // Global event bus — required for @OnEvent listeners (e.g. AuthEventsListener).
     EventEmitterModule.forRoot(),
