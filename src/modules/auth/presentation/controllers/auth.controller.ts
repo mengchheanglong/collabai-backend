@@ -14,6 +14,7 @@ import {
   Get,
   Headers,
   HttpCode,
+  Patch,
   Post,
   Req,
   Res,
@@ -61,6 +62,7 @@ import { ResendPasswordResetVerificationCommand } from '../../application/comman
 import { LoginCommand } from '../../application/commands/login.command';
 import { RefreshTokenCommand } from '../../application/commands/refresh-token.command';
 import { LogoutCommand } from '../../application/commands/logout.command';
+import { UpdateProfileCommand } from '../../application/commands/update-profile.command';
 import { GetCurrentUserQuery } from '../../application/queries/get-current-user.query';
 import { LoginResult } from '../../application/commands/login.handler';
 import { RefreshResult } from '../../application/commands/refresh-token.handler';
@@ -114,6 +116,22 @@ export class AuthController {
   async me(@CurrentUser('id') userId: string) {
     const user = await this.queryBus.execute(new GetCurrentUserQuery(userId));
     return { user: { ...user, id: user.id, _id: user.id, avatarUrl: user['avatarUrl'] ?? null } };
+  }
+
+  // ---- Update profile (avatar, name) ----
+  @Patch('me')
+  @RateLimit(THROTTLERS.me.name)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update current user profile (name, avatar)' })
+  async updateMe(
+    @CurrentUser('id') userId: string,
+    @Body() body: { name?: string; avatarUrl?: string | null },
+  ) {
+    const user = await this.commandBus.execute(
+      new UpdateProfileCommand(userId, body.name, body.avatarUrl),
+    );
+    return { user: { ...user, id: user.id, _id: user.id, avatarUrl: user.avatarUrl ?? null } };
   }
 
   // ---- Flow 1: Registration ----
