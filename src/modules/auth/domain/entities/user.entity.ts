@@ -22,6 +22,7 @@ export interface UserProps {
   passwordHash: string;
   role: UserRole;
   isVerified: boolean;
+  avatarUrl?: string | null;
   verificationCode?: string | null;
   verificationCodeExpiry?: Date | null;
   passwordResetCode?: string | null;
@@ -48,6 +49,7 @@ export class UserEntity {
   passwordHash: string;
   role: UserRole;
   isVerified: boolean;
+  avatarUrl: string | null;
   verificationCode?: string | null;
   verificationCodeExpiry?: Date | null;
   passwordResetCode?: string | null;
@@ -65,6 +67,7 @@ export class UserEntity {
     this.passwordHash = props.passwordHash;
     this.role = props.role;
     this.isVerified = props.isVerified;
+    this.avatarUrl = props.avatarUrl ?? null;
     this.verificationCode = props.verificationCode ?? null;
     this.verificationCodeExpiry = props.verificationCodeExpiry ?? null;
     this.passwordResetCode = props.passwordResetCode ?? null;
@@ -165,6 +168,13 @@ export class UserEntity {
     this.touch();
   }
 
+  /** Update profile fields (name, avatarUrl). */
+  updateProfile(fields: { name?: string; avatarUrl?: string | null }): void {
+    if (fields.name !== undefined) this.name = fields.name;
+    if (fields.avatarUrl !== undefined) this.avatarUrl = fields.avatarUrl;
+    this.touch();
+  }
+
   /**
    * Public projection with all secret fields stripped. Use this before caching under
    * `cache:user:entity:{userId}` or returning a user from a controller.
@@ -177,6 +187,7 @@ export class UserEntity {
       role: this.role,
       isVerified: this.isVerified,
       isActive: this.isActive,
+      avatarUrl: this.avatarUrl,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       lastLogin: this.lastLogin ?? null,

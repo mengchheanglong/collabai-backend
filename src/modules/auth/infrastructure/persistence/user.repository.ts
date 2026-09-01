@@ -191,6 +191,7 @@ export class UserRepository implements IUserRepository {
       role: row.role,
       // DB `emailVerified` -> domain `isVerified`
       isVerified: row.emailVerified,
+      avatarUrl: (row as any).avatarUrl ?? null,
       verificationCode: row.verificationCode,
       verificationCodeExpiry: row.verificationCodeExpiry,
       passwordResetCode: row.passwordResetCode,
@@ -215,6 +216,7 @@ export class UserRepository implements IUserRepository {
       role: user.role,
       // domain `isVerified` -> DB `emailVerified`
       emailVerified: user.isVerified,
+      avatarUrl: user.avatarUrl ?? null,
       verificationCode: user.verificationCode ?? null,
       verificationCodeExpiry: user.verificationCodeExpiry ?? null,
       passwordResetCode: user.passwordResetCode ?? null,
