@@ -113,7 +113,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the current authenticated user' })
   async me(@CurrentUser('id') userId: string) {
     const user = await this.queryBus.execute(new GetCurrentUserQuery(userId));
-    return { user: { ...user, id: user.id, _id: user.id, avatarUrl: user['avatarUrl'] ?? null } };
+    return {
+      user: {
+        ...user,
+        id: user.id,
+        _id: user.id,
+        avatarUrl: user['avatarUrl'] ?? null,
+      },
+    };
   }
 
   // ---- Flow 1: Registration ----
@@ -197,7 +204,11 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto.email);
+    const email = this.resolveEmail(
+      req,
+      COOKIE.registrationVerification,
+      dto.email,
+    );
     await this.commandBus.execute(new VerifyEmailCommand(email, dto.code));
     this.clearCookie(res, COOKIE.registrationVerification);
     return { success: true };
@@ -219,7 +230,11 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = this.resolveEmail(req, COOKIE.registrationVerification, dto?.email);
+    const email = this.resolveEmail(
+      req,
+      COOKIE.registrationVerification,
+      dto?.email,
+    );
     await this.commandBus.execute(new ResendEmailVerificationCommand(email));
     // Refresh the cookie (always — success regardless of whether the email exists).
     this.setCookie(

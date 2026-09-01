@@ -7,6 +7,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   UseFilters,
@@ -33,7 +34,7 @@ export class ProjectAnalyticsController {
   @ApiOperation({ summary: 'Get project task analytics summary' })
   async getSummary(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
   ): Promise<ProjectAnalyticsSummary> {
     return this.queryBus.execute(
       new GetProjectAnalyticsSummaryQuery(userId, projectId),
@@ -44,10 +45,15 @@ export class ProjectAnalyticsController {
   @ApiOperation({ summary: 'Get project burndown chart data' })
   async getBurndown(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Query('days') days?: string,
   ): Promise<BurndownPoint[]> {
-    const daysNum = Math.min(Math.max(parseInt(days ?? '14', 10) || 14, 1), 60);
+    const rawDays = Array.isArray(days) ? days[0] : days;
+    const parsed = Number(rawDays);
+    const daysNum =
+      Number.isFinite(parsed) && parsed > 0
+        ? Math.min(60, Math.max(1, Math.floor(parsed)))
+        : 14;
     return this.queryBus.execute(
       new GetProjectAnalyticsBurndownQuery(userId, projectId, daysNum),
     );

@@ -100,13 +100,27 @@ export class TaskRepository implements ITaskRepository {
     const where: Prisma.TaskWhereInput = {
       projectId,
       deletedAt: null,
-      ...(filters.boardId ? { boardId: filters.boardId } : {}),
+      ...(filters.boardId
+        ? {
+            boardId: isValidUuid(filters.boardId)
+              ? filters.boardId
+              : '00000000-0000-0000-0000-000000000000',
+          }
+        : {}),
       ...(filters.status ? { status: filters.status } : {}),
-      ...(filters.assigneeId ? { assignedTo: filters.assigneeId } : {}),
+      ...(filters.assigneeId
+        ? {
+            assignedTo: isValidUuid(filters.assigneeId)
+              ? filters.assigneeId
+              : '00000000-0000-0000-0000-000000000000',
+          }
+        : {}),
       ...(filters.q
         ? { title: { contains: filters.q, mode: 'insensitive' } }
         : {}),
-      ...(filters.dueBefore ? { dueDate: { lte: filters.dueBefore } } : {}),
+      ...(filters.dueBefore && !isNaN(filters.dueBefore.getTime())
+        ? { dueDate: { lte: filters.dueBefore } }
+        : {}),
       ...(filters.label
         ? { labels: { some: { label: { name: filters.label } } } }
         : {}),

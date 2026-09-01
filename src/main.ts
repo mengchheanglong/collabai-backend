@@ -2,13 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
+import { validationExceptionFactory } from './common/validation/validation.factory';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security: Payload size limits to protect against memory exhaustion / large payload DoS
+  app.use(json({ limit: '100kb' }));
+  app.use(urlencoded({ extended: true, limit: '100kb' }));
 
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
   app.setGlobalPrefix('api/v1');
@@ -32,6 +38,10 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: validationExceptionFactory,
     }),
   );
 

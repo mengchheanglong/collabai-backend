@@ -24,7 +24,9 @@ describe('PushNotificationsController', () => {
 
   describe('getPublicKey', () => {
     it('should return VAPID public key via queryBus', async () => {
-      queryBus.execute.mockResolvedValue({ publicKey: 'mock-vapid-public-key' });
+      queryBus.execute.mockResolvedValue({
+        publicKey: 'mock-vapid-public-key',
+      });
 
       const result = await controller.getPublicKey();
 
@@ -83,7 +85,8 @@ describe('PushNotificationsController', () => {
       expect(commandBus.execute).toHaveBeenCalledWith(
         expect.any(SendPushNotificationCommand),
       );
-      const calledCmd = commandBus.execute.mock.calls[0][0] as SendPushNotificationCommand;
+      const calledCmd = commandBus.execute.mock
+        .calls[0][0] as SendPushNotificationCommand;
       expect(calledCmd.userId).toBe('user-123');
       expect(calledCmd.title).toContain('Test Notification');
       expect(result.success).toBe(true);

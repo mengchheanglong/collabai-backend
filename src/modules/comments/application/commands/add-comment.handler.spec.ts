@@ -35,7 +35,7 @@ describe('AddCommentHandler (Offline Sync, Concurrency & Idempotency)', () => {
       listForTask: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
       delete: jest.fn(),
-    } as any;
+    };
 
     access = {
       requireWriter: jest.fn().mockResolvedValue(undefined),
@@ -48,12 +48,7 @@ describe('AddCommentHandler (Offline Sync, Concurrency & Idempotency)', () => {
       emit: jest.fn(),
     } as any;
 
-    handler = new AddCommentHandler(
-      repo,
-      access,
-      domain,
-      events,
-    );
+    handler = new AddCommentHandler(repo, access, domain, events);
   });
 
   describe('Standard Comment Creation & Client ID Assignment', () => {
@@ -96,15 +91,22 @@ describe('AddCommentHandler (Offline Sync, Concurrency & Idempotency)', () => {
     });
 
     it('should auto-generate UUID when client id is not provided', async () => {
-      repo.findViewById.mockImplementation(async (id: string) => ({
-        id,
-        taskId: validTaskId,
-        projectId: validProjectId,
-        authorId: validUserId,
-        body: 'Simple comment',
-      } as any));
+      repo.findViewById.mockImplementation(
+        async (id: string) =>
+          ({
+            id,
+            taskId: validTaskId,
+            projectId: validProjectId,
+            authorId: validUserId,
+            body: 'Simple comment',
+          }) as any,
+      );
 
-      const cmd = new AddCommentCommand(validUserId, validTaskId, 'Simple comment');
+      const cmd = new AddCommentCommand(
+        validUserId,
+        validTaskId,
+        'Simple comment',
+      );
       const result = await handler.execute(cmd);
 
       expect(repo.create).toHaveBeenCalledTimes(1);
@@ -162,7 +164,9 @@ describe('AddCommentHandler (Offline Sync, Concurrency & Idempotency)', () => {
         collidingId,
       );
 
-      await expect(handler.execute(cmd)).rejects.toThrow(InvalidCommentFieldError);
+      await expect(handler.execute(cmd)).rejects.toThrow(
+        InvalidCommentFieldError,
+      );
       expect(repo.create).not.toHaveBeenCalled();
       expect(events.emit).not.toHaveBeenCalled();
     });
@@ -221,7 +225,9 @@ describe('AddCommentHandler (Offline Sync, Concurrency & Idempotency)', () => {
         customId,
       );
 
-      await expect(handler.execute(cmd)).rejects.toThrow(InvalidCommentFieldError);
+      await expect(handler.execute(cmd)).rejects.toThrow(
+        InvalidCommentFieldError,
+      );
     });
   });
 

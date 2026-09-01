@@ -198,7 +198,9 @@ export class WebPushService implements OnModuleInit {
       this.publicKey = envPublic;
       this.privateKey = envPrivate;
       if (envSubject) this.subject = envSubject;
-      this.logger.log('Web Push initialized with configured VAPID credentials.');
+      this.logger.log(
+        'Web Push initialized with configured VAPID credentials.',
+      );
     } else {
       // Auto-generate development VAPID keys so PWA push works out of the box
       const keys = webpush.generateVAPIDKeys();
@@ -249,14 +251,10 @@ export class WebPushService implements OnModuleInit {
     const formattedPayload = formatAndTruncatePayload(payload);
 
     try {
-      const sendPromise = webpush.sendNotification(
-        pushSub,
-        formattedPayload,
-        {
-          TTL: 60 * 60 * 24, // 24 hours
-          urgency: 'high',
-        },
-      );
+      const sendPromise = webpush.sendNotification(pushSub, formattedPayload, {
+        TTL: 60 * 60 * 24, // 24 hours
+        urgency: 'high',
+      });
 
       let timer: NodeJS.Timeout | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {

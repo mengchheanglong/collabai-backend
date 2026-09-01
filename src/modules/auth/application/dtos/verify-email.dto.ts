@@ -13,7 +13,8 @@ export class VerifyEmailDto {
 
   @ApiPropertyOptional({
     example: 'user@example.com',
-    description: 'Optional email fallback if registration_verification cookie is absent.',
+    description:
+      'Optional email fallback if registration_verification cookie is absent.',
   })
   @IsOptional()
   @IsEmail()

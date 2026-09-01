@@ -1,24 +1,22 @@
 // src/modules/projects/application/dtos/create-project.dto.ts
-import {
-  IsHexColor,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsHexColor, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsTrimmedNotEmpty,
+  SanitizeHtml,
+  Trim,
+} from '../../../../common/decorators/sanitizers.decorator';
 
 export class CreateProjectDto {
   @ApiProperty({ example: 'Final Year Project', minLength: 2, maxLength: 100 })
+  @Trim()
   @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(100)
+  @IsTrimmedNotEmpty({ minLength: 2, maxLength: 100 })
   name: string;
 
   @ApiPropertyOptional({ example: 'Build the CollabAI MVP', maxLength: 500 })
   @IsOptional()
+  @SanitizeHtml()
   @IsString()
   @MaxLength(500)
   description?: string;

@@ -1,4 +1,3 @@
-// src/modules/boards/presentation/controllers/boards.controller.ts
 import {
   Body,
   Controller,
@@ -6,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -51,7 +51,7 @@ export class BoardsController {
   @ApiOperation({ summary: 'List boards in a project' })
   async listBoards(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
   ) {
     const views = await this.queryBus.execute(
       new GetBoardsQuery(userId, projectId),
@@ -64,7 +64,7 @@ export class BoardsController {
   @ApiOperation({ summary: 'Create a board' })
   async createBoard(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Body() dto: CreateBoardDto,
   ) {
     const view = await this.commandBus.execute(
@@ -77,7 +77,7 @@ export class BoardsController {
   @ApiOperation({ summary: 'Get a board and optionally its tasks' })
   async getBoard(
     @CurrentUser('id') userId: string,
-    @Param('boardId') boardId: string,
+    @Param('boardId', new ParseUUIDPipe({ version: '4' })) boardId: string,
     @Query('includeTasks') includeTasks?: string,
   ) {
     const view = await this.queryBus.execute(
@@ -118,7 +118,7 @@ export class BoardsController {
   @ApiOperation({ summary: 'Update board metadata' })
   async updateBoard(
     @CurrentUser('id') userId: string,
-    @Param('boardId') boardId: string,
+    @Param('boardId', new ParseUUIDPipe({ version: '4' })) boardId: string,
     @Body() dto: UpdateBoardDto,
   ) {
     const view = await this.commandBus.execute(
@@ -134,7 +134,7 @@ export class BoardsController {
   @ApiOperation({ summary: 'Delete a board' })
   async deleteBoard(
     @CurrentUser('id') userId: string,
-    @Param('boardId') boardId: string,
+    @Param('boardId', new ParseUUIDPipe({ version: '4' })) boardId: string,
   ) {
     await this.commandBus.execute(new DeleteBoardCommand(userId, boardId));
     return { success: true, message: 'Board deleted' };

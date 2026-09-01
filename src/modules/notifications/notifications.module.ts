@@ -38,10 +38,7 @@ const CommandHandlers = [
   SendPushNotificationHandler,
 ];
 
-const QueryHandlers = [
-  GetUserNotificationsHandler,
-  GetVapidPublicKeyHandler,
-];
+const QueryHandlers = [GetUserNotificationsHandler, GetVapidPublicKeyHandler];
 
 @Module({
   imports: [CqrsModule, SharedModule, AuthModule],

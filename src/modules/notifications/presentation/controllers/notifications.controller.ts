@@ -7,6 +7,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Query,
   UseFilters,
@@ -19,6 +20,7 @@ import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { NotificationExceptionFilter } from '../exception-filters/notification-exception.filter';
 
+import { parsePaginationParams } from '../../../../common/utils/pagination.util';
 import { GetUserNotificationsQuery } from '../../application/queries/get-user-notifications.query';
 import { MarkAsReadCommand } from '../../application/commands/mark-as-read.command';
 import { MarkAllReadCommand } from '../../application/commands/mark-all-read.command';
@@ -47,12 +49,17 @@ export class NotificationsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    const { page: parsedPage, limit: parsedLimit } = parsePaginationParams(
+      page,
+      limit,
+      20,
+    );
     const result = await this.queryBus.execute(
       new GetUserNotificationsQuery(
         userId,
         unreadOnly === 'true',
-        toInt(page, 1),
-        toInt(limit, 20),
+        parsedPage,
+        parsedLimit,
       ),
     );
 
@@ -78,7 +85,8 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark one notification as read' })
   async markRead(
     @CurrentUser('id') userId: string,
-    @Param('notificationId') notificationId: string,
+    @Param('notificationId', new ParseUUIDPipe({ version: '4' }))
+    notificationId: string,
   ) {
     await this.commandBus.execute(
       new MarkAsReadCommand(userId, notificationId),
@@ -87,7 +95,3 @@ export class NotificationsController {
   }
 }
 
-function toInt(value: string | undefined, fallback: number): number {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}

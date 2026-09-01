@@ -9,9 +9,7 @@ import { WebPushService } from '../../infrastructure/push/web-push.service';
 
 @Injectable()
 @CommandHandler(SendPushNotificationCommand)
-export class SendPushNotificationHandler
-  implements ICommandHandler<SendPushNotificationCommand>
-{
+export class SendPushNotificationHandler implements ICommandHandler<SendPushNotificationCommand> {
   private readonly logger = new Logger(SendPushNotificationHandler.name);
 
   constructor(
@@ -23,7 +21,9 @@ export class SendPushNotificationHandler
   async execute(command: SendPushNotificationCommand): Promise<void> {
     try {
       if (!command || !command.userId) {
-        this.logger.warn('SendPushNotificationCommand missing userId. Skipping.');
+        this.logger.warn(
+          'SendPushNotificationCommand missing userId. Skipping.',
+        );
         return;
       }
 
