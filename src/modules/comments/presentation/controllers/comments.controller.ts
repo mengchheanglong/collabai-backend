@@ -65,7 +65,7 @@ export class CommentsController {
     @Body() dto: AddCommentDto,
   ) {
     const view = await this.commandBus.execute(
-      new AddCommentCommand(userId, taskId, dto.body),
+      new AddCommentCommand(userId, taskId, dto.body, dto.id),
     );
     return { comment: toCommentResponse(view) };
   }

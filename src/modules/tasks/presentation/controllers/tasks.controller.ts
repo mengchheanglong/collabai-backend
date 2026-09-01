@@ -115,6 +115,7 @@ export class TasksController {
         dto.dueDate ? new Date(dto.dueDate) : undefined,
         dto.labels,
         dto.subtasks,
+        dto.id,
       ),
     );
     return { task: toTaskResponse(view) };

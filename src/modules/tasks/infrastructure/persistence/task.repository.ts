@@ -37,7 +37,7 @@ type TaskRow = Prisma.TaskGetPayload<{
 const taskInclude = {
   subtasks: { orderBy: { orderIndex: 'asc' as const } },
   labels: { include: { label: true } },
-  _count: { select: { comments: true } },
+  _count: { select: { comments: { where: { deletedAt: null } } } },
 } satisfies Prisma.TaskInclude;
 
 @Injectable()
@@ -84,7 +84,10 @@ export class TaskRepository implements ITaskRepository {
 
   async delete(id: string): Promise<void> {
     if (!isValidUuid(id)) return;
-    await this.prisma.task.delete({ where: { id } });
+    await this.prisma.task.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   async list(

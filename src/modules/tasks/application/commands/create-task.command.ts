@@ -15,5 +15,6 @@ export class CreateTaskCommand {
     public readonly dueDate?: Date,
     public readonly labels?: string[],
     public readonly subtasks?: string[],
+    public readonly id?: string,
   ) {}
 }

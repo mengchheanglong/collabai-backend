@@ -53,3 +53,11 @@ export class CommentModerationForbiddenError extends CommentError {
     super(message);
   }
 }
+
+/** Provided comment field value is invalid (or ID collides with another task). */
+export class InvalidCommentFieldError extends CommentError {
+  readonly code = 'INVALID_COMMENT_FIELD';
+  constructor(message = 'Invalid comment field value') {
+    super(message);
+  }
+}

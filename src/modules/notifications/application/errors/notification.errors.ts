@@ -27,3 +27,11 @@ export class NotificationForbiddenError extends NotificationError {
     super(message);
   }
 }
+
+/** Push subscription payload is invalid or malformed. */
+export class InvalidPushSubscriptionError extends NotificationError {
+  readonly code = 'INVALID_PUSH_SUBSCRIPTION';
+  constructor(message = 'Push subscription endpoint and keys are required') {
+    super(message);
+  }
+}

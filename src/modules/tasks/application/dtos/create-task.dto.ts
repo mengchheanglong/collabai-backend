@@ -15,6 +15,14 @@ import { TASK_STATUSES } from '../../domain/value-objects/task-status.value-obje
 import { TASK_PRIORITIES } from '../../domain/value-objects/task-priority.value-object';
 
 export class CreateTaskDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Client-assigned UUID for offline mutation sync',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   projectId: string;

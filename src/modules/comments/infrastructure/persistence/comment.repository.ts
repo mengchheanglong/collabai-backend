@@ -101,7 +101,10 @@ export class CommentRepository implements ICommentRepository {
 
   async delete(id: string): Promise<void> {
     if (!isValidUuid(id)) return;
-    await this.prisma.comment.delete({ where: { id } });
+    await this.prisma.comment.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   private toView(row: CommentRow): CommentView {

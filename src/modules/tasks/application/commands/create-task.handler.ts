@@ -65,10 +65,23 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
       if (!ok) throw new AssigneeNotMemberError();
     }
 
+    // Idempotent replay check for offline mutation sync
+    if (command.id) {
+      const existing = await this.repo.findViewById(command.id);
+      if (existing) {
+        if (existing.projectId === command.projectId) {
+          return existing;
+        }
+        throw new InvalidTaskFieldError(
+          'Task ID already exists in a different project',
+        );
+      }
+    }
+
     const status = command.status ?? 'todo';
     const max = await this.repo.maxPosition(command.projectId, status);
     const task = TaskEntity.create({
-      id: uuidv4(),
+      id: command.id || uuidv4(),
       projectId: command.projectId,
       boardId: board.id,
       title: command.title,
@@ -81,7 +94,22 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
       dueDate: command.dueDate,
     });
 
-    await this.repo.create(task);
+    try {
+      await this.repo.create(task);
+    } catch (err: any) {
+      if (command.id) {
+        const existing = await this.repo.findViewById(command.id);
+        if (existing) {
+          if (existing.projectId === command.projectId) {
+            return existing;
+          }
+          throw new InvalidTaskFieldError(
+            'Task ID already exists in a different project',
+          );
+        }
+      }
+      throw err;
+    }
     if (command.labels && command.labels.length > 0) {
       await this.repo.setLabels(
         task.id,
