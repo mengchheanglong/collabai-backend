@@ -109,10 +109,18 @@ export class AuthDomainService {
         `Password must be at least ${policy.minLength} characters long`,
       );
     }
-    if (typeof plain === 'string' && plain.length > policy.maxLength) {
-      errors.push(
-        `Password must be at most ${policy.maxLength} characters long`,
-      );
+    if (typeof plain === 'string') {
+      if (plain.length > policy.maxLength) {
+        errors.push(
+          `Password must be at most ${policy.maxLength} characters long`,
+        );
+      }
+      const byteLen = Buffer.byteLength(plain, 'utf8');
+      if (byteLen > 72 && plain.length <= policy.maxLength) {
+        errors.push(
+          `Password exceeds maximum length of 72 bytes (bcrypt limit)`,
+        );
+      }
     }
     if (policy.requireUppercase && !/[A-Z]/.test(plain)) {
       errors.push('Password must contain at least one uppercase letter');

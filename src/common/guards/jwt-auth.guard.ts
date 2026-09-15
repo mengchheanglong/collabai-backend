@@ -52,6 +52,10 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
+    if (!payload || !payload.sub || typeof payload.sub !== 'string') {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+
     // Revocation check — fail OPEN so a Redis outage never blocks valid tokens.
     if (payload.jti) {
       try {
@@ -90,11 +94,14 @@ export interface JwtPayload {
 
 export function extractBearerToken(request: Request): string | undefined {
   const authHeader = request.headers?.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+  if (authHeader) {
+    const match = /^Bearer\s+(\S.*)$/i.exec(authHeader.trim());
+    if (match && match[1].trim()) {
+      return match[1].trim();
+    }
   }
   // Fallback: httpOnly cookie set by the auth flow.
   const cookies = (request as Request & { cookies?: Record<string, string> })
-    .cookies;
-  return cookies?.accessToken;
+    ?.cookies;
+  return cookies?.accessToken?.trim() || undefined;
 }

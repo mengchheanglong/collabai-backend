@@ -106,7 +106,31 @@ export class ProjectRepository implements IProjectRepository {
 
   async delete(id: string): Promise<void> {
     if (!isValidUuid(id)) return;
-    await this.prisma.project.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      const taskRows = await tx.task.findMany({
+        where: { projectId: id },
+        select: { id: true },
+      });
+      const taskIds = taskRows.map((t) => t.id);
+
+      await tx.notification.deleteMany({
+        where: {
+          OR: [
+            { relatedEntityType: 'project', relatedEntityId: id },
+            ...(taskIds.length > 0
+              ? [
+                  {
+                    relatedEntityType: 'task',
+                    relatedEntityId: { in: taskIds },
+                  },
+                ]
+              : []),
+          ],
+        },
+      });
+
+      await tx.project.delete({ where: { id } });
+    });
   }
 
   async listForUser(

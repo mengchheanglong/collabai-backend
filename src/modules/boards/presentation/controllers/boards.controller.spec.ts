@@ -5,7 +5,10 @@ import { GetBoardQuery } from '../../application/queries/get-board.query';
 import { CreateBoardCommand } from '../../application/commands/create-board.command';
 import { UpdateBoardCommand } from '../../application/commands/update-board.command';
 import { DeleteBoardCommand } from '../../application/commands/delete-board.command';
-import { BoardView, BoardWithTasksView } from '../../domain/repositories/board.repository.interface';
+import {
+  BoardView,
+  BoardWithTasksView,
+} from '../../domain/repositories/board.repository.interface';
 
 describe('BoardsController', () => {
   let controller: BoardsController;
@@ -36,7 +39,10 @@ describe('BoardsController', () => {
     it('executes GetBoardsQuery and returns mapped boards', async () => {
       queryBus.execute.mockResolvedValueOnce([mockBoardView]);
 
-      const res = await controller.listBoards('user-1', mockBoardView.projectId);
+      const res = await controller.listBoards(
+        'user-1',
+        mockBoardView.projectId,
+      );
       expect(queryBus.execute).toHaveBeenCalledWith(expect.any(GetBoardsQuery));
       expect(res).toHaveLength(1);
     });
@@ -46,12 +52,18 @@ describe('BoardsController', () => {
     it('executes CreateBoardCommand and returns created board', async () => {
       commandBus.execute.mockResolvedValueOnce(mockBoardView);
 
-      const res = await controller.createBoard('user-1', mockBoardView.projectId, {
-        name: 'Sprint 1',
-        description: 'Sprint 1 board',
-      });
+      const res = await controller.createBoard(
+        'user-1',
+        mockBoardView.projectId,
+        {
+          name: 'Sprint 1',
+          description: 'Sprint 1 board',
+        },
+      );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(CreateBoardCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(CreateBoardCommand),
+      );
       expect(res.board.id).toBe(mockBoardView.id);
     });
   });
@@ -60,8 +72,14 @@ describe('BoardsController', () => {
     it('executes GetBoardQuery with includeTasks=false', async () => {
       queryBus.execute.mockResolvedValueOnce(mockBoardView);
 
-      const res = await controller.getBoard('user-1', mockBoardView.id, 'false');
-      expect(queryBus.execute).toHaveBeenCalledWith(new GetBoardQuery('user-1', mockBoardView.id, false));
+      const res = await controller.getBoard(
+        'user-1',
+        mockBoardView.id,
+        'false',
+      );
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        new GetBoardQuery('user-1', mockBoardView.id, false),
+      );
       expect(res.board.id).toBe(mockBoardView.id);
       expect((res as any).tasks).toBeUndefined();
     });
@@ -95,7 +113,9 @@ describe('BoardsController', () => {
       queryBus.execute.mockResolvedValueOnce(mockWithTasks);
 
       const res = await controller.getBoard('user-1', mockBoardView.id, 'true');
-      expect(queryBus.execute).toHaveBeenCalledWith(new GetBoardQuery('user-1', mockBoardView.id, true));
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        new GetBoardQuery('user-1', mockBoardView.id, true),
+      );
       expect(res.board).toBeDefined();
       expect(res.tasks).toHaveLength(1);
       expect(res.tasks[0]._id).toBe('task-1');
@@ -110,7 +130,9 @@ describe('BoardsController', () => {
         name: 'Sprint 1 Updated',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(UpdateBoardCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateBoardCommand),
+      );
       expect(res.board).toBeDefined();
     });
   });
@@ -120,7 +142,9 @@ describe('BoardsController', () => {
       commandBus.execute.mockResolvedValueOnce(undefined);
 
       const res = await controller.deleteBoard('user-1', mockBoardView.id);
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteBoardCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteBoardCommand),
+      );
       expect(res.success).toBe(true);
     });
   });

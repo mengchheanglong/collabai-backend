@@ -75,7 +75,9 @@ describe('ProjectsController', () => {
         icon: '??',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(CreateProjectCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(CreateProjectCommand),
+      );
       expect(res.project.id).toBe(mockProjectView.id);
     });
   });
@@ -85,7 +87,9 @@ describe('ProjectsController', () => {
       queryBus.execute.mockResolvedValueOnce(mockProjectView);
 
       const res = await controller.get('user-1', mockProjectView.id);
-      expect(queryBus.execute).toHaveBeenCalledWith(expect.any(GetProjectQuery));
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        expect.any(GetProjectQuery),
+      );
       expect(res.project.id).toBe(mockProjectView.id);
     });
   });
@@ -98,7 +102,9 @@ describe('ProjectsController', () => {
         name: 'Updated Name',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(UpdateProjectCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateProjectCommand),
+      );
       expect(res.project).toBeDefined();
     });
   });
@@ -108,7 +114,9 @@ describe('ProjectsController', () => {
       commandBus.execute.mockResolvedValueOnce(undefined);
 
       const res = await controller.remove('user-1', mockProjectView.id);
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteProjectCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteProjectCommand),
+      );
       expect(res.success).toBe(true);
     });
   });
@@ -118,7 +126,9 @@ describe('ProjectsController', () => {
       queryBus.execute.mockResolvedValueOnce(mockProjectView.members);
 
       const res = await controller.listMembers('user-1', mockProjectView.id);
-      expect(queryBus.execute).toHaveBeenCalledWith(expect.any(ListMembersQuery));
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        expect.any(ListMembersQuery),
+      );
       expect(res.members).toHaveLength(1);
     });
 
@@ -130,7 +140,9 @@ describe('ProjectsController', () => {
         role: 'member',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(InviteMemberCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(InviteMemberCommand),
+      );
       expect(res.message).toBe('Member added');
     });
 
@@ -144,7 +156,9 @@ describe('ProjectsController', () => {
         { role: 'admin' },
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(UpdateMemberRoleCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateMemberRoleCommand),
+      );
       expect(res.project).toBeDefined();
     });
 
@@ -157,7 +171,9 @@ describe('ProjectsController', () => {
         '33333333-3333-4333-a333-333333333333',
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(RemoveMemberCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(RemoveMemberCommand),
+      );
       expect(res.message).toBe('Member removed');
     });
   });

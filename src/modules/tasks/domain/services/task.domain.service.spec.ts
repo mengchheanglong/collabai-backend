@@ -24,6 +24,12 @@ describe('TaskDomainService', () => {
     it('handles an empty column', () => {
       expect(svc.positionBetween(null, null)).toBe(POSITION_GAP);
     });
+    it('avoids collision when before and after have identical positions', () => {
+      expect(svc.positionBetween(1000, 1000)).toBe(1001);
+    });
+    it('avoids inversion when before is greater than after', () => {
+      expect(svc.positionBetween(2000, 1000)).toBe(2001);
+    });
   });
 });
 

@@ -57,9 +57,9 @@ export function sanitizeHtmlContent(value: unknown): unknown {
         /data\s*:\s*(?:text\s*\/\s*(?:html|javascript|ecmascript|xml)|application\s*\/\s*(?:javascript|ecmascript|x-javascript|xml|xhtml\+xml)|image\s*\/\s*svg\+xml)[^"'\s>]*/gi,
         '',
       )
-      // Strip inline event handlers like onerror=, onclick=, onload=, onfocus=, onbegin= etc.
+      // Strip inline event handlers like onerror=, onclick=, onload=, onfocus=, onbegin= etc. (including slash-separated like <svg/onload=...>)
       .replace(
-        /\bon[a-zA-Z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|`[^`]*`|[^\s>]+)/gi,
+        /(?:^|[\s/])on[a-zA-Z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|`[^`]*`|[^\s>]+)/gi,
         '',
       );
     passes++;
@@ -137,6 +137,23 @@ export function Trim(): PropertyDecorator {
   );
 }
 
+/**
+ * Normalizes email strings: trims ASCII/Unicode whitespace and lowercases.
+ */
+export function normalizeEmail(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  return trimUnicode(value).toLowerCase();
+}
+
+/**
+ * Decorator to automatically normalize, trim whitespace, and lowercase email strings.
+ */
+export function NormalizeEmail(): PropertyDecorator {
+  return Transform(({ value }: { value: unknown }): unknown =>
+    normalizeEmail(value),
+  );
+}
+
 @ValidatorConstraint({ name: 'isTrimmedNotEmpty', async: false })
 export class IsTrimmedNotEmptyConstraint implements ValidatorConstraintInterface {
   validate(value: unknown, args?: ValidationArguments): boolean {
@@ -192,7 +209,7 @@ export function IsTrimmedNotEmpty(
 }
 
 const ISO_DATE_REGEX =
-  /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?)?$/;
+  /^(\d{4})-(\d{2})-(\d{2})(?:[Tt\s](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(?:[Zz]|([+-])(\d{2})(?::?(\d{2}))?)?)?$/;
 
 function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;

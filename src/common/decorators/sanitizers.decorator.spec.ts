@@ -9,6 +9,8 @@ import {
   Trim,
   trimUnicode,
   isValidSafeDate,
+  NormalizeEmail,
+  normalizeEmail,
 } from './sanitizers.decorator';
 
 class TestDto {
@@ -303,6 +305,44 @@ describe('Sanitizers & Validation Decorators', () => {
       expect(isValidSafeDate(true)).toBe(false);
       expect(isValidSafeDate('not-a-date')).toBe(false);
       expect(isValidSafeDate(new Date('invalid'))).toBe(false);
+    });
+
+    it('should accept lowercase ISO date letters and microsecond precision', () => {
+      expect(isValidSafeDate('2026-09-15t14:00:00z')).toBe(true);
+      expect(isValidSafeDate('2026-09-15T14:00:00.123456Z')).toBe(true);
+      expect(isValidSafeDate('2026-09-15t14:00:00.123456789z')).toBe(true);
+    });
+  });
+
+  describe('NormalizeEmail & normalizeEmail', () => {
+    it('normalizes mixed-case and whitespace-padded emails', () => {
+      expect(normalizeEmail('  User+Tag@GMAIL.COM  ')).toBe(
+        'user+tag@gmail.com',
+      );
+      expect(normalizeEmail('\u200Buser@domain.com\uFEFF')).toBe(
+        'user@domain.com',
+      );
+      expect(normalizeEmail(12345 as any)).toBe(12345);
+    });
+
+    it('transforms email field via @NormalizeEmail decorator', async () => {
+      class EmailDto {
+        @NormalizeEmail()
+        email: string;
+      }
+      const instance = plainToInstance(EmailDto, {
+        email: '  Alice.Admin@Example.ORG  ',
+      });
+      expect(instance.email).toBe('alice.admin@example.org');
+    });
+  });
+
+  describe('sanitizeHtmlContent forward-slash XSS vectors', () => {
+    it('neutralizes forward-slash event handlers like <svg/onload=...>', () => {
+      const payload = '<svg/onload=alert(1)>';
+      const clean = sanitizeHtmlContent(payload);
+      expect(clean).not.toContain('onload=');
+      expect(clean).not.toContain('alert(1)');
     });
   });
 });

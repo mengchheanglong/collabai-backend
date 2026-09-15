@@ -94,4 +94,3 @@ export class NotificationsController {
     return { read: true };
   }
 }
-
