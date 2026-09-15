@@ -213,4 +213,3 @@ export class ProjectsController {
     return { project: toProjectResponse(view), message: 'Member removed' };
   }
 }
-

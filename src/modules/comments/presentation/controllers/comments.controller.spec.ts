@@ -38,7 +38,9 @@ describe('CommentsController', () => {
       queryBus.execute.mockResolvedValueOnce([mockCommentView]);
 
       const res = await controller.list('user-1', mockCommentView.taskId);
-      expect(queryBus.execute).toHaveBeenCalledWith(expect.any(GetTaskCommentsQuery));
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        expect.any(GetTaskCommentsQuery),
+      );
       expect(res.comments).toHaveLength(1);
     });
   });
@@ -51,7 +53,9 @@ describe('CommentsController', () => {
         body: 'This is a comment body',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(AddCommentCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(AddCommentCommand),
+      );
       expect(res.comment.id).toBe(mockCommentView.id);
     });
   });
@@ -64,7 +68,9 @@ describe('CommentsController', () => {
         body: 'Updated comment body',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(EditCommentCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(EditCommentCommand),
+      );
       expect(res.comment).toBeDefined();
     });
 
@@ -78,7 +84,9 @@ describe('CommentsController', () => {
         { body: 'Updated comment body' },
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(EditCommentCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(EditCommentCommand),
+      );
       expect(res.comment).toBeDefined();
     });
   });
@@ -88,7 +96,9 @@ describe('CommentsController', () => {
       commandBus.execute.mockResolvedValueOnce(undefined);
 
       const res = await controller.remove('user-1', mockCommentView.id);
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteCommentCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteCommentCommand),
+      );
       expect(res.success).toBe(true);
     });
 
@@ -101,7 +111,9 @@ describe('CommentsController', () => {
         mockCommentView.id,
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteCommentCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteCommentCommand),
+      );
       expect(res.success).toBe(true);
     });
   });

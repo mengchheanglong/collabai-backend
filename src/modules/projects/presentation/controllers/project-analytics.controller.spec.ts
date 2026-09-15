@@ -24,9 +24,15 @@ describe('ProjectAnalyticsController', () => {
       };
       queryBus.execute.mockResolvedValueOnce(summaryResult);
 
-      const res = await controller.getSummary('user-1', '11111111-1111-4111-a111-111111111111');
+      const res = await controller.getSummary(
+        'user-1',
+        '11111111-1111-4111-a111-111111111111',
+      );
       expect(queryBus.execute).toHaveBeenCalledWith(
-        new GetProjectAnalyticsSummaryQuery('user-1', '11111111-1111-4111-a111-111111111111'),
+        new GetProjectAnalyticsSummaryQuery(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+        ),
       );
       expect(res).toEqual(summaryResult);
     });
@@ -36,21 +42,45 @@ describe('ProjectAnalyticsController', () => {
     it('clamps days between 1 and 60 with default fallback to 14', async () => {
       queryBus.execute.mockResolvedValueOnce([]);
 
-      await controller.getBurndown('user-1', '11111111-1111-4111-a111-111111111111', '999');
+      await controller.getBurndown(
+        'user-1',
+        '11111111-1111-4111-a111-111111111111',
+        '999',
+      );
       expect(queryBus.execute).toHaveBeenCalledWith(
-        new GetProjectAnalyticsBurndownQuery('user-1', '11111111-1111-4111-a111-111111111111', 60),
+        new GetProjectAnalyticsBurndownQuery(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+          60,
+        ),
       );
 
       queryBus.execute.mockResolvedValueOnce([]);
-      await controller.getBurndown('user-1', '11111111-1111-4111-a111-111111111111', '-10');
+      await controller.getBurndown(
+        'user-1',
+        '11111111-1111-4111-a111-111111111111',
+        '-10',
+      );
       expect(queryBus.execute).toHaveBeenCalledWith(
-        new GetProjectAnalyticsBurndownQuery('user-1', '11111111-1111-4111-a111-111111111111', 14),
+        new GetProjectAnalyticsBurndownQuery(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+          14,
+        ),
       );
 
       queryBus.execute.mockResolvedValueOnce([]);
-      await controller.getBurndown('user-1', '11111111-1111-4111-a111-111111111111', 'not-a-number');
+      await controller.getBurndown(
+        'user-1',
+        '11111111-1111-4111-a111-111111111111',
+        'not-a-number',
+      );
       expect(queryBus.execute).toHaveBeenCalledWith(
-        new GetProjectAnalyticsBurndownQuery('user-1', '11111111-1111-4111-a111-111111111111', 14),
+        new GetProjectAnalyticsBurndownQuery(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+          14,
+        ),
       );
     });
 
@@ -63,7 +93,11 @@ describe('ProjectAnalyticsController', () => {
         ['30', '50'] as any,
       );
       expect(queryBus.execute).toHaveBeenCalledWith(
-        new GetProjectAnalyticsBurndownQuery('user-1', '11111111-1111-4111-a111-111111111111', 30),
+        new GetProjectAnalyticsBurndownQuery(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+          30,
+        ),
       );
     });
   });

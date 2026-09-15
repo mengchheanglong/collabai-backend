@@ -155,6 +155,16 @@ describe('AuthDomainService', () => {
       );
     });
 
+    it('rejects a password whose UTF-8 byte length exceeds 72 bytes even if character count <= 72', () => {
+      // 25 3-byte unicode characters = 75 bytes, but character length is only 27 (<= 72)
+      const multibytePw = 'Ab1' + '€'.repeat(25);
+      const result = service.validatePasswordPolicy(multibytePw);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual(
+        expect.arrayContaining([expect.stringContaining('72 bytes')]),
+      );
+    });
+
     it('collects multiple violations at once', () => {
       const result = service.validatePasswordPolicy('abc');
       expect(result.valid).toBe(false);

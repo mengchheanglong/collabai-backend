@@ -75,10 +75,12 @@ export class TasksController {
     @Query('dueBefore') dueBefore?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('page[]') pageBracket?: string | string[],
+    @Query('limit[]') limitBracket?: string | string[],
   ) {
     const { page: parsedPage, limit: parsedLimit } = parsePaginationParams(
-      page,
-      limit,
+      page ?? pageBracket,
+      limit ?? limitBracket,
       50,
     );
     const result = await this.queryBus.execute(

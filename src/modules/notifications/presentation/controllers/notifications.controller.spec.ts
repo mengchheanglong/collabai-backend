@@ -54,7 +54,9 @@ describe('NotificationsController', () => {
       commandBus.execute.mockResolvedValueOnce({ updated: 5 });
 
       const res = await controller.markAllRead('user-1');
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(MarkAllReadCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(MarkAllReadCommand),
+      );
       expect(res).toEqual({ updated: 5 });
     });
   });
@@ -64,7 +66,9 @@ describe('NotificationsController', () => {
       commandBus.execute.mockResolvedValueOnce(undefined);
 
       const res = await controller.markRead('user-1', mockNotification.id);
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(MarkAsReadCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(MarkAsReadCommand),
+      );
       expect(res).toEqual({ read: true });
     });
   });

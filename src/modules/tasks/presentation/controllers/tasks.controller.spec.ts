@@ -32,7 +32,12 @@ describe('TasksController', () => {
     completedAt: null,
     labels: ['backend', 'testing'],
     subtasks: [
-      { id: '66666666-6666-4666-a666-666666666666', title: 'Write tests', done: false, orderIndex: 0 },
+      {
+        id: '66666666-6666-4666-a666-666666666666',
+        title: 'Write tests',
+        done: false,
+        orderIndex: 0,
+      },
     ],
     commentCount: 2,
     createdAt: new Date('2026-09-01T10:00:00.000Z'),
@@ -67,13 +72,13 @@ describe('TasksController', () => {
         '999999',
       );
 
-      expect(queryBus.execute).toHaveBeenCalledWith(
-        expect.any(GetTasksQuery),
-      );
+      expect(queryBus.execute).toHaveBeenCalledWith(expect.any(GetTasksQuery));
       const query = queryBus.execute.mock.calls[0][0] as GetTasksQuery;
       expect(query.filters.page).toBe(1);
       expect(query.filters.limit).toBe(100);
-      expect(query.filters.dueBefore).toEqual(new Date('2026-09-10T12:00:00.000Z'));
+      expect(query.filters.dueBefore).toEqual(
+        new Date('2026-09-10T12:00:00.000Z'),
+      );
       expect(res.items).toHaveLength(1);
       expect(res.meta.totalPages).toBe(1);
     });
@@ -118,7 +123,9 @@ describe('TasksController', () => {
         priority: 'high',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(CreateTaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(CreateTaskCommand),
+      );
       expect(res.task.id).toBe(mockTaskView.id);
       expect(res.task.title).toBe(mockTaskView.title);
     });
@@ -143,7 +150,9 @@ describe('TasksController', () => {
         priority: 'urgent',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(UpdateTaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateTaskCommand),
+      );
       expect(res.task).toBeDefined();
     });
   });
@@ -157,7 +166,9 @@ describe('TasksController', () => {
         destinationPosition: 2000,
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(MoveTaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(MoveTaskCommand),
+      );
       expect(res.task).toBeDefined();
     });
 
@@ -173,7 +184,9 @@ describe('TasksController', () => {
       commandBus.execute.mockResolvedValueOnce(undefined);
 
       const res = await controller.remove('user-1', mockTaskView.id);
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteTaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteTaskCommand),
+      );
       expect(res.success).toBe(true);
     });
   });
@@ -186,7 +199,9 @@ describe('TasksController', () => {
         title: 'New Subtask',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(AddSubtaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(AddSubtaskCommand),
+      );
       expect(res.subtask).toBeDefined();
     });
 
@@ -200,7 +215,9 @@ describe('TasksController', () => {
         { done: true },
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(UpdateSubtaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateSubtaskCommand),
+      );
       expect(res.subtask).toBeDefined();
     });
 
@@ -213,7 +230,9 @@ describe('TasksController', () => {
         '66666666-6666-4666-a666-666666666666',
       );
 
-      expect(commandBus.execute).toHaveBeenCalledWith(expect.any(DeleteSubtaskCommand));
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(DeleteSubtaskCommand),
+      );
       expect(res.success).toBe(true);
     });
   });

@@ -46,7 +46,8 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
       );
     }
 
-    const invitee = await this.repo.findUserByEmail(command.email);
+    const email = command.email.toLowerCase().trim();
+    const invitee = await this.repo.findUserByEmail(email);
     if (!invitee) throw new InviteeNotFoundError();
 
     const existing = await this.repo.findMembership(
