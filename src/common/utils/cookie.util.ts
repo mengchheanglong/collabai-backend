@@ -20,10 +20,20 @@ export function buildAuthCookieOptions(
   nodeEnv?: string,
   maxAgeMs?: number,
 ): CookieOptions {
+  const isProd = isProduction(nodeEnv);
+  // In cross-origin cloud hosting (e.g. Render with frontend & backend on different subdomains),
+  // sameSite must be 'none' and secure must be true for credentials (httpOnly cookies) to flow.
+  const sameSiteEnv = process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none' | undefined;
+  const sameSite: 'strict' | 'lax' | 'none' = sameSiteEnv ?? (isProd ? 'none' : 'lax');
+  const secure =
+    process.env.COOKIE_SECURE !== undefined
+      ? process.env.COOKIE_SECURE === 'true'
+      : (isProd || sameSite === 'none');
+
   const options: CookieOptions = {
     httpOnly: true,
-    sameSite: 'strict',
-    secure: isProduction(nodeEnv),
+    sameSite,
+    secure,
     path: '/',
   };
   if (maxAgeMs && maxAgeMs > 0) {
