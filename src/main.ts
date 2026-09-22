@@ -20,12 +20,25 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // CORS with credentials (so the httpOnly auth cookies flow). In dev, reflect the
-  // request origin so any localhost port/host works; in prod, lock to FRONTEND_ORIGIN.
+  // request origin so any localhost port/host works; in prod, support comma-separated origins.
   const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
   app.enableCors({
-    origin: isProd
-      ? (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200')
-      : true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server) or in dev mode
+      if (!origin || !isProd) {
+        return callback(null, true);
+      }
+      const cleanOrigin = origin.trim().replace(/\/$/, '');
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(cleanOrigin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
   });
 
@@ -75,6 +88,7 @@ async function bootstrap() {
     swaggerOptions: { withCredentials: true, persistAuthorization: true },
   });
 
-  await app.listen(process.env.PORT ?? 4000);
+  const port = process.env.PORT ?? 4000;
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();
