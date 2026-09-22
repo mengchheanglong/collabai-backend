@@ -15,8 +15,12 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return a friendly service banner with docs + health links', () => {
+      expect(appController.getHello()).toEqual({
+        message: 'CollabAI API is running',
+        docs: '/api/docs',
+        health: '/api/v1/health',
+      });
     });
   });
 });

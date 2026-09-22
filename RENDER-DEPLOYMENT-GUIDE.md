@@ -75,11 +75,32 @@ In the **Environment** tab, add the following variables:
 | `AI_PROVIDER` | `stub`, `deepseek`, or `openai` | `stub` (or `deepseek`) |
 | `DEEPSEEK_API_KEY` | DeepSeek API key (if using DeepSeek) | `sk-...` |
 | `OPENAI_API_KEY` | OpenAI API key (if using OpenAI) | `sk-...` |
-| `EMAIL_HOST` | SMTP server host (optional) | `smtp.gmail.com` |
-| `EMAIL_PORT` | SMTP server port | `587` |
-| `EMAIL_USER` | SMTP username / email | `you@gmail.com` |
-| `EMAIL_PASS` | SMTP App Password | `xxxx xxxx xxxx xxxx` |
-| `SMTP_FROM` | From header | `"CollabAI" <noreply@example.com>` |
+| `EMAIL_BACKEND` | `log`, `smtp`, `resend`, or `mailjet`. Unset = auto-detect from keys | `resend` |
+| `EMAIL_HOST` | SMTP server host (local dev only) | `smtp.gmail.com` |
+| `EMAIL_PORT` | SMTP server port (local dev only) | `587` |
+| `EMAIL_USER` | SMTP username / email (local dev only) | `you@gmail.com` |
+| `EMAIL_PASS` | SMTP App Password (local dev only) | `xxxx xxxx xxxx xxxx` |
+| `SMTP_FROM` | SMTP From header | `"CollabAI" <noreply@example.com>` |
+| `RESEND_API_KEY` | Resend API key — **recommended on Render free tier** | `re_...` |
+| `MAILJET_API_KEY` | Mailjet API key (alternative HTTP provider) | `...` |
+| `MAILJET_SECRET_KEY` | Mailjet secret key | `...` |
+| `DEFAULT_FROM_EMAIL` | Sender address for every backend (highest precedence) | `"CollabAI" <noreply@yourdomain.com>` |
+
+> **⚠️ Render free tier blocks SMTP.** Since September 26, 2025, free Render web services
+> cannot send outbound traffic on SMTP ports 25/465/587. Gmail/SMTP credentials will
+> verify fine but every send silently times out. Use the **Resend** or **Mailjet**
+> HTTP backends instead (they use port 443 and are never blocked), or upgrade to a
+> paid Render instance.
+
+### Recommended: Resend on Render (free, ~100 emails/day)
+
+1. Sign up at [resend.com](https://resend.com) and add + verify your sending domain
+   (or start with `onboarding@resend.dev` to test).
+2. Copy your API key (`re_...`) from **API Keys**.
+3. In Render, set `RESEND_API_KEY` (and optionally `DEFAULT_FROM_EMAIL` to a verified
+   sender, e.g. `CollabAI <noreply@yourdomain.com>`).
+4. Leave `EMAIL_BACKEND` unset — the service auto-detects Resend from the key, with
+   automatic fallback to `log` if the key is missing.
 
 5. Click **Deploy Web Service**.
 
