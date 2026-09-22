@@ -59,7 +59,8 @@ function normalizeBackendName(raw: string | undefined): string | undefined {
 export function resolveEmailBackend(
   env: NodeJS.ProcessEnv = process.env,
 ): EmailBackend {
-  const explicit = BACKEND_ALIASES[normalizeBackendName(env.EMAIL_BACKEND) ?? ''];
+  const explicit =
+    BACKEND_ALIASES[normalizeBackendName(env.EMAIL_BACKEND) ?? ''];
   if (explicit) return explicit;
   if (env.RESEND_API_KEY) return 'resend';
   if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) return 'mailjet';
@@ -126,14 +127,22 @@ export class EmailService implements OnModuleInit {
       return;
     }
 
-    if (this.backend === 'resend' && !this.config.get<string>('RESEND_API_KEY')) {
-      this.logger.warn('EMAIL_BACKEND=resend but RESEND_API_KEY is missing — falling back to log.');
+    if (
+      this.backend === 'resend' &&
+      !this.config.get<string>('RESEND_API_KEY')
+    ) {
+      this.logger.warn(
+        'EMAIL_BACKEND=resend but RESEND_API_KEY is missing — falling back to log.',
+      );
       this.backend = 'log';
       return;
     }
     if (
       this.backend === 'mailjet' &&
-      !(this.config.get<string>('MAILJET_API_KEY') && this.config.get<string>('MAILJET_SECRET_KEY'))
+      !(
+        this.config.get<string>('MAILJET_API_KEY') &&
+        this.config.get<string>('MAILJET_SECRET_KEY')
+      )
     ) {
       this.logger.warn(
         'EMAIL_BACKEND=mailjet but MAILJET_API_KEY/MAILJET_SECRET_KEY are missing — falling back to log.',
@@ -189,19 +198,26 @@ export class EmailService implements OnModuleInit {
     });
   }
 
-  private async send(to: string, subject: string, body: MailBody): Promise<void> {
+  private async send(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
     try {
       switch (this.backend) {
         case 'smtp':
           if (this.transporter) {
-            const info = await this.transporter.sendMail({
+            // nodemailer's SentMessageInfo is typed `any`; assert the shape we use.
+            const info = (await this.transporter.sendMail({
               from: this.from,
               to,
               subject,
               text: body.text,
               html: body.html,
-            });
-            this.logger.log(`Email sent: "${subject}" -> ${to} (messageId=${info.messageId})`);
+            })) as { messageId?: string };
+            this.logger.log(
+              `Email sent: "${subject}" -> ${to} (messageId=${info.messageId})`,
+            );
           }
           return;
         case 'resend':
@@ -213,9 +229,7 @@ export class EmailService implements OnModuleInit {
           this.logger.log(`Email sent: "${subject}" -> ${to} (via Mailjet)`);
           return;
         default:
-          this.logger.log(
-            `[LOG-EMAIL] "${subject}" -> ${to}\n${body.text}`,
-          );
+          this.logger.log(`[LOG-EMAIL] "${subject}" -> ${to}\n${body.text}`);
           return;
       }
     } catch (err) {
@@ -227,7 +241,11 @@ export class EmailService implements OnModuleInit {
   }
 
   /** Resend HTTP API — https://resend.com/docs/api-reference (port 443, Render-safe). */
-  private async sendViaResend(to: string, subject: string, body: MailBody): Promise<void> {
+  private async sendViaResend(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
     const key = this.config.get<string>('RESEND_API_KEY');
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -244,12 +262,18 @@ export class EmailService implements OnModuleInit {
       }),
     });
     if (!res.ok) {
-      throw new Error(`Resend API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      throw new Error(
+        `Resend API ${res.status}: ${(await res.text()).slice(0, 300)}`,
+      );
     }
   }
 
   /** Mailjet Send API v3.1 — https://dev.mailjet.com (port 443, Render-safe). */
-  private async sendViaMailjet(to: string, subject: string, body: MailBody): Promise<void> {
+  private async sendViaMailjet(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
     const key = this.config.get<string>('MAILJET_API_KEY');
     const secret = this.config.get<string>('MAILJET_SECRET_KEY');
     const auth = Buffer.from(`${key}:${secret}`).toString('base64');
@@ -263,7 +287,10 @@ export class EmailService implements OnModuleInit {
       body: JSON.stringify({
         Messages: [
           {
-            From: { Email: from.email, ...(from.name ? { Name: from.name } : {}) },
+            From: {
+              Email: from.email,
+              ...(from.name ? { Name: from.name } : {}),
+            },
             To: [{ Email: to }],
             Subject: subject,
             TextPart: body.text,
@@ -273,7 +300,9 @@ export class EmailService implements OnModuleInit {
       }),
     });
     if (!res.ok) {
-      throw new Error(`Mailjet API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      throw new Error(
+        `Mailjet API ${res.status}: ${(await res.text()).slice(0, 300)}`,
+      );
     }
   }
 

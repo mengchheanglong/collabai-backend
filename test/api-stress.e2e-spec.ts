@@ -1416,7 +1416,9 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
 
     it('1.9.4 Filter & Search with 0 matches returns empty array and 0 total without error', async () => {
       const searchRes = await request(server)
-        .get(`/projects/${projectAId}/tasks?q=non_existent_search_term_xyz_12345`)
+        .get(
+          `/projects/${projectAId}/tasks?q=non_existent_search_term_xyz_12345`,
+        )
         .set('Authorization', `Bearer ${userA.token}`)
         .expect(200);
 

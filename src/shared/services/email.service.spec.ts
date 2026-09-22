@@ -1,7 +1,10 @@
 // src/shared/services/email.service.spec.ts
 // Unit tests for backend resolution + fallback-code gating.
 
-import { resolveEmailBackend, isEmailDeliveryConfigured } from './email.service';
+import {
+  resolveEmailBackend,
+  isEmailDeliveryConfigured,
+} from './email.service';
 
 describe('EmailService backend resolution', () => {
   const baseEnv = { ...process.env };
@@ -11,12 +14,15 @@ describe('EmailService backend resolution', () => {
   });
 
   it('defaults to log when nothing is configured', () => {
-    expect(resolveEmailBackend({} as NodeJS.ProcessEnv)).toBe('log');
-    expect(isEmailDeliveryConfigured({} as NodeJS.ProcessEnv)).toBe(false);
+    expect(resolveEmailBackend({})).toBe('log');
+    expect(isEmailDeliveryConfigured({})).toBe(false);
   });
 
   it('explicit EMAIL_BACKEND always wins', () => {
-    const env = { EMAIL_BACKEND: 'log', RESEND_API_KEY: 're_x' } as NodeJS.ProcessEnv;
+    const env = {
+      EMAIL_BACKEND: 'log',
+      RESEND_API_KEY: 're_x',
+    } as NodeJS.ProcessEnv;
     expect(resolveEmailBackend(env)).toBe('log');
     expect(isEmailDeliveryConfigured(env)).toBe(false);
   });
@@ -26,12 +32,12 @@ describe('EmailService backend resolution', () => {
       resolveEmailBackend({
         EMAIL_BACKEND: 'notifications.email_backends.ResendAPIBackend',
         RESEND_API_KEY: 're_x',
-      } as NodeJS.ProcessEnv),
+      }),
     ).toBe('resend');
     expect(
       resolveEmailBackend({
         EMAIL_BACKEND: 'notifications.email_backends.MailjetAPIBackend',
-      } as NodeJS.ProcessEnv),
+      }),
     ).toBe('mailjet');
   });
 
@@ -42,7 +48,10 @@ describe('EmailService backend resolution', () => {
   });
 
   it('auto-detects mailjet from its key pair', () => {
-    const env = { MAILJET_API_KEY: 'k', MAILJET_SECRET_KEY: 's' } as NodeJS.ProcessEnv;
+    const env = {
+      MAILJET_API_KEY: 'k',
+      MAILJET_SECRET_KEY: 's',
+    } as NodeJS.ProcessEnv;
     expect(resolveEmailBackend(env)).toBe('mailjet');
     expect(isEmailDeliveryConfigured(env)).toBe(true);
   });
@@ -70,7 +79,10 @@ describe('EmailService backend resolution', () => {
   });
 
   it('empty-string EMAIL_BACKEND falls through to auto-detect', () => {
-    const env = { EMAIL_BACKEND: '', RESEND_API_KEY: 're_x' } as NodeJS.ProcessEnv;
+    const env = {
+      EMAIL_BACKEND: '',
+      RESEND_API_KEY: 're_x',
+    } as NodeJS.ProcessEnv;
     expect(resolveEmailBackend(env)).toBe('resend');
   });
 });

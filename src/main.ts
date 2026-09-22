@@ -17,12 +17,16 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '100kb' }));
 
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
-  app.setGlobalPrefix('api/v1');
+  // The root banner stays at / (excluded from the prefix) so hitting the bare
+  // host shows the service banner instead of a raw 404 "Cannot GET /".
+  app.setGlobalPrefix('api/v1', { exclude: ['/'] });
 
   // CORS with credentials (so the httpOnly auth cookies flow). In dev, reflect the
   // request origin so any localhost port/host works; in prod, support comma-separated origins.
   const isProd = process.env.NODE_ENV === 'production';
-  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200')
+  const allowedOrigins = (
+    process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200'
+  )
     .split(',')
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);
@@ -34,7 +38,10 @@ async function bootstrap() {
         return callback(null, true);
       }
       const cleanOrigin = origin.trim().replace(/\/$/, '');
-      if (allowedOrigins.includes('*') || allowedOrigins.includes(cleanOrigin)) {
+      if (
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(cleanOrigin)
+      ) {
         return callback(null, true);
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`));

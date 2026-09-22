@@ -138,7 +138,14 @@ export class AuthController {
     const user = await this.commandBus.execute(
       new UpdateProfileCommand(userId, body.name, body.avatarUrl),
     );
-    return { user: { ...user, id: user.id, _id: user.id, avatarUrl: user.avatarUrl ?? null } };
+    return {
+      user: {
+        ...user,
+        id: user.id,
+        _id: user.id,
+        avatarUrl: user.avatarUrl ?? null,
+      },
+    };
   }
 
   // ---- Flow 1: Registration ----

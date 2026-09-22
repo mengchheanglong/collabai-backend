@@ -26,10 +26,18 @@ describe('AccountLockoutService', () => {
 
       await service.recordFailedAttempt('User@Example.COM', '127.0.0.1');
 
-      expect(redis.incr).toHaveBeenCalledWith('lockout:account:attempts:user@example.com');
+      expect(redis.incr).toHaveBeenCalledWith(
+        'lockout:account:attempts:user@example.com',
+      );
       expect(redis.incr).toHaveBeenCalledWith('lockout:ip:attempts:127.0.0.1');
-      expect(redis.expire).toHaveBeenCalledWith('lockout:account:attempts:user@example.com', 900);
-      expect(redis.expire).toHaveBeenCalledWith('lockout:ip:attempts:127.0.0.1', 900);
+      expect(redis.expire).toHaveBeenCalledWith(
+        'lockout:account:attempts:user@example.com',
+        900,
+      );
+      expect(redis.expire).toHaveBeenCalledWith(
+        'lockout:ip:attempts:127.0.0.1',
+        900,
+      );
       expect(redis.set).not.toHaveBeenCalled();
     });
 
@@ -43,8 +51,16 @@ describe('AccountLockoutService', () => {
 
       await service.recordFailedAttempt('target@example.com', '192.168.1.1');
 
-      expect(redis.set).toHaveBeenCalledWith('lockout:account:blocked:target@example.com', '1', 1800);
-      expect(redis.set).not.toHaveBeenCalledWith(expect.stringContaining('lockout:ip:blocked'), expect.anything(), expect.anything());
+      expect(redis.set).toHaveBeenCalledWith(
+        'lockout:account:blocked:target@example.com',
+        '1',
+        1800,
+      );
+      expect(redis.set).not.toHaveBeenCalledWith(
+        expect.stringContaining('lockout:ip:blocked'),
+        expect.anything(),
+        expect.anything(),
+      );
     });
 
     it('blocks IP when attempts reach 20', async () => {
@@ -57,7 +73,11 @@ describe('AccountLockoutService', () => {
 
       await service.recordFailedAttempt('innocent@example.com', '10.0.0.5');
 
-      expect(redis.set).toHaveBeenCalledWith('lockout:ip:blocked:10.0.0.5', '1', 1800);
+      expect(redis.set).toHaveBeenCalledWith(
+        'lockout:ip:blocked:10.0.0.5',
+        '1',
+        1800,
+      );
     });
 
     it('fails open when Redis throws during recordFailedAttempt without throwing', async () => {
@@ -109,14 +129,20 @@ describe('AccountLockoutService', () => {
 
       await service.clearAttempts('User@Example.COM');
 
-      expect(redis.del).toHaveBeenCalledWith('lockout:account:attempts:user@example.com');
-      expect(redis.del).toHaveBeenCalledWith('lockout:account:blocked:user@example.com');
+      expect(redis.del).toHaveBeenCalledWith(
+        'lockout:account:attempts:user@example.com',
+      );
+      expect(redis.del).toHaveBeenCalledWith(
+        'lockout:account:blocked:user@example.com',
+      );
     });
 
     it('fails open when Redis del throws without rethrowing', async () => {
       redis.del.mockRejectedValue(new Error('Redis timeout'));
 
-      await expect(service.clearAttempts('user@example.com')).resolves.not.toThrow();
+      await expect(
+        service.clearAttempts('user@example.com'),
+      ).resolves.not.toThrow();
     });
   });
 });
