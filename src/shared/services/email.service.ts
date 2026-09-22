@@ -101,7 +101,7 @@ export class EmailService implements OnModuleInit {
   ): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(
-        `Email skipped (SMTP not configured): "${subject}" -> ${to}`,
+        `[NO-SMTP] Email skipped (SMTP not configured): "${subject}" -> ${to}\nMessage content:\n${body.text}`,
       );
       return;
     }
