@@ -4,6 +4,8 @@
 
 CollabAI is a smart team task management app that combines Kanban boards with AI features to help teams work more efficiently.
 
+> **Current technical baseline:** see [TECH-SCOPE.md](TECH-SCOPE.md). The original Express/MongoDB references below were planning assumptions and do not describe the running implementation.
+
 ## Product summary
 
 CollabAI helps teams create projects, manage boards/tasks, collaborate in real time, and use AI to generate subtasks, improve task descriptions, summarize comments, and search tasks naturally.
@@ -46,7 +48,7 @@ Avoid these until core MVP is stable:
 
 | Member | Primary focus | Responsibilities |
 |---|---|---|
-| 1 | Backend Lead | Express APIs, auth, Mongoose models, Socket.io, AI backend endpoints |
+| 1 | Backend Lead | NestJS APIs, auth, Prisma/PostgreSQL, Socket.IO, AI endpoints |
 | 2 | Frontend Lead | Angular architecture, routing, Kanban UI, services, Angular Material |
 | 3 | Full-stack Features | Task CRUD, comments, AI UI/backend integration |
 | 4 | Polish + DevOps + Testing | Responsive design, real-time testing, activity log, deployment, docs |
@@ -94,4 +96,3 @@ Avoid these until core MVP is stable:
 - AI generates useful subtasks for a task title.
 - Frontend and backend agree with `docs/02-API-CONTRACT.md`.
 - App can be demoed with seeded data in less than 5 minutes.
-

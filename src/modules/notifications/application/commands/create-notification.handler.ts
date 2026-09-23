@@ -1,3 +1,6 @@
+import { toNotificationResponse } from '../dtos/notification-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/notifications/application/commands/create-notification.handler.ts
 // Persist a notification. Internal (invoked by event listeners).
 
@@ -16,6 +19,7 @@ export class CreateNotificationHandler implements ICommandHandler<CreateNotifica
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly repo: INotificationRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: CreateNotificationCommand): Promise<void> {
@@ -29,5 +33,6 @@ export class CreateNotificationHandler implements ICommandHandler<CreateNotifica
       relatedEntityId: command.relatedEntityId,
     });
     await this.repo.create(notification);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('notification:created', '', command.userId, { notification: { ...toNotificationResponse(notification), _id: notification.id } }, command.userId));
   }
 }

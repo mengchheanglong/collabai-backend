@@ -31,7 +31,6 @@ import { GetTaskCommentsQuery } from '../../application/queries/get-task-comment
 import { AddCommentDto } from '../../application/dtos/add-comment.dto';
 import { EditCommentDto } from '../../application/dtos/edit-comment.dto';
 import { toCommentResponse } from '../../application/dtos/comment-response.dto';
-import { CommentView } from '../../domain/repositories/comment.repository.interface';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')

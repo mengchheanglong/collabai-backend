@@ -43,10 +43,6 @@ import {
   UpdateSubtaskDto,
 } from '../../application/dtos/subtask.dto';
 import { toTaskResponse } from '../../application/dtos/task-response.dto';
-import {
-  Paginated,
-  TaskView,
-} from '../../domain/repositories/task.repository.interface';
 import { TaskStatus } from '../../domain/value-objects/task-status.value-object';
 
 @ApiTags('Tasks')

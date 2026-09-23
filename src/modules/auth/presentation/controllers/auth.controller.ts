@@ -64,9 +64,6 @@ import { RefreshTokenCommand } from '../../application/commands/refresh-token.co
 import { LogoutCommand } from '../../application/commands/logout.command';
 import { UpdateProfileCommand } from '../../application/commands/update-profile.command';
 import { GetCurrentUserQuery } from '../../application/queries/get-current-user.query';
-import { LoginResult } from '../../application/commands/login.handler';
-import { RefreshResult } from '../../application/commands/refresh-token.handler';
-
 import { RegisterDto } from '../../application/dtos/register.dto';
 import { VerifyEmailDto } from '../../application/dtos/verify-email.dto';
 import { RequestPasswordResetDto } from '../../application/dtos/request-password-reset.dto';

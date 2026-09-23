@@ -12,9 +12,61 @@ import {
   SuggestSubtasksInput,
   SummarizeCommentsInput,
   TaskSearchInterpretation,
+  ProjectInsightsInput,
+  ProjectRecommendation,
+  TaskActionContext,
+  ProposedTaskAction,
 } from '../../domain/services/ai-provider.interface';
 
 export class StubAiProvider implements IAiProvider {
+  async proposeTaskActions(input: TaskActionContext): Promise<{ actions: ProposedTaskAction[]; source: 'fallback' }> {
+    const request = input.request.toLowerCase();
+    const target = input.tasks.find((task) => request.includes(task.title.toLowerCase()))
+      ?? input.tasks.find((task) => task.status !== 'done' && task.dueDate && new Date(task.dueDate) < new Date())
+      ?? input.tasks.find((task) => task.status !== 'done');
+    if (!target) return { actions: [], source: 'fallback' };
+    const changes: ProposedTaskAction['changes'] = {};
+    if (/\b(done|complete|completed|finish)\b/.test(request) && target.status !== 'done') changes.status = 'done';
+    if (/\b(start|in progress)\b/.test(request) && target.status !== 'in_progress') changes.status = 'in_progress';
+    const priority = request.match(/\b(low|medium|high|urgent)\s+priority\b|\bpriority\s+(low|medium|high|urgent)\b/);
+    const requestedPriority = priority?.[1] ?? priority?.[2];
+    if (requestedPriority && requestedPriority !== target.priority) changes.priority = requestedPriority;
+    if (!Object.keys(changes).length && /\b(priority|prioritize|urgent)\b/.test(request)) {
+      const nextPriority = target.priority === 'low' ? 'medium' : target.priority === 'medium' ? 'high' : target.priority === 'high' ? 'urgent' : null;
+      if (nextPriority) changes.priority = nextPriority;
+    }
+    return Object.keys(changes).length
+      ? { actions: [{ taskId: target.id, rationale: 'Development fallback selected a candidate from the supplied request and task state. Review before applying.', changes }], source: 'fallback' }
+      : { actions: [], source: 'fallback' };
+  }
+
+  /** Deterministic, explicitly non-LLM fallback for local development without a provider key. */
+  async recommendProjectActions(input: ProjectInsightsInput): Promise<{ recommendations: ProjectRecommendation[]; source: 'fallback' }> {
+    const results: ProjectRecommendation[] = [];
+    const overdue = input.tasks.filter((task) => task.status !== 'done' && task.dueDate && new Date(task.dueDate) < new Date());
+    if (overdue.length) results.push({
+      title: `Review ${overdue.length} overdue task${overdue.length === 1 ? '' : 's'}`,
+      rationale: `These open tasks are past their due dates: ${overdue.slice(0, 3).map((task) => task.title).join(', ')}.`,
+      urgency: 'high', action: 'review_task', taskIds: overdue.slice(0, 3).map((task) => task.id),
+    });
+    const workload = [...input.workload].sort((a, b) => b.openTasks - a.openTasks);
+    if (workload.length > 1 && workload[0].openTasks - workload[workload.length - 1].openTasks >= 3) results.push({
+      title: 'Check whether work can be rebalanced',
+      rationale: `${workload[0].member} has ${workload[0].openTasks} open tasks while ${workload[workload.length - 1].member} has ${workload[workload.length - 1].openTasks}.`,
+      urgency: 'medium', action: 'balance_workload', taskIds: [],
+    });
+    if (input.metrics.completedLast14Days < input.metrics.completedPrevious14Days) results.push({
+      title: 'Review the recent delivery slowdown',
+      rationale: `The team completed ${input.metrics.completedLast14Days} tasks in the last 14 days versus ${input.metrics.completedPrevious14Days} in the prior 14 days.`,
+      urgency: 'medium', action: 'plan', taskIds: [],
+    });
+    if (!results.length && input.tasks.length) {
+      const candidates = [...input.tasks].filter((task) => task.status !== 'done').sort((a, b) => (b.openSubtasks - a.openSubtasks) || (b.priority === 'urgent' ? 1 : 0) - (a.priority === 'urgent' ? 1 : 0)).slice(0, 2);
+      results.push({ title: 'Confirm the next delivery targets', rationale: `Review ${candidates.map((task) => task.title).join(' and ')} against the current project plan.`, urgency: 'low', action: 'review_task', taskIds: candidates.map((task) => task.id) });
+    }
+    return { recommendations: results.slice(0, 5), source: 'fallback' };
+  }
+
   async generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]> {
     const count = Math.min(Math.max(input.count, 1), 15);
     const results: StructuredTask[] = [];

@@ -1,130 +1,34 @@
-# CollabAI System Architecture
+# CollabAI system architecture
 
-## High-level architecture
+The technology baseline and deferred technologies are maintained in [TECH-SCOPE.md](TECH-SCOPE.md).
 
-```txt
-Angular 18+ SPA
-  |
-  | REST JSON over HTTP: /api/v1/*
-  | Socket.io websocket/polling: project rooms
-  v
-Node.js + Express API
-  |-- Auth middleware: JWT
-  |-- REST controllers/services
-  |-- Socket.io event broadcaster
-  |-- AI service wrapper: OpenAI or Groq
-  v
-MongoDB via Mongoose
+```text
+Angular 21 browser client
+  ├─ REST /api/v1 + JWT ───────► NestJS 11 (Express adapter)
+  ├─ Socket.IO ────────────────► Realtime gateway
+  └─ presigned PUT ────────────► Private S3 bucket
+
+NestJS modules
+  ├─ CQRS handlers / domain services
+  ├─ Prisma ───────────────────► PostgreSQL
+  ├─ in-process EventEmitter2 ─► notification/realtime handlers
+  ├─ SendGrid ─────────────────► verification, reset, invitation mail
+  ├─ OpenAI / DeepSeek / Claude ► AI provider adapter
+  ├─ S3 presigning ────────────► private attachments and avatar objects
+  └─ Sentry + JSON stdout logs
 ```
 
-## Runtime components
+## Request flow
 
-### Frontend
+1. Nest controllers validate DTOs and require JWT authentication on protected routes.
+2. CQRS handlers enforce project membership/role rules and execute Prisma reads/writes.
+3. Domain events stay in-process; Socket.IO broadcasts after a successful database write.
+4. The response interceptor applies the API envelope. The global exception filter normalizes errors and reports server errors to Sentry when configured.
+5. Structured request logs are written to stdout for the deployment log collector.
 
-- Angular standalone components.
-- Angular Router with lazy-loaded feature routes.
-- Angular Material for UI.
-- Angular CDK drag/drop for Kanban.
-- Services + signals for state.
-- HTTP interceptor for JWT.
-- Socket service for real-time events.
+## Deployment notes
 
-### Backend
-
-- Express app mounted at `/api/v1`.
-- Mongoose connection.
-- JWT auth middleware.
-- Zod or Joi request validation.
-- Socket.io server attached to HTTP server.
-- AI provider adapter so OpenAI/Groq can be swapped.
-
-### Database
-
-MongoDB collections:
-
-- `users`
-- `projects`
-- `boards`
-- `tasks`
-- `comments`
-- `activities`
-- `notifications`
-
-### AI provider
-
-AI provider key stays in backend environment variables.
-
-Supported feature endpoints:
-
-- `POST /api/v1/ai/subtasks`
-- `POST /api/v1/ai/description`
-- `POST /api/v1/ai/summarize-comments`
-- `POST /api/v1/ai/search-tasks`
-
-For MVP, `search-tasks` can use normal MongoDB text search plus AI query rewriting. Embeddings are optional bonus.
-
-## Data flow examples
-
-### Login
-
-1. Frontend sends `POST /auth/login` with email/password.
-2. Backend verifies password with bcrypt.
-3. Backend returns `accessToken` and `user`.
-4. Frontend stores token and calls `GET /auth/me` on app start.
-
-### Create task
-
-1. User opens board and submits task form.
-2. Frontend sends `POST /tasks`.
-3. Backend validates user membership in the project.
-4. Backend saves task.
-5. Backend creates activity entry.
-6. Backend emits `task:created` to room `project:{projectId}`.
-7. Backend returns created task.
-8. All connected clients update task list.
-
-### Drag task to new status
-
-1. Frontend uses Angular CDK drag/drop.
-2. Frontend optimistically updates local UI.
-3. Frontend sends `PATCH /tasks/:taskId/status`.
-4. Backend validates allowed status and project permission.
-5. Backend updates `status` and `position`.
-6. Backend emits `task:moved` to project room.
-7. Other clients update board.
-
-## Environments
-
-### Development
-
-- Angular dev server: `http://localhost:4200`
-- Express server: `http://localhost:4000`
-- API base URL: `http://localhost:4000/api/v1`
-- Socket URL: `http://localhost:4000`
-- MongoDB: local or Atlas.
-
-### Production
-
-Possible deployment:
-
-- Frontend: Vercel/Netlify.
-- Backend: Render/Railway.
-- Database: MongoDB Atlas.
-
-## Security rules
-
-- Hash passwords with bcrypt.
-- Never return `passwordHash` in API responses.
-- All project/board/task/comment access must verify project membership.
-- AI endpoints require auth and must enforce project membership when task/project IDs are passed.
-- Add CORS origin allowlist via environment variable.
-- Rate-limit auth and AI endpoints if time allows.
-
-## Integration source of truth
-
-- REST: `docs/02-API-CONTRACT.md`
-- Database: `docs/03-DATABASE-SCHEMA.md`
-- Socket.io: `docs/04-REALTIME-SOCKET-CONTRACT.md`
-- AI prompts/provider behavior: `docs/05-AI-FEATURES.md`
-- Shared DTOs: `shared/TYPESCRIPT-TYPES.md`
-
+- Run Prisma migrations before starting the backend container.
+- The frontend container serves the Angular production build from Nginx with SPA route fallback.
+- S3 uses the AWS SDK credential provider chain; production should use an IAM role. Configure bucket CORS for the frontend origin. Private attachments are downloaded using project-checked short-lived URLs.
+- RabbitMQ is explicitly deferred; no async queue consumer currently requires a broker.

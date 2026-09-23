@@ -10,7 +10,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AssigneeNotMemberError,
   InvalidTaskFieldError,
-  TaskNotFoundError,
 } from '../errors/task.errors';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
 import { TaskAssignedEvent } from '../../domain/events/task-assigned.event';

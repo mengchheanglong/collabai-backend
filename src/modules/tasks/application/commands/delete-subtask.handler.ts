@@ -1,3 +1,6 @@
+import { toTaskResponse } from '../dtos/task-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/tasks/application/commands/delete-subtask.handler.ts
 // Remove a subtask from a task. Writer role required.
 
@@ -17,6 +20,7 @@ export class DeleteSubtaskHandler implements ICommandHandler<DeleteSubtaskComman
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: DeleteSubtaskCommand): Promise<TaskView> {
@@ -32,6 +36,7 @@ export class DeleteSubtaskHandler implements ICommandHandler<DeleteSubtaskComman
 
     const view = await this.repo.findViewById(task.id);
     if (!view) throw new TaskNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('task:updated', task.projectId, command.actingUserId, { task: toTaskResponse(view) }));
     return view;
   }
 }

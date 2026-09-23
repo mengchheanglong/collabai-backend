@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/boards/application/commands/delete-board.handler.ts
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
@@ -21,6 +23,7 @@ export class DeleteBoardHandler implements ICommandHandler<DeleteBoardCommand> {
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
     @Inject(PROJECT_REPOSITORY)
     private readonly projectRepo: IProjectRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: DeleteBoardCommand): Promise<void> {
@@ -36,5 +39,6 @@ export class DeleteBoardHandler implements ICommandHandler<DeleteBoardCommand> {
     }
 
     await this.boardRepo.delete(board.id);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('board:deleted', board.projectId, command.userId, { boardId: board.id }));
   }
 }

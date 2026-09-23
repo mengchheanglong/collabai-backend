@@ -7,27 +7,35 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
-  Logger,
   NestInterceptor,
+  HttpException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, catchError, tap, throwError } from 'rxjs';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(LoggingInterceptor.name);
-
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const { method, url } = request;
+    const { method, originalUrl, url } = request;
     const start = Date.now();
 
     return next.handle().pipe(
       tap(() => {
         const response = context.switchToHttp().getResponse();
-        this.logger.log(
-          `[${method}] ${url} ${response.statusCode} - ${Date.now() - start}ms`,
-        );
+        console.log(JSON.stringify({
+          event: 'http.request.completed', method, path: originalUrl ?? url,
+          status: response.statusCode, durationMs: Date.now() - start,
+          userId: request.user?.id ?? null,
+        }));
+      }),
+      catchError((error: unknown) => {
+        const status = error instanceof HttpException ? error.getStatus() : 500;
+        console.error(JSON.stringify({
+          event: 'http.request.failed', method, path: originalUrl ?? url,
+          status, durationMs: Date.now() - start, userId: request.user?.id ?? null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }));
+        return throwError(() => error);
       }),
     );
   }

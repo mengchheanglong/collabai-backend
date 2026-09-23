@@ -153,7 +153,7 @@ export class ProjectRepository implements IProjectRepository {
     const row = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },
     });
-    return row ? this.toMemberDomain(row) : null;
+    return row?.userId ? this.toMemberDomain({ ...row, userId: row.userId }) : null;
   }
 
   async listMembers(projectId: string): Promise<ProjectMemberView[]> {
@@ -271,10 +271,14 @@ export class ProjectRepository implements IProjectRepository {
     return {
       userId: row.userId,
       role: this.asRole(row.role),
-      name: row.user.name,
-      email: row.user.email,
-      avatarUrl: row.user.avatarUrl ?? null,
+      name: row.user?.name ?? row.invitedEmail ?? 'Invited user',
+      email: row.user?.email ?? row.invitedEmail ?? '',
+      avatarUrl: row.user?.avatarUrl ?? null,
       joinedAt: row.joinedAt,
+      pending: !row.userId,
+      invitationId: !row.userId ? row.id : undefined,
+      invitedAt: row.invitedAt,
+      invitationExpiresAt: row.invitationExpiresAt,
     };
   }
 

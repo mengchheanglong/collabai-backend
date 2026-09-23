@@ -18,6 +18,7 @@ import { AiController } from './presentation/controllers/ai.controller';
 import { AI_PROVIDER } from './domain/services/ai-provider.interface';
 import { OpenAiProvider } from './infrastructure/providers/openai.provider';
 import { DeepSeekProvider } from './infrastructure/providers/deepseek.provider';
+import { AnthropicProvider } from './infrastructure/providers/anthropic.provider';
 import { StubAiProvider } from './infrastructure/providers/stub-ai.provider';
 import { AiAccessService } from './application/services/ai-access.service';
 
@@ -27,6 +28,8 @@ import { SummarizeCommentsHandler } from './application/commands/summarize-comme
 import { SearchTasksHandler } from './application/commands/search-tasks.handler';
 import { GenerateTasksHandler } from './application/commands/generate-tasks.handler';
 import { ChatHandler } from './application/commands/chat.handler';
+import { ProjectInsightsHandler } from './application/commands/project-insights.handler';
+import { AiAutomationService } from './application/services/ai-automation.service';
 
 const CommandHandlers = [
   SuggestSubtasksHandler,
@@ -35,6 +38,7 @@ const CommandHandlers = [
   SearchTasksHandler,
   GenerateTasksHandler,
   ChatHandler,
+  ProjectInsightsHandler,
 ];
 
 @Module({
@@ -59,6 +63,12 @@ const CommandHandlers = [
           if (apiKey) return new DeepSeekProvider(apiKey, model);
         }
 
+        if (provider === 'anthropic' || provider === 'claude') {
+          const apiKey = config.get<string>('ANTHROPIC_API_KEY');
+          const model = config.get<string>('ANTHROPIC_MODEL') ?? 'claude-sonnet-5';
+          if (apiKey) return new AnthropicProvider(apiKey, model);
+        }
+
         // Default: OpenAI (fallback to stub if no key).
         const apiKey = config.get<string>('OPENAI_API_KEY');
         const model = config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini';
@@ -69,6 +79,7 @@ const CommandHandlers = [
       inject: [ConfigService],
     },
     AiAccessService,
+    AiAutomationService,
     ...CommandHandlers,
   ],
 })

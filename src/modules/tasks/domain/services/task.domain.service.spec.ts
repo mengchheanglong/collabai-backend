@@ -1,5 +1,6 @@
 // src/modules/tasks/domain/services/task.domain.service.spec.ts
 import { POSITION_GAP, TaskDomainService } from './task.domain.service';
+import { TaskEntity } from '../entities/task.entity';
 
 describe('TaskDomainService', () => {
   const svc = new TaskDomainService();
@@ -28,8 +29,6 @@ describe('TaskDomainService', () => {
 });
 
 describe('TaskEntity move()', () => {
-  const { TaskEntity } = require('../entities/task.entity');
-
   it('sets completedAt when moved to done and clears it when moved back', () => {
     const task = TaskEntity.create({
       id: 't1',

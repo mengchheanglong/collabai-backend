@@ -1,3 +1,5 @@
+import { toTaskResponse } from '../dtos/task-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
 // src/modules/tasks/application/commands/update-task.handler.ts
 // Edit task fields (not status/position). Writer role required; a new assignee must be a
 // project member. Emits task.assigned when the assignee changes to a new user.
@@ -66,6 +68,7 @@ export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
 
     const view = await this.repo.findViewById(task.id);
     if (!view) throw new TaskNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('task:updated', task.projectId, command.actingUserId, { task: toTaskResponse(view) }));
     return view;
   }
 }

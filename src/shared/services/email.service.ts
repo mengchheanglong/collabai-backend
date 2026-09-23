@@ -1,14 +1,13 @@
 // src/shared/services/email.service.ts
 //
-// SMTP email delivery (nodemailer) for verification / password-reset codes.
-// Config comes from EMAIL_HOST/EMAIL_PORT/EMAIL_USER/EMAIL_PASS/SMTP_FROM (see .env.local).
-// If SMTP isn't configured, sends are skipped (logged) rather than throwing — email
+// SendGrid email delivery for verification, password-reset, and invitation emails.
+// Config comes from SENDGRID_API_KEY and SENDGRID_FROM (see .env.example).
+// If SendGrid isn't configured, sends are skipped (logged) rather than throwing — email
 // failures must never break the auth flow (they're triggered from an event listener).
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import sgMail = require('@sendgrid/mail');
 
 interface MailBody {
   text: string;
@@ -18,45 +17,35 @@ interface MailBody {
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
-  private transporter?: Transporter;
+  private configured = false;
   private from = '';
 
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
-    const host = this.config.get<string>('EMAIL_HOST');
-    const user = this.config.get<string>('EMAIL_USER');
-    const pass = this.config.get<string>('EMAIL_PASS');
-    const port = parseInt(this.config.get<string>('EMAIL_PORT') ?? '587', 10);
-    this.from =
-      this.config.get<string>('SMTP_FROM') ?? user ?? 'no-reply@localhost';
-
-    if (!host || !user || !pass) {
+    this.from = this.config.get<string>('SENDGRID_FROM') ?? 'no-reply@localhost';
+    const apiKey = this.config.get<string>('SENDGRID_API_KEY');
+    if (!apiKey) {
       this.logger.warn(
-        'Email not configured (EMAIL_HOST/EMAIL_USER/EMAIL_PASS missing) — emails will be skipped.',
+        'Email not configured (SENDGRID_API_KEY missing) — emails will be skipped.',
       );
       return;
     }
-
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // 465 = implicit TLS, 587 = STARTTLS
-      auth: { user, pass },
-    });
-    this.logger.log(`Email transport configured (host=${host}, port=${port}).`);
+    sgMail.setApiKey(apiKey);
+    const apiBaseUrl = this.config.get<string>('SENDGRID_API_BASE_URL');
+    if (apiBaseUrl) {
+      // Set only in isolated staging/smoke environments to target a SendGrid-compatible
+      // mock. Real deployments should omit this and use SendGrid's default endpoint.
+      (sgMail as unknown as { client: { setDefaultRequest(key: string, value: string): void } })
+        .client.setDefaultRequest('baseUrl', apiBaseUrl);
+    }
+    this.configured = true;
+    this.logger.log('SendGrid email transport configured.');
   }
 
-  /** Verify the SMTP connection/credentials. Returns false instead of throwing. */
+  /** Report whether SendGrid credentials are configured. */
   async verifyConnection(): Promise<boolean> {
-    if (!this.transporter) return false;
-    try {
-      await this.transporter.verify();
-      return true;
-    } catch (err) {
-      this.logger.error(`SMTP verify failed: ${(err as Error).message}`);
-      return false;
-    }
+    return this.configured;
   }
 
   async sendVerificationCode(to: string, code: string): Promise<void> {
@@ -94,19 +83,34 @@ export class EmailService implements OnModuleInit {
     });
   }
 
+  async sendProjectInvitation(to: string, projectName: string, inviterName: string, url: string, expiresAt?: Date): Promise<void> {
+    const safeProject = this.escapeHtml(projectName);
+    const safeInviter = this.escapeHtml(inviterName);
+    const expiryText = expiresAt ? `This invitation expires ${expiresAt.toLocaleString()}.` : 'Sign in to view the project.';
+    const expiryHtml = expiresAt ? `<p>This invitation expires ${expiresAt.toLocaleString()}.</p>` : '<p>Sign in to view the project.</p>';
+    await this.send(to, `Invitation to join ${projectName} on CollabAI`, {
+      text: `${inviterName} invited you to join ${projectName} on CollabAI. Open here: ${url}\n${expiryText}`,
+      html: `<p>${safeInviter} invited you to join <strong>${safeProject}</strong> on CollabAI.</p><p><a href="${this.escapeHtml(url)}">Open project</a></p>${expiryHtml}`,
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+  }
+
   private async send(
     to: string,
     subject: string,
     body: MailBody,
   ): Promise<void> {
-    if (!this.transporter) {
+    if (!this.configured) {
       this.logger.warn(
-        `Email skipped (SMTP not configured): "${subject}" -> ${to}`,
+        `Email skipped (SendGrid not configured): "${subject}" -> ${to}`,
       );
       return;
     }
     try {
-      const info = await this.transporter.sendMail({
+      const [response] = await sgMail.send({
         from: this.from,
         to,
         subject,
@@ -114,7 +118,7 @@ export class EmailService implements OnModuleInit {
         html: body.html,
       });
       this.logger.log(
-        `Email sent: "${subject}" -> ${to} (messageId=${info.messageId})`,
+        `Email sent: "${subject}" -> ${to} (status=${response.statusCode})`,
       );
     } catch (err) {
       // Never rethrow — an email failure must not break registration / reset flows.

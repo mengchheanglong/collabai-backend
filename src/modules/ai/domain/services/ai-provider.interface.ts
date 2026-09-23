@@ -64,6 +64,60 @@ export interface ChatInput {
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
+export interface ProjectInsightTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  assignee: string | null;
+  openSubtasks: number;
+}
+
+export interface ProjectInsightsInput {
+  projectName: string;
+  description: string;
+  metrics: { totalOpen: number; overdue: number; completedLast14Days: number; completedPrevious14Days: number };
+  workload: Array<{ member: string; openTasks: number; overdueTasks: number }>;
+  tasks: ProjectInsightTask[];
+}
+
+export interface ProjectRecommendation {
+  title: string;
+  rationale: string;
+  urgency: 'high' | 'medium' | 'low';
+  action: 'review_task' | 'balance_workload' | 'plan';
+  taskIds: string[];
+}
+
+export interface TaskActionContext {
+  request: string;
+  projectName: string;
+  projectDescription: string;
+  metrics: { openTasks: number; overdueTasks: number; completedLast14Days: number };
+  members: Array<{ id: string; name: string; openTasks: number; overdueTasks: number }>;
+  tasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    dueDate: string | null;
+    assigneeId: string | null;
+    assigneeName: string | null;
+  }>;
+}
+
+export interface ProposedTaskAction {
+  taskId: string;
+  rationale: string;
+  changes: {
+    status?: string;
+    priority?: string;
+    assigneeId?: string | null;
+    dueDate?: string | null;
+  };
+}
+
 export interface IAiProvider {
   suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]>;
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
@@ -71,4 +125,6 @@ export interface IAiProvider {
   interpretSearch(query: string): Promise<TaskSearchInterpretation>;
   generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]>;
   chat(input: ChatInput): Promise<string>;
+  recommendProjectActions(input: ProjectInsightsInput): Promise<{ recommendations: ProjectRecommendation[]; source: 'ai' | 'fallback' }>;
+  proposeTaskActions(input: TaskActionContext): Promise<{ actions: ProposedTaskAction[]; source: 'ai' | 'fallback' }>;
 }

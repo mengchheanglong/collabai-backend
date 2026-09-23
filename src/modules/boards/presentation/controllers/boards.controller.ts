@@ -27,10 +27,7 @@ import { GetBoardQuery } from '../../application/queries/get-board.query';
 
 import { CreateBoardDto } from '../../application/dtos/create-board.dto';
 import { UpdateBoardDto } from '../../application/dtos/update-board.dto';
-import {
-  toBoardResponse,
-  toBoardWithTasksResponse,
-} from '../../application/dtos/board-response.dto';
+import { toBoardResponse } from '../../application/dtos/board-response.dto';
 import {
   BoardView,
   BoardWithTasksView,

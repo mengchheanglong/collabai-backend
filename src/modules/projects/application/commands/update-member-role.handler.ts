@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/projects/application/commands/update-member-role.handler.ts
 // Change a member's role. Enforces the privileged-role rules (only owners manage
 // owner/admin roles) and last-owner protection.
@@ -24,6 +26,7 @@ export class UpdateMemberRoleHandler implements ICommandHandler<UpdateMemberRole
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: UpdateMemberRoleCommand): Promise<ProjectView> {
@@ -66,6 +69,7 @@ export class UpdateMemberRoleHandler implements ICommandHandler<UpdateMemberRole
 
     const view = await this.repo.findViewById(command.projectId);
     if (!view) throw new ProjectNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('member:updated', command.projectId, command.actingUserId, { userId: command.targetUserId, role: command.role }));
     return view;
   }
 }

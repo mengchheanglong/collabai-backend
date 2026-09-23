@@ -23,8 +23,6 @@ import { GetUserNotificationsQuery } from '../../application/queries/get-user-no
 import { MarkAsReadCommand } from '../../application/commands/mark-as-read.command';
 import { MarkAllReadCommand } from '../../application/commands/mark-all-read.command';
 import { toNotificationResponse } from '../../application/dtos/notification-response.dto';
-import { Paginated } from '../../domain/repositories/notification.repository.interface';
-import { NotificationEntity } from '../../domain/entities/notification.entity';
 
 @ApiTags('Notifications')
 @ApiBearerAuth('access-token')

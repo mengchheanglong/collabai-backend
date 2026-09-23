@@ -1,3 +1,6 @@
+import { toBoardResponse } from '../dtos/board-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/boards/application/commands/create-board.handler.ts
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
@@ -8,10 +11,7 @@ import {
   type BoardView,
 } from '../../domain/repositories/board.repository.interface';
 import { BoardEntity } from '../../domain/entities/board.entity';
-import {
-  DuplicateBoardNameError,
-  BoardForbiddenError,
-} from '../errors/board.errors';
+import { BoardForbiddenError } from '../errors/board.errors';
 import {
   PROJECT_REPOSITORY,
   type IProjectRepository,
@@ -26,6 +26,7 @@ export class CreateBoardHandler implements ICommandHandler<CreateBoardCommand> {
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
     @Inject(PROJECT_REPOSITORY)
     private readonly projectRepo: IProjectRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: CreateBoardCommand): Promise<BoardView> {
@@ -51,6 +52,7 @@ export class CreateBoardHandler implements ICommandHandler<CreateBoardCommand> {
     await this.boardRepo.create(board);
 
     const view = await this.boardRepo.findViewById(board.id);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('board:created', board.projectId, command.userId, { board: toBoardResponse(view!) }));
     return view!;
   }
 }

@@ -1,5 +1,7 @@
 # 📚 CollabAI - Complete Backend Setup Summary
 
+> **Current runtime baseline:** this repository now runs NestJS on the Express adapter, PostgreSQL with Prisma, SendGrid, optional S3 uploads, Sentry, and OpenAI/DeepSeek/Anthropic adapters. See [docs/TECH-SCOPE.md](docs/TECH-SCOPE.md). The older setup material below is a historical scaffold and is not the active stack guide.
+
 All documentation files are ready. Here's what you have and how to use them.
 
 ---
@@ -488,4 +490,3 @@ collabai-backend/
 **Status**: Production Ready
 
 Ready to start? → **Open NESTJS-QUICK-START-GUIDE.md**
-

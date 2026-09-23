@@ -1,3 +1,6 @@
+import { toProjectResponse } from '../dtos/project-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/projects/application/commands/update-project.handler.ts
 // Update project metadata. Requires the actor to be an admin/owner member.
 
@@ -21,6 +24,7 @@ import {
 export class UpdateProjectHandler implements ICommandHandler<UpdateProjectCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: UpdateProjectCommand): Promise<ProjectView> {
@@ -49,6 +53,7 @@ export class UpdateProjectHandler implements ICommandHandler<UpdateProjectComman
 
     const view = await this.repo.findViewById(project.id);
     if (!view) throw new ProjectNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('project:updated', project.id, command.actingUserId, { project: toProjectResponse(view) }));
     return view;
   }
 }

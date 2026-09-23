@@ -1,3 +1,6 @@
+import { toTaskResponse } from '../dtos/task-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/tasks/application/commands/update-subtask.handler.ts
 // Rename a subtask and/or toggle its done state. Writer role required. The subtask must
 // belong to the given task.
@@ -18,6 +21,7 @@ export class UpdateSubtaskHandler implements ICommandHandler<UpdateSubtaskComman
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: UpdateSubtaskCommand): Promise<TaskView> {
@@ -36,6 +40,7 @@ export class UpdateSubtaskHandler implements ICommandHandler<UpdateSubtaskComman
 
     const view = await this.repo.findViewById(task.id);
     if (!view) throw new TaskNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('task:updated', task.projectId, command.actingUserId, { task: toTaskResponse(view) }));
     return view;
   }
 }

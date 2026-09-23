@@ -1,6 +1,8 @@
 # CollabAI Database Schema
 
-Database: MongoDB using Mongoose.
+> **Current implementation:** PostgreSQL using Prisma; `prisma/schema.prisma` and committed migrations are authoritative. The MongoDB/Mongoose collection sketches below are retained historical planning notes and are not the runtime schema. See [TECH-SCOPE.md](TECH-SCOPE.md).
+
+Historical proposal: MongoDB using Mongoose.
 
 All timestamps should use Mongoose `timestamps: true` unless stated otherwise.
 
@@ -274,3 +276,19 @@ When deleting task:
 
 - delete comments where `taskId` matches.
 
+
+## Workspace documents (current PostgreSQL / Prisma implementation)
+
+The current application uses PostgreSQL; `prisma/schema.prisma` is authoritative.
+`Document` belongs to a project and its creator, with UUID keys, title, Markdown
+content, integer version, creation/update timestamps, and a nullable deletion
+timestamp. A composite index covers project, deletion state and update time.
+Project deletion cascades; creator deletion is restricted.
+
+Deployment: run `npx prisma migrate deploy` followed by `npx prisma generate`
+before starting the updated application. Migration: `20260923000000_workspace_documents`.
+
+Project invitations are pending `ProjectMember` rows with `userId = null`,
+`invitedEmail`, `invitedAt`, a SHA-256 hashed `invitationToken`, and
+`invitationExpiresAt`. Acceptance fills `userId`, clears `invitedEmail` and the
+token fields, and sets `joinedAt`. Migration: `20260924000000_project_member_invitations`.

@@ -2,6 +2,9 @@
 // Request DTOs for the AI endpoints.
 import {
   IsIn,
+  IsArray,
+  ArrayMaxSize,
+  ArrayUnique,
   IsInt,
   IsOptional,
   IsString,
@@ -124,4 +127,31 @@ export class ChatDto {
   @ApiPropertyOptional()
   @IsOptional()
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
+export class ProjectInsightsDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  projectId: string;
+}
+
+export class ProposeTaskActionsDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  projectId: string;
+
+  @ApiProperty({ maxLength: 1200, example: 'Move overdue high priority work to in progress' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1200)
+  request: string;
+}
+
+export class ApplyTaskActionPlanDto {
+  @ApiProperty({ type: [String], minItems: 1, maxItems: 5, format: 'uuid' })
+  @IsArray()
+  @ArrayMaxSize(5)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  actionIds: string[];
 }

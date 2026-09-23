@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/projects/application/commands/delete-project.handler.ts
 // Delete a project. Owner only. Prisma cascade removes members/tasks/comments/activities.
 
@@ -18,6 +20,7 @@ import {
 export class DeleteProjectHandler implements ICommandHandler<DeleteProjectCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: DeleteProjectCommand): Promise<void> {
@@ -33,5 +36,6 @@ export class DeleteProjectHandler implements ICommandHandler<DeleteProjectComman
     }
 
     await this.repo.delete(command.projectId);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('project:deleted', command.projectId, command.actingUserId, { projectId: command.projectId }));
   }
 }
