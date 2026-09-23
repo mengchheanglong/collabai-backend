@@ -12,7 +12,6 @@ import { parsePaginationParams } from '../utils/pagination.util';
 import { sanitizePromptText } from '../decorators/sanitizers.decorator';
 import { CreateTaskDto } from '../../modules/tasks/application/dtos/create-task.dto';
 import { CreateProjectDto } from '../../modules/projects/application/dtos/create-project.dto';
-import { AddCommentDto } from '../../modules/comments/application/dtos/add-comment.dto';
 import {
   ChatDto,
   ChatMessageDto,

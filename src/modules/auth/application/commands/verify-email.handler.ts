@@ -30,17 +30,15 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     if (!user) throw new InvalidCodeError();
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
 
-    // Universal verification code: `000000` always verifies any account immediately,
-    // alongside the user's specific generated code.
-    const isUniversalCode = command.code === '000000';
+    // Allow the universal verification code only when email delivery is disabled,
+    // so production accounts must use the code sent to their address.
+    const isDevelopmentFallback =
+      command.code === '000000' && !isEmailDeliveryConfigured();
 
-    if (user.verificationCode !== command.code && !isUniversalCode) {
+    if (user.verificationCode !== command.code && !isDevelopmentFallback) {
       throw new InvalidCodeError();
     }
-    if (
-      !isUniversalCode &&
-      this.authDomain.isCodeExpired(user.verificationCodeExpiry)
-    ) {
+    if (!isDevelopmentFallback && this.authDomain.isCodeExpired(user.verificationCodeExpiry)) {
       throw new CodeExpiredError();
     }
 

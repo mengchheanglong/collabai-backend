@@ -19,7 +19,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import sgMail = require('@sendgrid/mail');
+import sgMail from '@sendgrid/mail';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
