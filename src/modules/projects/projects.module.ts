@@ -19,7 +19,7 @@ import { ProjectDomainService } from './domain/services/project.domain.service';
 import { CreateProjectHandler } from './application/commands/create-project.handler';
 import { UpdateProjectHandler } from './application/commands/update-project.handler';
 import { DeleteProjectHandler } from './application/commands/delete-project.handler';
-import { InviteMemberHandler } from './application/commands/invite-member.handler';
+import { ProjectInvitationsService } from './application/project-invitations.service';
 import { UpdateMemberRoleHandler } from './application/commands/update-member-role.handler';
 import { RemoveMemberHandler } from './application/commands/remove-member.handler';
 import { GetAllProjectsHandler } from './application/queries/get-all-projects.handler';
@@ -32,7 +32,6 @@ const CommandHandlers = [
   CreateProjectHandler,
   UpdateProjectHandler,
   DeleteProjectHandler,
-  InviteMemberHandler,
   UpdateMemberRoleHandler,
   RemoveMemberHandler,
 ];
@@ -51,6 +50,7 @@ const QueryHandlers = [
   providers: [
     { provide: PROJECT_REPOSITORY, useClass: ProjectRepository },
     ProjectDomainService,
+    ProjectInvitationsService,
     ...CommandHandlers,
     ...QueryHandlers,
   ],

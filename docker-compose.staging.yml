@@ -1,0 +1,137 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: collabai_staging
+      POSTGRES_USER: staging
+      POSTGRES_PASSWORD: local-only-staging
+    ports: ["127.0.0.1:15432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U staging -d collabai_staging"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports: ["127.0.0.1:16379:6379"]
+
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: us-east-1
+      PERSISTENCE: "0"
+    ports: ["127.0.0.1:14566:4566"]
+    volumes:
+      - ./infra/staging/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh:ro
+      - ./infra/staging/s3-cors.json:/etc/localstack/init/ready.d/s3-cors.json:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "curl -fsS http://localhost:4566/_localstack/health | grep -q 's3'"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  sendgrid-mock:
+    build: ./infra/staging/sendgrid-mock
+    ports: ["127.0.0.1:18025:8025"]
+
+  migrate:
+    image: collabai-backend-migrate
+    build:
+      context: .
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://staging:local-only-staging@postgres:5432/collabai_staging?schema=public
+      DIRECT_URL: postgresql://staging:local-only-staging@postgres:5432/collabai_staging?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles: ["setup"]
+
+  backend:
+    image: collabai-backend-staging
+    build: ./collabai-backend
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://staging:local-only-staging@postgres:5432/collabai_staging?schema=public
+      DIRECT_URL: postgresql://staging:local-only-staging@postgres:5432/collabai_staging?schema=public
+      JWT_SECRET: local-staging-access-secret-change-before-deploy-2026
+      JWT_REFRESH_SECRET: local-staging-refresh-secret-change-before-deploy-2026
+      FRONTEND_URL: http://localhost:4200
+      FRONTEND_ORIGIN: http://localhost:4200
+      CORS_ORIGINS: http://localhost:4200
+      REDIS_URL: redis://redis:6379
+      AI_PROVIDER: openai
+      OPENAI_API_KEY: ""
+      SENTRY_DSN: ""
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      S3_BUCKET: collabai-staging
+      S3_ENDPOINT: http://localstack:4566
+      S3_PUBLIC_BASE_URL: http://localhost:14566/collabai-staging
+      SENDGRID_API_KEY: SG.local-smoke-only-not-real
+      SENDGRID_API_BASE_URL: http://sendgrid-mock:8025/
+      SENDGRID_FROM: CollabAI Staging <no-reply@example.test>
+    ports: ["127.0.0.1:14000:4000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      localstack:
+        condition: service_healthy
+      sendgrid-mock:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  frontend:
+    image: collabai-frontend-staging
+    build:
+      context: ../collabai-frontend
+      args:
+        API_BASE_URL: http://localhost:14000/api/v1
+    ports: ["127.0.0.1:4200:80"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  smoke:
+    image: collabai-backend-migrate
+    build:
+      context: .
+      target: build
+    command: ["node", "/app/scripts/staging-smoke.mjs"]
+    environment:
+      API_BASE_URL: http://backend:4000/api/v1
+      FRONTEND_BASE_URL: http://frontend
+      SENDGRID_MOCK_URL: http://sendgrid-mock:8025
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      S3_BUCKET: collabai-staging
+      S3_ENDPOINT: http://localstack:4566
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      sendgrid-mock:
+        condition: service_started
+    profiles: ["smoke"]

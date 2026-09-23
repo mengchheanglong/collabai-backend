@@ -8,6 +8,8 @@ import {
   Body,
   Controller,
   HttpCode,
+  Param,
+  ParseUUIDPipe,
   Post,
   UseFilters,
   UseGuards,
@@ -25,9 +27,14 @@ import { SummarizeCommentsCommand } from '../../application/commands/summarize-c
 import { SearchTasksCommand } from '../../application/commands/search-tasks.command';
 import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
 import { ChatCommand } from '../../application/commands/chat.command';
+import { ProjectInsightsCommand } from '../../application/commands/project-insights.command';
+import { AiAutomationService } from '../../application/services/ai-automation.service';
 
 import {
   ChatDto,
+  ProjectInsightsDto,
+  ProposeTaskActionsDto,
+  ApplyTaskActionPlanDto,
   GenerateDescriptionDto,
   GenerateTasksDto,
   SearchTasksDto,
@@ -41,7 +48,7 @@ import {
 @UseGuards(JwtAuthGuard)
 @UseFilters(AiExceptionFilter)
 export class AiController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(private readonly commandBus: CommandBus, private readonly automation: AiAutomationService) {}
 
   @Post('subtasks')
   @HttpCode(200)
@@ -129,5 +136,26 @@ export class AiController {
     return this.commandBus.execute(
       new ChatCommand(userId, dto.message, dto.projectId, dto.history),
     );
+  }
+
+  @Post('project-insights')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Generate project-aware prioritized recommendations' })
+  async projectInsights(@CurrentUser('id') userId: string, @Body() dto: ProjectInsightsDto) {
+    return this.commandBus.execute(new ProjectInsightsCommand(userId, dto.projectId));
+  }
+
+  @Post('automation/proposals')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Generate a reviewable project-aware task action plan' })
+  proposeActions(@CurrentUser('id') userId: string, @Body() dto: ProposeTaskActionsDto) {
+    return this.automation.propose(userId, dto.projectId, dto.request);
+  }
+
+  @Post('automation/proposals/:planId/apply')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Apply explicitly approved actions from an AI plan' })
+  applyActions(@CurrentUser('id') userId: string, @Param('planId', ParseUUIDPipe) planId: string, @Body() dto: ApplyTaskActionPlanDto) {
+    return this.automation.apply(userId, planId, dto.actionIds);
   }
 }

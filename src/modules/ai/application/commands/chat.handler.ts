@@ -53,7 +53,7 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
 
       if (project) {
         const membersSummary = project.members
-          .map((m) => `- ${m.user.name} (${m.role}, email: ${m.user.email})`)
+          .flatMap((m) => m.user ? [`- ${m.user.name} (${m.role}, email: ${m.user.email})`] : [])
           .join('\n');
 
         const tasksSummary = project.tasks

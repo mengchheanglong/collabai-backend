@@ -505,7 +505,9 @@ Response `200`:
 
 ## POST /projects/:projectId/members
 
-Add/invite existing user to project.
+Invite an email address to the project. If the account exists it is added immediately;
+otherwise a seven-day invitation email is sent. Owner/admin may invite; only owners
+may assign the admin role.
 
 Auth: owner/admin.
 
@@ -523,12 +525,52 @@ Response `201`:
 ```json
 {
   "success": true,
-  "data": { "project": ProjectDto },
-  "message": "Member added"
+  "data": { "invitation": { "email": "sophea@example.com", "role": "member", "pending": true, "expiresAt": "2026-01-08T00:00:00.000Z" } },
+  "message": "Invitation sent"
 }
 ```
 
-Socket event: `member:added`.
+`GET /projects/:projectId/members` includes pending rows with `userId: null`,
+`pending: true`, `invitationId`, `invitedAt`, and `invitationExpiresAt`.
+
+- `GET /projects/:projectId/invitations`: list pending invites (owner/admin).
+- `POST /projects/:projectId/invitations/:invitationId/resend`: rotate token and resend.
+- `DELETE /projects/:projectId/invitations/:invitationId`: revoke a pending invite.
+- `POST /projects/invitations/accept` `{ "token": "..." }`: authenticated; account email must match the invite.
+
+Invitation tokens are random, stored as SHA-256 hashes, single-use, and expire after
+seven days. Configure `FRONTEND_URL` for the acceptance link. SendGrid uses
+`SENDGRID_API_KEY` and `SENDGRID_FROM` from `.env.example`.
+
+## POST /uploads/presign
+
+Create a short-lived S3 PUT URL for an avatar or project attachment. Authenticated
+users may upload avatars; project members may upload attachments.
+
+Request:
+
+```json
+{
+  "kind": "avatar",
+  "fileName": "avatar.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": 12345
+}
+```
+
+For attachments, use `"kind": "attachment"` and include `projectId`. Avatar limits
+are 5 MB and JPEG/PNG/WebP; attachment limits are 25 MB. Upload the bytes directly
+to the returned `uploadUrl` with the returned `requiredHeaders` before the URL expires.
+The returned `objectUrl` can be saved as the user's avatar URL.
+
+## POST /uploads/download
+
+Return a five-minute signed GET URL for a private project attachment. Requires project
+membership.
+
+```json
+{ "projectId": "<project UUID>", "key": "projects/<id>/attachments/<object>" }
+```
 
 ## PATCH /projects/:projectId/members/:userId
 
@@ -1246,7 +1288,40 @@ Response `200`:
 }
 ```
 
-MVP implementation can parse with AI into filters, then run MongoDB query. Full embeddings are bonus.
+The backend interprets the query and runs a PostgreSQL/Prisma task query.
+
+## POST /ai/project-insights
+
+Generate project-aware prioritized next actions from task details, assignee workload,
+overdue counts, and the last two 14-day completion windows. Auth: project member.
+
+Request: `{ "projectId": "<uuid>" }`.
+
+Response data contains `projectId`, `projectName`, `generatedAt`, and up to five
+`recommendations`, and `source` (`ai` or `fallback`) so clients can disclose when no
+configured model produced the result. Each recommendation has `title`, evidence-based `rationale`,
+`urgency` (`high|medium|low`), `action` (`review_task|balance_workload|plan`), and
+`taskIds` referencing tasks in that project. The backend validates returned task IDs.
+
+## POST /ai/automation/proposals
+
+Ask the model to propose safe updates to existing project tasks using the request,
+task state, delivery metrics, and member workload. Only project writers may request a
+plan. The response includes a short-lived plan ID, its source, and each proposed
+before/after change. Supported fields are status, priority, assignee, and due date;
+the backend rejects task/member IDs outside the project.
+
+Request: `{ "projectId": "<uuid>", "request": "Move overdue urgent work to in progress" }`.
+Plans expire after 20 minutes. Creating a plan never mutates tasks.
+
+## POST /ai/automation/proposals/:planId/apply
+
+Apply the selected action IDs only after explicit user approval. The requester must
+still have project write access, and tasks must match the saved before-state; stale or
+expired plans are rejected. The update and an audit activity containing the before/after
+values are committed together. The response includes applied action IDs and timestamp.
+
+Request: `{ "actionIds": ["<action UUID>"] }`.
 
 ---
 
@@ -1279,3 +1354,27 @@ Recommended frontend order:
 8. Socket.io live updates.
 9. Analytics/dark mode/responsive polish.
 
+
+# Workspace documentation
+
+All routes use `/api/v1` and JWT authentication. Active members of a non-deleted
+project can read; owner/admin/member roles can create, edit and delete. Viewers
+are read-only. Missing/inaccessible resources return 404; read-only writes 403.
+
+- `GET /projects/:projectId/docs?page=1&limit=50&q=`: title search, newest updated
+  first; returns `{ success: true, data: DocumentSummary[], meta: { page, limit,
+  total, totalPages } }`. Limit maximum 100.
+- `POST /projects/:projectId/docs`: `{ title, content? }`; returns 201 with
+  `{ success: true, data: { document: DocumentDto } }`.
+- `GET /docs/:documentId`: returns `{ success: true, data: { document: DocumentDto,
+  canEdit: boolean } }`.
+- `PATCH /docs/:documentId`: `{ title?, content?, version }`; returns the updated
+  document in the same envelope as create. Version is required for optimistic
+  concurrency; stale versions return 409, preserving the caller's draft.
+- `DELETE /docs/:documentId`: returns `{ success: true, data: null }`.
+
+DocumentDto: `{ _id, projectId, createdById, title, content, version, createdAt,
+updatedAt }`. IDs are UUIDs; timestamps are ISO strings. DocumentSummary omits
+content. Titles are trimmed, 1–150 characters; Markdown content is limited to
+100,000 characters and defaults to empty. Version starts at 1. Deletion is soft;
+project hard-deletion cascades to documents. Raw HTML is not rendered by the editor.

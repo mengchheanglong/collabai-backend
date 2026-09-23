@@ -10,12 +10,16 @@ import {
 import { ProjectRole } from '../../domain/value-objects/project-role.value-object';
 
 export interface ProjectMemberResponse {
-  userId: string;
+  userId: string | null;
   role: ProjectRole;
   name: string;
   email: string;
   avatarUrl: string | null;
   joinedAt: string | null;
+  pending?: boolean;
+  invitationId?: string;
+  invitedAt?: string | null;
+  invitationExpiresAt?: string | null;
 }
 
 export interface ProjectResponse {
@@ -40,6 +44,10 @@ export function toMemberResponse(m: ProjectMemberView): ProjectMemberResponse {
     email: m.email,
     avatarUrl: m.avatarUrl,
     joinedAt: m.joinedAt ? m.joinedAt.toISOString() : null,
+    pending: m.pending ?? false,
+    invitationId: m.invitationId,
+    invitedAt: m.invitedAt?.toISOString() ?? null,
+    invitationExpiresAt: m.invitationExpiresAt?.toISOString() ?? null,
   };
 }
 

@@ -14,12 +14,16 @@ import { ProjectRole } from '../value-objects/project-role.value-object';
 export const PROJECT_REPOSITORY = Symbol('PROJECT_REPOSITORY');
 
 export interface ProjectMemberView {
-  userId: string;
+  userId: string | null;
   role: ProjectRole;
   name: string;
   email: string;
   avatarUrl: string | null;
   joinedAt: Date | null;
+  pending?: boolean;
+  invitationId?: string;
+  invitedAt?: Date | null;
+  invitationExpiresAt?: Date | null;
 }
 
 export interface ProjectView {

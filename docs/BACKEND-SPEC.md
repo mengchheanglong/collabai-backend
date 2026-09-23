@@ -1,6 +1,8 @@
 # CollabAI Backend Spec
 
-Backend stack:
+> **Current runtime:** NestJS 11 on the Express adapter, PostgreSQL/Prisma, Socket.IO, Redis optional, and provider adapters for OpenAI/DeepSeek/Anthropic. See [TECH-SCOPE.md](TECH-SCOPE.md). The Express/Mongoose guidance below is historical and superseded.
+
+Original proposal (not the current stack):
 
 - Node.js + Express.
 - TypeScript recommended.
@@ -221,4 +223,3 @@ A backend endpoint is done only when:
 - activity is logged if relevant.
 - socket event emits if relevant.
 - manual curl/Postman test works.
-

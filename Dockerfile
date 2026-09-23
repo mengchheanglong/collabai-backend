@@ -1,48 +1,33 @@
-# Stage 1: Build
-FROM node:22-alpine AS builder
-
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Copy package manifests and Prisma schema
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma/
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Generate Prisma client
-RUN pnpm exec prisma generate
-
-# Copy config and source code
-COPY tsconfig*.json nest-cli.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY prisma ./prisma
+RUN npx prisma generate
+COPY nest-cli.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
+COPY scripts ./scripts
+RUN npm run build
 
-# Build production bundles
-RUN pnpm run build
-
-# Stage 2: Production runtime
-FROM node:22-alpine AS runner
-
+FROM node:22-bookworm-slim AS production-dependencies
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
 
-RUN npm install -g pnpm
-
+FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
-ENV PORT=4000
-
-# Copy manifests and Prisma schema
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma/
-
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile && pnpm exec prisma generate
-
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
-
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/* && chown node:node /app
+COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=production-dependencies --chown=node:node /app/package.json ./package.json
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/scripts ./scripts
+USER node
 EXPOSE 4000
-
 CMD ["node", "dist/main.js"]

@@ -1,5 +1,7 @@
 # Backend Implementation Checklist
 
+> This checklist is an original Express/MongoDB implementation plan. The current NestJS/Prisma application is already in place; use [TECH-SCOPE.md](TECH-SCOPE.md) for active stack and deployment steps.
+
 Use this as a task list for backend members and coding agents.
 
 ## Phase 1 — Setup
@@ -96,4 +98,3 @@ curl -X POST http://localhost:4000/api/v1/auth/register \
 - Do not trust frontend-provided userId for ownership; use JWT user.
 - Do not allow access to task/comment unless project membership is verified.
 - Do not let frontend directly call AI provider.
-

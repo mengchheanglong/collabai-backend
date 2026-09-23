@@ -105,7 +105,7 @@ export class GetProjectAnalyticsSummaryHandler implements IQueryHandler<GetProje
       where: { projectId },
       include: { user: true },
     });
-    const users = members.map((m) => m.user);
+    const users = members.flatMap((m) => m.user ? [m.user] : []);
 
     const tasksByUser = await Promise.all(
       users.map(async (user) => {

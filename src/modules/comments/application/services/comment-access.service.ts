@@ -62,6 +62,7 @@ export class CommentAccessService {
     const members = await this.projects.listMembers(projectId);
     return members
       .filter((m) => wanted.has(m.email.toLowerCase()))
-      .map((m) => m.userId);
+      .map((m) => m.userId)
+      .filter((userId): userId is string => userId !== null);
   }
 }

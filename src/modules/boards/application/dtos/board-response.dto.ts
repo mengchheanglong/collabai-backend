@@ -8,7 +8,6 @@ import {
   BoardWithTasksView,
   TaskInBoardView,
 } from '../../domain/repositories/board.repository.interface';
-import { BoardColumn } from '../../domain/entities/board.entity';
 
 export interface BoardColumnResponse {
   key: string;

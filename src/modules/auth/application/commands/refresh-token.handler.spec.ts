@@ -1,14 +1,13 @@
 // src/modules/auth/application/commands/refresh-token.handler.spec.ts
 //
-// INTEGRATION test (hits the real DATABASE_URL). Redis is stubbed with a no-op — cache
-// is fail-open and irrelevant to theft detection, which lives entirely in the DB via the
+// INTEGRATION test against the isolated collabai_ci PostgreSQL database supplied by CI.
+// Redis is stubbed with a no-op — cache is fail-open and irrelevant to theft detection, which lives entirely in the DB via the
 // `revokedAt` soft-delete column. Confirms:
 //   1. rotating a token once succeeds,
 //   2. replaying the same original token is detected as reuse (RefreshTokenReuseDetectedError),
 //   3. and the reuse response actually WIPES every refresh token for that user in the DB,
 //   4. a validly-signed but unknown token is a routine InvalidRefreshTokenError (not reuse).
 
-import 'dotenv/config';
 import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
@@ -41,6 +40,13 @@ const config = {
 } as any;
 
 describe('RefreshTokenHandler — rotation theft detection (integration)', () => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl || new URL(databaseUrl).pathname.replace(/^\//, '') !== 'collabai_ci') {
+    throw new Error(
+      'This integration test requires DATABASE_URL to target the isolated collabai_ci database.',
+    );
+  }
+
   const prisma = new PrismaClient();
   const tokenService = new AuthTokenService(new JwtService({}), config);
   const userRepo = new UserRepository(prisma as any, noopRedis);

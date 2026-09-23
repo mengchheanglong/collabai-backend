@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/tasks/application/commands/delete-task.handler.ts
 // Delete a task (Prisma cascade removes its subtasks, comments, label links). Writer role.
 
@@ -16,6 +18,7 @@ export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: DeleteTaskCommand): Promise<void> {
@@ -23,5 +26,6 @@ export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
     if (!task) throw new TaskNotFoundError();
     await this.access.requireWriter(task.projectId, command.actingUserId);
     await this.repo.delete(task.id);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('task:deleted', task.projectId, command.actingUserId, { taskId: task.id, boardId: task.boardId }));
   }
 }

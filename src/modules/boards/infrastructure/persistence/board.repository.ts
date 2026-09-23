@@ -1,6 +1,5 @@
 // src/modules/boards/infrastructure/persistence/board.repository.ts
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/services/prisma.service';
 import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { BoardColumn, BoardEntity } from '../../domain/entities/board.entity';

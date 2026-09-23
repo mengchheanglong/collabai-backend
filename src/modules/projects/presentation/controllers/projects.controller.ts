@@ -30,7 +30,7 @@ import { parsePaginationParams } from '../../../../common/utils/pagination.util'
 import { CreateProjectCommand } from '../../application/commands/create-project.command';
 import { UpdateProjectCommand } from '../../application/commands/update-project.command';
 import { DeleteProjectCommand } from '../../application/commands/delete-project.command';
-import { InviteMemberCommand } from '../../application/commands/invite-member.command';
+import { ProjectInvitationsService } from '../../application/project-invitations.service';
 import { UpdateMemberRoleCommand } from '../../application/commands/update-member-role.command';
 import { RemoveMemberCommand } from '../../application/commands/remove-member.command';
 import { GetAllProjectsQuery } from '../../application/queries/get-all-projects.query';
@@ -40,16 +40,12 @@ import { ListMembersQuery } from '../../application/queries/list-members.query';
 import { CreateProjectDto } from '../../application/dtos/create-project.dto';
 import { UpdateProjectDto } from '../../application/dtos/update-project.dto';
 import { InviteMemberDto } from '../../application/dtos/invite-member.dto';
+import { AcceptInvitationDto } from '../../application/dtos/accept-invitation.dto';
 import { UpdateMemberRoleDto } from '../../application/dtos/update-member-role.dto';
 import {
   toMemberResponse,
   toProjectResponse,
 } from '../../application/dtos/project-response.dto';
-import {
-  Paginated,
-  ProjectMemberView,
-  ProjectView,
-} from '../../domain/repositories/project.repository.interface';
 
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
@@ -60,6 +56,7 @@ export class ProjectsController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    private readonly invitations: ProjectInvitationsService,
   ) {}
 
   @Get()
@@ -173,15 +170,28 @@ export class ProjectsController {
     @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Body() dto: InviteMemberDto,
   ) {
-    const view = await this.commandBus.execute(
-      new InviteMemberCommand(
-        userId,
-        projectId,
-        dto.email,
-        dto.role ?? 'member',
-      ),
-    );
-    return { project: toProjectResponse(view), message: 'Member added' };
+    const invitation = await this.invitations.invite(projectId, userId, dto.email, dto.role ?? 'member');
+    return { invitation, message: invitation.pending ? 'Invitation sent' : 'Member added' };
+  }
+
+  @Get(':projectId/invitations')
+  async listInvitations(@CurrentUser('id') userId: string, @Param('projectId') projectId: string) {
+    return { invitations: await this.invitations.list(projectId, userId) };
+  }
+
+  @Post(':projectId/invitations/:invitationId/resend')
+  async resendInvitation(@CurrentUser('id') userId: string, @Param('projectId') projectId: string, @Param('invitationId') invitationId: string) {
+    return this.invitations.resend(projectId, invitationId, userId);
+  }
+
+  @Delete(':projectId/invitations/:invitationId')
+  async revokeInvitation(@CurrentUser('id') userId: string, @Param('projectId') projectId: string, @Param('invitationId') invitationId: string) {
+    return this.invitations.revoke(projectId, invitationId, userId);
+  }
+
+  @Post('invitations/accept')
+  async acceptInvitation(@CurrentUser('id') userId: string, @Body() dto: AcceptInvitationDto) {
+    return { invitation: await this.invitations.accept(dto.token, userId) };
   }
 
   @Patch(':projectId/members/:memberUserId')

@@ -6,7 +6,6 @@ import { ListMembersQuery } from '../../application/queries/list-members.query';
 import { CreateProjectCommand } from '../../application/commands/create-project.command';
 import { UpdateProjectCommand } from '../../application/commands/update-project.command';
 import { DeleteProjectCommand } from '../../application/commands/delete-project.command';
-import { InviteMemberCommand } from '../../application/commands/invite-member.command';
 import { UpdateMemberRoleCommand } from '../../application/commands/update-member-role.command';
 import { RemoveMemberCommand } from '../../application/commands/remove-member.command';
 import { ProjectView } from '../../domain/repositories/project.repository.interface';
@@ -15,6 +14,7 @@ describe('ProjectsController', () => {
   let controller: ProjectsController;
   let commandBus: jest.Mocked<CommandBus>;
   let queryBus: jest.Mocked<QueryBus>;
+  let invitations: { invite: jest.Mock };
 
   const mockProjectView: ProjectView = {
     id: '11111111-1111-4111-a111-111111111111',
@@ -41,7 +41,8 @@ describe('ProjectsController', () => {
   beforeEach(() => {
     commandBus = { execute: jest.fn() } as any;
     queryBus = { execute: jest.fn() } as any;
-    controller = new ProjectsController(commandBus, queryBus);
+    invitations = { invite: jest.fn() };
+    controller = new ProjectsController(commandBus, queryBus, invitations as any);
   });
 
   describe('list', () => {
@@ -133,15 +134,23 @@ describe('ProjectsController', () => {
     });
 
     it('adds member', async () => {
-      commandBus.execute.mockResolvedValueOnce(mockProjectView);
+      invitations.invite.mockResolvedValueOnce({
+        email: 'bob@example.com',
+        role: 'member',
+        pending: false,
+        expiresAt: null,
+      });
 
       const res = await controller.addMember('user-1', mockProjectView.id, {
         email: 'bob@example.com',
         role: 'member',
       });
 
-      expect(commandBus.execute).toHaveBeenCalledWith(
-        expect.any(InviteMemberCommand),
+      expect(invitations.invite).toHaveBeenCalledWith(
+        mockProjectView.id,
+        'user-1',
+        'bob@example.com',
+        'member',
       );
       expect(res.message).toBe('Member added');
     });

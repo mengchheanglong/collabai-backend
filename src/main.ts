@@ -1,3 +1,4 @@
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -7,13 +8,26 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
+import * as Sentry from '@sentry/nestjs';
+import { config as loadEnv } from 'dotenv';
 import { validationExceptionFactory } from './common/validation/validation.factory';
 
+loadEnv({ path: '.env.local' });
+loadEnv();
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0),
+  });
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Security: Payload size limits to protect against memory exhaustion / large payload DoS
-  app.use(json({ limit: '100kb' }));
+  // Documents allow 100,000 characters; leave room for JSON encoding overhead.
+  app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '100kb' }));
 
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
@@ -98,4 +112,4 @@ async function bootstrap() {
   const port = process.env.PORT ?? 4000;
   await app.listen(port, '0.0.0.0');
 }
-bootstrap();
+void bootstrap();

@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/comments/application/commands/delete-comment.handler.ts
 // Delete a comment. Allowed for the author or a project moderator (owner/admin). Hard
 // delete keeps the task's derived commentCount accurate.
@@ -20,6 +22,7 @@ export class DeleteCommentHandler implements ICommandHandler<DeleteCommentComman
   constructor(
     @Inject(COMMENT_REPOSITORY) private readonly repo: ICommentRepository,
     private readonly access: CommentAccessService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: DeleteCommentCommand): Promise<void> {
@@ -36,5 +39,6 @@ export class DeleteCommentHandler implements ICommandHandler<DeleteCommentComman
     );
 
     await this.repo.delete(comment.id);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('comment:deleted', projectId, command.actingUserId, { taskId: comment.taskId, commentId: comment.id }));
   }
 }

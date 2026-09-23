@@ -37,6 +37,8 @@ describe('EmailService backend resolution', () => {
     expect(
       resolveEmailBackend({
         EMAIL_BACKEND: 'notifications.email_backends.MailjetAPIBackend',
+        MAILJET_API_KEY: 'key',
+        MAILJET_SECRET_KEY: 'secret',
       }),
     ).toBe('mailjet');
   });

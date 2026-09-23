@@ -1,6 +1,6 @@
 # CollabAI Backend Agent Instructions
 
-You are working only on the CollabAI Express/MongoDB backend.
+You are working only on the CollabAI NestJS backend (Express adapter), backed by PostgreSQL and Prisma. `docs/TECH-SCOPE.md` is the current technology baseline; older SRS extracts are historical inputs.
 
 ## Read order
 
@@ -26,7 +26,7 @@ You are working only on the CollabAI Express/MongoDB backend.
 
 ## Main implementation order
 
-1. Setup Express/TypeScript/MongoDB.
+1. Maintain the NestJS/TypeScript/Prisma/PostgreSQL application.
 2. Add health endpoint.
 3. Implement auth.
 4. Implement project + board CRUD.

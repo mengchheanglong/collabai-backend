@@ -1,3 +1,6 @@
+import { toCommentResponse } from '../dtos/comment-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/comments/application/commands/edit-comment.handler.ts
 // Edit a comment. Allowed for the author or a project moderator (owner/admin).
 
@@ -20,6 +23,7 @@ export class EditCommentHandler implements ICommandHandler<EditCommentCommand> {
   constructor(
     @Inject(COMMENT_REPOSITORY) private readonly repo: ICommentRepository,
     private readonly access: CommentAccessService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: EditCommentCommand): Promise<CommentView> {
@@ -40,6 +44,7 @@ export class EditCommentHandler implements ICommandHandler<EditCommentCommand> {
 
     const view = await this.repo.findViewById(comment.id);
     if (!view) throw new CommentNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('comment:updated', projectId, command.actingUserId, { taskId: comment.taskId, comment: toCommentResponse(view) }));
     return view;
   }
 }

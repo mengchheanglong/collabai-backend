@@ -109,7 +109,7 @@ MVP approach:
 
 1. Ask AI to convert natural language query into filters.
 2. Validate filters.
-3. Run MongoDB query.
+3. Run the validated query with Prisma against PostgreSQL.
 
 Example model output:
 
@@ -140,6 +140,15 @@ Supported filters:
 
 Embedding-based semantic search is optional bonus. Do not block MVP on it.
 
+## Feature 5: Project insights and next actions
+
+`POST /ai/project-insights` accepts a project UUID from an authenticated member.
+The server gathers bounded task details, open and overdue counts, assignee workload,
+and completed-task counts for the latest and previous 14-day windows. It asks the
+configured provider for a prioritized JSON list of actions, validates the response,
+and removes task IDs outside the project. The dashboard uses these recommendations
+for its AI suggestions and prioritizes referenced tasks in “Up next”.
+
 ## UI recommendations
 
 - Task detail page: button `Generate subtasks`.
@@ -152,4 +161,3 @@ Embedding-based semantic search is optional bonus. Do not block MVP on it.
 - Add per-user simple rate limit for AI endpoints.
 - Cache repeated subtask/description requests only if easy.
 - Limit AI input size, especially comments.
-

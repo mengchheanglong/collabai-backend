@@ -3,7 +3,6 @@ import { IsBoolean, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsTrimmedNotEmpty,
-  SanitizeHtml,
   Trim,
 } from '../../../../common/decorators/sanitizers.decorator';
 

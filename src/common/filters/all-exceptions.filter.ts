@@ -14,6 +14,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import * as Sentry from '@sentry/nestjs';
 import {
   buildErrorBody,
   codeForStatus,
@@ -103,6 +104,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     this.logger.error(
       `[${method}] ${url} -> ${status} - ${JSON.stringify(message)}`,
     );
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) Sentry.captureException(exception);
 
     response
       .status(status)

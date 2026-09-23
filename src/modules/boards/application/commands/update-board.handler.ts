@@ -1,3 +1,6 @@
+import { toBoardResponse } from '../dtos/board-response.dto';
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/boards/application/commands/update-board.handler.ts
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
@@ -24,6 +27,7 @@ export class UpdateBoardHandler implements ICommandHandler<UpdateBoardCommand> {
     @Inject(BOARD_REPOSITORY) private readonly boardRepo: IBoardRepository,
     @Inject(PROJECT_REPOSITORY)
     private readonly projectRepo: IProjectRepository,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: UpdateBoardCommand): Promise<BoardView> {
@@ -42,6 +46,7 @@ export class UpdateBoardHandler implements ICommandHandler<UpdateBoardCommand> {
     await this.boardRepo.update(board);
 
     const view = await this.boardRepo.findViewById(board.id);
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('board:updated', board.projectId, command.userId, { board: toBoardResponse(view!) }));
     return view!;
   }
 }

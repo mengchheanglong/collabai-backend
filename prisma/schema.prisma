@@ -13,57 +13,59 @@ datasource db {
 // ============ USERS & AUTH ============
 
 model User {
-  id                String         @id @default(uuid()) @db.Uuid
-  email             String         @unique
-  name              String
-  passwordHash      String
-  role              String         @default("member") // owner, admin, member, viewer
-  avatarUrl         String?
-  timezone          String         @default("UTC")
-  isActive          Boolean        @default(true)
-  emailVerified     Boolean        @default(false) // UserEntity.isVerified maps to this column
+  id            String  @id @default(uuid()) @db.Uuid
+  email         String  @unique
+  name          String
+  passwordHash  String
+  role          String  @default("member") // owner, admin, member, viewer
+  avatarUrl     String?
+  timezone      String  @default("UTC")
+  isActive      Boolean @default(true)
+  emailVerified Boolean @default(false) // UserEntity.isVerified maps to this column
 
   // Auth flows — verification & password-reset codes (plaintext, TTL-expired server-side)
-  verificationCode         String?
-  verificationCodeExpiry   DateTime?
-  passwordResetCode        String?
-  passwordResetCodeExpiry  DateTime?
+  verificationCode        String?
+  verificationCodeExpiry  DateTime?
+  passwordResetCode       String?
+  passwordResetCodeExpiry DateTime?
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  lastLogin         DateTime?
-  deletedAt         DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastLogin DateTime?
+  deletedAt DateTime?
 
   // Relations
-  projects          Project[]      @relation("ProjectOwner")
-  projectMembers    ProjectMember[]
-  tasks             Task[]         @relation("TaskAssignee")
-  tasksCreated      Task[]         @relation("TaskCreator")
-  comments          Comment[]
+  projects             Project[]          @relation("ProjectOwner")
+  projectMembers       ProjectMember[]
+  tasks                Task[]             @relation("TaskAssignee")
+  tasksCreated         Task[]             @relation("TaskCreator")
+  documents            Document[]
+  comments             Comment[]
   // NOTE: doc's `subtasks Subtask[]` removed — Subtask model has no back-relation to User (dangling relation)
-  labels            Label[]
-  activities        Activity[]
-  notifications     Notification[]
-  userSettings      UserSettings?
-  refreshTokens     RefreshToken[]
-  pushSubscriptions PushSubscription[]
+  labels               Label[]
+  activities           Activity[]
+  notifications        Notification[]
+  userSettings         UserSettings?
+  refreshTokens        RefreshToken[]
+  pushSubscriptions    PushSubscription[]
+  aiActionPlansCreated AiActionPlan[]     @relation("AiActionPlanRequester")
+  // NOTE: doc's `@@fulltext([name, email])` removed — @@fulltext is MySQL/MongoDB-only, invalid on PostgreSQL
 
   @@index([email])
   @@index([isActive])
-  // NOTE: doc's `@@fulltext([name, email])` removed — @@fulltext is MySQL/MongoDB-only, invalid on PostgreSQL
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  tokenHash String   @unique // SHA-256 hash of the refresh token — never store plaintext
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique // SHA-256 hash of the refresh token — never store plaintext
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   // Soft-delete for rotation: NULL = live token, non-null = consumed/revoked. Kept
   // (not hard-deleted) so a replayed already-rotated token can be detected as reuse/theft.
   revokedAt DateTime?
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -71,39 +73,41 @@ model RefreshToken {
 }
 
 model UserSettings {
-  id                     String   @id @default(uuid()) @db.Uuid
-  userId                 String   @unique @db.Uuid
-  emailFrequency         String   @default("daily") // never, daily, weekly, instant
-  theme                  String   @default("auto") // light, dark, auto
-  notifyCommentMentions  Boolean  @default(true)
-  notifyTaskAssigned     Boolean  @default(true)
-  notifyTaskCompleted    Boolean  @default(true)
-  updatedAt              DateTime @updatedAt
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @db.Uuid
+  emailFrequency        String   @default("daily") // never, daily, weekly, instant
+  theme                 String   @default("auto") // light, dark, auto
+  notifyCommentMentions Boolean  @default(true)
+  notifyTaskAssigned    Boolean  @default(true)
+  notifyTaskCompleted   Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
 
-  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ============ PROJECTS ============
 
 model Project {
-  id        String         @id @default(uuid()) @db.Uuid
-  ownerId   String         @db.Uuid
-  name      String
+  id          String    @id @default(uuid()) @db.Uuid
+  ownerId     String    @db.Uuid
+  name        String
   description String?
-  icon      String?
-  color     String?
-  isArchived Boolean        @default(false)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  deletedAt DateTime?
+  icon        String?
+  color       String?
+  isArchived  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   // Relations
-  owner             User           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members           ProjectMember[]
-  tasks             Task[]
-  boards            Board[]
-  labels            Label[]
-  activities        Activity[]
+  owner         User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members       ProjectMember[]
+  tasks         Task[]
+  documents     Document[]
+  boards        Board[]
+  labels        Label[]
+  activities    Activity[]
+  aiActionPlans AiActionPlan[]
 
   @@unique([ownerId, name])
   @@index([ownerId])
@@ -111,22 +115,24 @@ model Project {
 }
 
 model ProjectMember {
-  id                 String   @id @default(uuid()) @db.Uuid
-  projectId          String   @db.Uuid
-  userId             String   @db.Uuid
-  role               String   @default("member") // owner, admin, member, viewer, guest
-  invitedBy          String?  @db.Uuid
-  invitedAt          DateTime?
-  joinedAt           DateTime?
-  invitationToken    String?  @unique
+  id                  String    @id @default(uuid()) @db.Uuid
+  projectId           String    @db.Uuid
+  userId              String?   @db.Uuid
+  invitedEmail        String?
+  role                String    @default("member") // owner, admin, member, viewer, guest
+  invitedBy           String?   @db.Uuid
+  invitedAt           DateTime?
+  joinedAt            DateTime?
+  invitationToken     String?   @unique
   invitationExpiresAt DateTime?
-  isActive           Boolean  @default(true)
+  isActive            Boolean   @default(true)
 
   // Relations
-  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@unique([projectId, invitedEmail])
   @@index([projectId])
   @@index([userId])
 }
@@ -143,8 +149,8 @@ model Board {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks       Task[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
 
   @@index([projectId])
 }
@@ -152,53 +158,53 @@ model Board {
 // ============ TASKS ============
 
 model Task {
-  id        String   @id @default(uuid()) @db.Uuid
-  projectId String   @db.Uuid
-  boardId   String?  @db.Uuid
-  title     String
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  boardId     String?   @db.Uuid
+  title       String
   description String?
-  status    String   @default("todo") // todo, in_progress, done
-  priority  String   @default("medium") // low, medium, high, urgent
-  position  Float    @default(0) // ordering within a status column (kanban); spaced/fractional
-  assignedTo String? @db.Uuid
-  createdBy String   @db.Uuid
-  dueDate   DateTime?
+  status      String    @default("todo") // todo, in_progress, done
+  priority    String    @default("medium") // low, medium, high, urgent
+  position    Float     @default(0) // ordering within a status column (kanban); spaced/fractional
+  assignedTo  String?   @db.Uuid
+  createdBy   String    @db.Uuid
+  dueDate     DateTime?
   completedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   // Relations
-  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  board     Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
-  assignee  User?       @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
-  creator   User        @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Restrict)
-  comments  Comment[]
-  subtasks  Subtask[]
-  labels    TaskLabel[]
+  project  Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  board    Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  assignee User?       @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator  User        @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  comments Comment[]
+  subtasks Subtask[]
+  labels   TaskLabel[]
   // NOTE: doc's `activities Activity[]` removed — Activity is polymorphic (entityType/entityId), no direct Task relation (dangling)
+  // NOTE: doc's `@@fulltext([title, description])` removed — @@fulltext is MySQL/MongoDB-only, invalid on PostgreSQL
 
   @@index([projectId, status])
   @@index([assignedTo])
   @@index([dueDate])
   @@index([createdAt])
-  // NOTE: doc's `@@fulltext([title, description])` removed — @@fulltext is MySQL/MongoDB-only, invalid on PostgreSQL
 }
 
 model Subtask {
-  id        String  @id @default(uuid()) @db.Uuid
-  taskId    String  @db.Uuid
-  title     String
-  completed Boolean @default(false)
+  id          String    @id @default(uuid()) @db.Uuid
+  taskId      String    @db.Uuid
+  title       String
+  completed   Boolean   @default(false)
   completedAt DateTime?
-  orderIndex Int     @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  orderIndex  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
-  @@index([taskId])
   @@unique([taskId, orderIndex])
+  @@index([taskId])
 }
 
 model Label {
@@ -209,9 +215,9 @@ model Label {
   createdBy String   @db.Uuid
   createdAt DateTime @default(now())
 
-  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  creator   User        @relation(fields: [createdBy], references: [id], onDelete: Restrict)
-  tasks     TaskLabel[]
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator User        @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  tasks   TaskLabel[]
 
   @@unique([projectId, name])
   @@index([projectId])
@@ -222,8 +228,8 @@ model TaskLabel {
   taskId  String @db.Uuid
   labelId String @db.Uuid
 
-  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, labelId])
   @@index([taskId])
@@ -232,16 +238,16 @@ model TaskLabel {
 // ============ COMMENTS ============
 
 model Comment {
-  id        String   @id @default(uuid()) @db.Uuid
-  taskId    String   @db.Uuid
-  userId    String   @db.Uuid
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @db.Uuid
+  userId    String    @db.Uuid
   content   String
   editedAt  DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   deletedAt DateTime?
 
-  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([userId])
@@ -251,39 +257,59 @@ model Comment {
 // ============ ACTIVITIES (AUDIT LOG) ============
 
 model Activity {
-  id        String   @id @default(uuid()) @db.Uuid
-  projectId String   @db.Uuid
-  userId    String   @db.Uuid
-  entityType String  // task, comment, project_member
-  entityId  String?  @db.Uuid
-  action    String   // created, updated, deleted, moved
-  oldValue  String?
-  newValue  String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @db.Uuid
+  userId     String   @db.Uuid
+  entityType String // task, comment, project_member
+  entityId   String?  @db.Uuid
+  action     String // created, updated, deleted, moved
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
 
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([projectId, userId])
   @@index([entityType, entityId])
   @@index([createdAt])
 }
 
+// AI proposals are reviewable, short-lived plans. Only the requester can approve them.
+model AiActionPlan {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  requestedBy String    @db.Uuid
+  request     String
+  actions     Json
+  source      String // ai or fallback
+  status      String    @default("pending") // pending or applied
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  appliedAt   DateTime?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requester User    @relation("AiActionPlanRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([requestedBy, status])
+}
+
 // ============ NOTIFICATIONS ============
 
 model Notification {
-  id                String   @id @default(uuid()) @db.Uuid
-  userId            String   @db.Uuid
-  type              String   // task_assigned, comment_added, etc
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @db.Uuid
+  type              String // task_assigned, comment_added, etc
   title             String
   message           String
   relatedEntityType String?
-  relatedEntityId   String?  @db.Uuid
-  isRead            Boolean  @default(false)
+  relatedEntityId   String?   @db.Uuid
+  isRead            Boolean   @default(false)
   readAt            DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([createdAt])
@@ -301,8 +327,23 @@ model PushSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
+model Document {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  createdById String    @db.Uuid
+  title       String
+  content     String    @default("")
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator     User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([projectId, deletedAt, updatedAt])
+}

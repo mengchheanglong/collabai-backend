@@ -2,13 +2,14 @@
 //
 // Transactional email delivery with pluggable backends:
 //
-//   EMAIL_BACKEND = log | smtp | resend | mailjet   (auto-detected from keys if unset)
+//   EMAIL_BACKEND = sendgrid | log | smtp | resend | mailjet (auto-detected from keys if unset)
 //
 //   - log     — dev default: prints the email (incl. verification codes) to the console
 //   - smtp    — nodemailer SMTP. NOTE: Render's free tier blocks outbound SMTP ports
 //               25/465/587 (since Sept 2025), so SMTP only works locally or on paid plans.
 //   - resend  — Resend HTTP API  (api.resend.com, port 443 — works on Render free tier)
 //   - mailjet — Mailjet HTTP API (api.mailjet.com, port 443 — works on Render free tier)
+//   - sendgrid — SendGrid Mail API; SENDGRID_API_BASE_URL can target an isolated local mock.
 //
 // Env precedence for the sender address:
 //   DEFAULT_FROM_EMAIL > SMTP_FROM > EMAIL_USER > 'CollabAI <no-reply@localhost>'
@@ -18,10 +19,11 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import sgMail from '@sendgrid/mail';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
-export type EmailBackend = 'log' | 'smtp' | 'resend' | 'mailjet';
+export type EmailBackend = 'log' | 'smtp' | 'resend' | 'mailjet' | 'sendgrid';
 
 interface MailBody {
   text: string;
@@ -30,6 +32,7 @@ interface MailBody {
 
 /** Accepts plain values ("resend") and Django-style ones ("notifications.email_backends.ResendAPIBackend"). */
 const BACKEND_ALIASES: Record<string, EmailBackend> = {
+  sendgrid: 'sendgrid',
   log: 'log',
   console: 'log',
   logemailbackend: 'log',
@@ -52,20 +55,33 @@ function normalizeBackendName(raw: string | undefined): string | undefined {
 }
 
 /**
- * Resolve the active backend. An explicit EMAIL_BACKEND always wins (falling back
- * to `log` if its keys are missing); otherwise auto-detect from whichever API keys
- * are present: resend > mailjet > smtp > log.
+ * Resolve the active backend. An explicit backend is used only when its credentials
+ * exist; otherwise fall back to log. Without an explicit selection, detect configured
+ * providers, preferring SendGrid for the approved production stack.
  */
 export function resolveEmailBackend(
   env: NodeJS.ProcessEnv = process.env,
 ): EmailBackend {
   const explicit =
     BACKEND_ALIASES[normalizeBackendName(env.EMAIL_BACKEND) ?? ''];
-  if (explicit) return explicit;
+  if (explicit === 'log') return 'log';
+  if (explicit && hasBackendCredentials(explicit, env)) return explicit;
+  if (explicit) return 'log';
+  if (env.SENDGRID_API_KEY) return 'sendgrid';
   if (env.RESEND_API_KEY) return 'resend';
   if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) return 'mailjet';
   if (env.EMAIL_HOST && env.EMAIL_USER && env.EMAIL_PASS) return 'smtp';
   return 'log';
+}
+
+function hasBackendCredentials(backend: EmailBackend, env: NodeJS.ProcessEnv): boolean {
+  switch (backend) {
+    case 'sendgrid': return Boolean(env.SENDGRID_API_KEY);
+    case 'smtp': return Boolean(env.EMAIL_HOST && env.EMAIL_USER && env.EMAIL_PASS);
+    case 'resend': return Boolean(env.RESEND_API_KEY);
+    case 'mailjet': return Boolean(env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY);
+    case 'log': return true;
+  }
 }
 
 /**
@@ -75,7 +91,8 @@ export function resolveEmailBackend(
 export function isEmailDeliveryConfigured(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return resolveEmailBackend(env) !== 'log';
+  const backend = resolveEmailBackend(env);
+  return backend !== 'log' && hasBackendCredentials(backend, env);
 }
 
 /** Parse `"Name" <email@host>` or `email@host` into Mailjet's From shape. */
@@ -101,9 +118,27 @@ export class EmailService implements OnModuleInit {
     this.backend = resolveEmailBackend(process.env);
     this.from =
       this.config.get<string>('DEFAULT_FROM_EMAIL') ??
+      this.config.get<string>('SENDGRID_FROM') ??
       this.config.get<string>('SMTP_FROM') ??
       this.config.get<string>('EMAIL_USER') ??
       'CollabAI <no-reply@localhost>';
+
+    if (this.backend === 'sendgrid') {
+      const apiKey = this.config.get<string>('SENDGRID_API_KEY');
+      if (!apiKey) {
+        this.logger.warn('EMAIL_BACKEND=sendgrid but SENDGRID_API_KEY is missing — falling back to log.');
+        this.backend = 'log';
+        return;
+      }
+      sgMail.setApiKey(apiKey);
+      const apiBaseUrl = this.config.get<string>('SENDGRID_API_BASE_URL');
+      if (apiBaseUrl) {
+        (sgMail as unknown as { client: { setDefaultRequest(key: string, value: string): void } })
+          .client.setDefaultRequest('baseUrl', apiBaseUrl);
+      }
+      this.logger.log('Email backend: sendgrid.');
+      return;
+    }
 
     if (this.backend === 'smtp') {
       const host = this.config.get<string>('EMAIL_HOST');
@@ -171,6 +206,10 @@ export class EmailService implements OnModuleInit {
     return this.backend;
   }
 
+  async verifyConnection(): Promise<boolean> {
+    return this.backend !== 'log';
+  }
+
   async sendVerificationCode(to: string, code: string): Promise<void> {
     await this.send(
       to,
@@ -206,6 +245,21 @@ export class EmailService implements OnModuleInit {
     });
   }
 
+  async sendProjectInvitation(to: string, projectName: string, inviterName: string, url: string, expiresAt?: Date): Promise<void> {
+    const safeProject = this.escapeHtml(projectName);
+    const safeInviter = this.escapeHtml(inviterName);
+    const expiryText = expiresAt ? `This invitation expires ${expiresAt.toLocaleString()}.` : 'Sign in to view the project.';
+    const expiryHtml = expiresAt ? `<p>This invitation expires ${expiresAt.toLocaleString()}.</p>` : '<p>Sign in to view the project.</p>';
+    await this.send(to, `Invitation to join ${projectName} on CollabAI`, {
+      text: `${inviterName} invited you to join ${projectName} on CollabAI. Open here: ${url}\n${expiryText}`,
+      html: `<p>${safeInviter} invited you to join <strong>${safeProject}</strong> on CollabAI.</p><p><a href="${this.escapeHtml(url)}">Open project</a></p>${expiryHtml}`,
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+  }
+
   private async send(
     to: string,
     subject: string,
@@ -213,6 +267,11 @@ export class EmailService implements OnModuleInit {
   ): Promise<void> {
     try {
       switch (this.backend) {
+        case 'sendgrid': {
+          const [response] = await sgMail.send({ from: this.from, to, subject, text: body.text, html: body.html });
+          this.logger.log(`Email sent: "${subject}" -> ${to} (status=${response.statusCode})`);
+          return;
+        }
         case 'smtp':
           if (this.transporter) {
             // nodemailer's SentMessageInfo is typed `any`; assert the shape we use.

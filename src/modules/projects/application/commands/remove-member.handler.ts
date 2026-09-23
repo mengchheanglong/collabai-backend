@@ -1,3 +1,5 @@
+import { WorkspaceChangedEvent } from '../../../../shared/events/workspace-changed.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // src/modules/projects/application/commands/remove-member.handler.ts
 // Remove a member (or leave the project yourself). Managers can remove others; anyone
 // may remove themselves. The last owner cannot be removed.
@@ -24,6 +26,7 @@ export class RemoveMemberHandler implements ICommandHandler<RemoveMemberCommand>
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,
+    private readonly events: EventEmitter2 = new EventEmitter2(),
   ) {}
 
   async execute(command: RemoveMemberCommand): Promise<ProjectView> {
@@ -64,6 +67,7 @@ export class RemoveMemberHandler implements ICommandHandler<RemoveMemberCommand>
 
     const view = await this.repo.findViewById(command.projectId);
     if (!view) throw new ProjectNotFoundError();
+    this.events.emit(WorkspaceChangedEvent.eventName, new WorkspaceChangedEvent('member:removed', command.projectId, command.actingUserId, { userId: command.targetUserId }));
     return view;
   }
 }

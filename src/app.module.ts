@@ -1,3 +1,5 @@
+import { RealtimeModule } from './modules/realtime/realtime.module';
+import { DocsModule } from './modules/docs/docs.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -14,6 +16,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AiModule } from './modules/ai/ai.module';
 import { BoardsModule } from './modules/boards/boards.module';
 import { SyncModule } from './modules/sync/sync.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -33,11 +36,14 @@ import { authThrottlers } from './config/throttler.config';
     UsersModule,
     ProjectsModule,
     TasksModule,
+    DocsModule,
+    RealtimeModule,
     CommentsModule,
     NotificationsModule,
     AiModule,
     BoardsModule,
     SyncModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
