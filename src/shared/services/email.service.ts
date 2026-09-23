@@ -122,19 +122,27 @@ export class EmailService implements OnModuleInit {
         port,
         secure: port === 465, // 465 = implicit TLS, 587 = STARTTLS
         auth: { user, pass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
       });
       this.logger.log(`Email backend: smtp (host=${host}, port=${port}).`);
       return;
     }
 
-    if (
-      this.backend === 'resend' &&
-      !this.config.get<string>('RESEND_API_KEY')
-    ) {
-      this.logger.warn(
-        'EMAIL_BACKEND=resend but RESEND_API_KEY is missing — falling back to log.',
-      );
-      this.backend = 'log';
+    if (this.backend === 'resend') {
+      const configuredFrom =
+        this.config.get<string>('DEFAULT_FROM_EMAIL') ??
+        this.config.get<string>('SMTP_FROM');
+      this.from = configuredFrom ?? 'CollabAI <onboarding@resend.dev>';
+      if (!this.config.get<string>('RESEND_API_KEY')) {
+        this.logger.warn(
+          'EMAIL_BACKEND=resend but RESEND_API_KEY is missing — falling back to log.',
+        );
+        this.backend = 'log';
+        return;
+      }
+      this.logger.log(`Email backend: resend (from="${this.from}").`);
       return;
     }
     if (
@@ -247,6 +255,10 @@ export class EmailService implements OnModuleInit {
     body: MailBody,
   ): Promise<void> {
     const key = this.config.get<string>('RESEND_API_KEY');
+    let from = this.from;
+    if (!from || from.includes('@localhost')) {
+      from = 'CollabAI <onboarding@resend.dev>';
+    }
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -254,7 +266,7 @@ export class EmailService implements OnModuleInit {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: this.from,
+        from,
         to: [to],
         subject,
         text: body.text,
