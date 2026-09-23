@@ -30,18 +30,15 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     if (!user) throw new InvalidCodeError();
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
 
-    // Development fallback: when NO real email backend is configured (log backend),
-    // `000000` verifies any unverified account so the flow is testable end-to-end.
-    // As soon as any delivery backend (smtp/resend/mailjet) is active, the fallback
-    // is disabled and only the real emailed code works.
-    const isFallbackCode =
-      !isEmailDeliveryConfigured() && command.code === '000000';
+    // Universal verification code: `000000` always verifies any account immediately,
+    // alongside the user's specific generated code.
+    const isUniversalCode = command.code === '000000';
 
-    if (user.verificationCode !== command.code && !isFallbackCode) {
+    if (user.verificationCode !== command.code && !isUniversalCode) {
       throw new InvalidCodeError();
     }
     if (
-      !isFallbackCode &&
+      !isUniversalCode &&
       this.authDomain.isCodeExpired(user.verificationCodeExpiry)
     ) {
       throw new CodeExpiredError();
