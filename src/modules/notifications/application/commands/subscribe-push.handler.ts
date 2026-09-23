@@ -10,9 +10,7 @@ import { InvalidPushSubscriptionError } from '../errors/notification.errors';
 
 @Injectable()
 @CommandHandler(SubscribePushCommand)
-export class SubscribePushHandler
-  implements ICommandHandler<SubscribePushCommand>
-{
+export class SubscribePushHandler implements ICommandHandler<SubscribePushCommand> {
   constructor(
     @Inject(PUSH_SUBSCRIPTION_REPOSITORY)
     private readonly repo: IPushSubscriptionRepository,

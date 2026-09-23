@@ -44,7 +44,8 @@ export class PushNotificationsController {
   @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Register or update browser web push subscription for current user',
+    summary:
+      'Register or update browser web push subscription for current user',
   })
   async subscribe(
     @CurrentUser('id') userId: string,

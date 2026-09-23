@@ -10,9 +10,7 @@ import {
 import { AiAccessService } from '../services/ai-access.service';
 
 @CommandHandler(GenerateTasksCommand)
-export class GenerateTasksHandler
-  implements ICommandHandler<GenerateTasksCommand>
-{
+export class GenerateTasksHandler implements ICommandHandler<GenerateTasksCommand> {
   constructor(
     @Inject(AI_PROVIDER) private readonly ai: IAiProvider,
     private readonly access: AiAccessService,

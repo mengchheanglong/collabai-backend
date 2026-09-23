@@ -56,13 +56,7 @@ describe('CreateTaskHandler (Offline Sync, Concurrency & Idempotency)', () => {
       emit: jest.fn(),
     } as any;
 
-    handler = new CreateTaskHandler(
-      repo,
-      boardRepo,
-      access,
-      domain,
-      events,
-    );
+    handler = new CreateTaskHandler(repo, boardRepo, access, domain, events);
   });
 
   describe('Standard Task Creation & Offline ID Assignment', () => {
@@ -123,12 +117,15 @@ describe('CreateTaskHandler (Offline Sync, Concurrency & Idempotency)', () => {
     });
 
     it('should generate a new UUID when client id is omitted', async () => {
-      repo.findViewById.mockImplementation(async (id: string) => ({
-        id,
-        projectId: validProjectId,
-        boardId: validBoardId,
-        title: 'Auto ID Task',
-      } as any));
+      repo.findViewById.mockImplementation(
+        async (id: string) =>
+          ({
+            id,
+            projectId: validProjectId,
+            boardId: validBoardId,
+            title: 'Auto ID Task',
+          }) as any,
+      );
 
       const cmd = new CreateTaskCommand(
         validUserId,
@@ -314,7 +311,9 @@ describe('CreateTaskHandler (Offline Sync, Concurrency & Idempotency)', () => {
         customId,
       );
 
-      await expect(handler.execute(cmd)).rejects.toThrow('Database connection lost');
+      await expect(handler.execute(cmd)).rejects.toThrow(
+        'Database connection lost',
+      );
     });
   });
 
@@ -333,7 +332,9 @@ describe('CreateTaskHandler (Offline Sync, Concurrency & Idempotency)', () => {
         'non-member-user-id',
       );
 
-      await expect(handler.execute(cmd)).rejects.toThrow(AssigneeNotMemberError);
+      await expect(handler.execute(cmd)).rejects.toThrow(
+        AssigneeNotMemberError,
+      );
     });
 
     it('should throw InvalidTaskFieldError if project has no boards', async () => {

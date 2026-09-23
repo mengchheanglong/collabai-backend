@@ -12,6 +12,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { TaskExceptionFilter } from '../exception-filters/task-exception.filter';
 
+import { parsePaginationParams } from '../../../../common/utils/pagination.util';
 import { CreateTaskCommand } from '../../application/commands/create-task.command';
 import { UpdateTaskCommand } from '../../application/commands/update-task.command';
 import { MoveTaskCommand } from '../../application/commands/move-task.command';
@@ -60,7 +62,7 @@ export class TasksController {
   @ApiOperation({ summary: 'List tasks in a project (filterable)' })
   async list(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Query('boardId') boardId?: string,
     @Query('status') status?: string,
     @Query('assigneeId') assigneeId?: string,
@@ -69,7 +71,14 @@ export class TasksController {
     @Query('dueBefore') dueBefore?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('page[]') pageBracket?: string | string[],
+    @Query('limit[]') limitBracket?: string | string[],
   ) {
+    const { page: parsedPage, limit: parsedLimit } = parsePaginationParams(
+      page ?? pageBracket,
+      limit ?? limitBracket,
+      50,
+    );
     const result = await this.queryBus.execute(
       new GetTasksQuery(userId, projectId, {
         boardId,
@@ -77,9 +86,9 @@ export class TasksController {
         assigneeId,
         q,
         label,
-        dueBefore: dueBefore ? new Date(dueBefore) : undefined,
-        page: toInt(page, 1),
-        limit: toInt(limit, 50),
+        dueBefore: parseDate(dueBefore),
+        page: parsedPage,
+        limit: parsedLimit,
       }),
     );
 
@@ -121,7 +130,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Get a task' })
   async get(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
   ) {
     const view = await this.queryBus.execute(new GetTaskQuery(userId, taskId));
     return { task: toTaskResponse(view) };
@@ -131,7 +140,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Update task fields' })
   async update(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: UpdateTaskDto,
   ) {
     const view = await this.commandBus.execute(
@@ -160,7 +169,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Move a task between columns (status + position)' })
   async move(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: MoveTaskDto,
   ) {
     const status = dto.status ?? dto.destinationStatus;
@@ -178,7 +187,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Move a task between columns (PATCH alias)' })
   async movePatch(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: MoveTaskDto,
   ) {
     return this.move(userId, taskId, dto);
@@ -189,7 +198,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Move a task between columns (POST alias)' })
   async movePost(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: MoveTaskDto,
   ) {
     return this.move(userId, taskId, dto);
@@ -199,7 +208,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Delete a task' })
   async remove(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
   ) {
     await this.commandBus.execute(new DeleteTaskCommand(userId, taskId));
     return { success: true, message: 'Task deleted' };
@@ -212,7 +221,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Add a subtask' })
   async addSubtask(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: AddSubtaskDto,
   ) {
     const view = await this.commandBus.execute(
@@ -227,8 +236,8 @@ export class TasksController {
   @ApiOperation({ summary: 'Rename or toggle a subtask' })
   async updateSubtask(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
-    @Param('subtaskId') subtaskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
+    @Param('subtaskId', new ParseUUIDPipe({ version: '4' })) subtaskId: string,
     @Body() dto: UpdateSubtaskDto,
   ) {
     const view = await this.commandBus.execute(
@@ -243,8 +252,8 @@ export class TasksController {
   @ApiOperation({ summary: 'Delete a subtask' })
   async deleteSubtask(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
-    @Param('subtaskId') subtaskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
+    @Param('subtaskId', new ParseUUIDPipe({ version: '4' })) subtaskId: string,
   ) {
     const view = await this.commandBus.execute(
       new DeleteSubtaskCommand(userId, taskId, subtaskId),
@@ -257,9 +266,10 @@ export class TasksController {
   }
 }
 
-function toInt(value: string | undefined, fallback: number): number {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+function parseDate(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? undefined : d;
 }
 
 function asStatus(value: string | undefined): TaskStatus | undefined {

@@ -9,9 +9,7 @@ import { SafeUser } from '../../domain/entities/safe-user.entity';
 import { UserNotFoundError } from '../errors/auth.errors';
 
 @CommandHandler(UpdateProfileCommand)
-export class UpdateProfileHandler
-  implements ICommandHandler<UpdateProfileCommand>
-{
+export class UpdateProfileHandler implements ICommandHandler<UpdateProfileCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}

@@ -112,23 +112,27 @@ export class AiController {
 
   @Post('generate-tasks')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Generate structured tasks with subtasks from prompt' })
+  @ApiOperation({
+    summary: 'Generate structured tasks with subtasks from prompt',
+  })
   async generateTasks(
     @CurrentUser('id') userId: string,
     @Body() dto: GenerateTasksDto,
   ) {
     return this.commandBus.execute(
-      new GenerateTasksCommand(userId, dto.projectId, dto.prompt, dto.count ?? 5),
+      new GenerateTasksCommand(
+        userId,
+        dto.projectId,
+        dto.prompt,
+        dto.count ?? 5,
+      ),
     );
   }
 
   @Post('chat')
   @HttpCode(200)
   @ApiOperation({ summary: 'Conversational project assistant chat' })
-  async chat(
-    @CurrentUser('id') userId: string,
-    @Body() dto: ChatDto,
-  ) {
+  async chat(@CurrentUser('id') userId: string, @Body() dto: ChatDto) {
     return this.commandBus.execute(
       new ChatCommand(userId, dto.message, dto.projectId, dto.history),
     );

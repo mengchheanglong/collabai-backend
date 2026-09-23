@@ -28,11 +28,9 @@ export class DeepSeekProvider implements IAiProvider {
 
   private readonly modelName: string;
 
-  constructor(
-    apiKey: string,
-    model: string,
-  ) {
-    this.modelName = (!model || model.includes('deepseek-v4')) ? 'deepseek-chat' : model;
+  constructor(apiKey: string, model: string) {
+    this.modelName =
+      !model || model.includes('deepseek-v4') ? 'deepseek-chat' : model;
     this.client = new OpenAI({
       apiKey,
       baseURL: 'https://api.deepseek.com',
@@ -275,13 +273,16 @@ function safeStructuredTasks(raw: string): StructuredTask[] | null {
             status: ['todo', 'in_progress', 'done'].includes(item.status)
               ? item.status
               : 'todo',
-            priority: ['low', 'medium', 'high', 'urgent'].includes(item.priority)
+            priority: ['low', 'medium', 'high', 'urgent'].includes(
+              item.priority,
+            )
               ? item.priority
               : 'medium',
             labels: Array.isArray(item.labels)
               ? item.labels.map((l: any) => String(l).trim()).filter(Boolean)
               : [],
-            dueDate: typeof item.dueDate === 'string' ? item.dueDate : undefined,
+            dueDate:
+              typeof item.dueDate === 'string' ? item.dueDate : undefined,
           }))
           .filter((t) => t.title.length > 0);
       }
@@ -293,20 +294,27 @@ function safeStructuredTasks(raw: string): StructuredTask[] | null {
           return innerParsed
             .map((item: any) => ({
               title: String(item.title || item.name || '').trim(),
-              description: String(item.description || item.details || '').trim(),
+              description: String(
+                item.description || item.details || '',
+              ).trim(),
               subtasks: Array.isArray(item.subtasks)
-                ? item.subtasks.map((s: any) => String(s).trim()).filter(Boolean)
+                ? item.subtasks
+                    .map((s: any) => String(s).trim())
+                    .filter(Boolean)
                 : [],
               status: ['todo', 'in_progress', 'done'].includes(item.status)
                 ? item.status
                 : 'todo',
-              priority: ['low', 'medium', 'high', 'urgent'].includes(item.priority)
+              priority: ['low', 'medium', 'high', 'urgent'].includes(
+                item.priority,
+              )
                 ? item.priority
                 : 'medium',
               labels: Array.isArray(item.labels)
                 ? item.labels.map((l: any) => String(l).trim()).filter(Boolean)
                 : [],
-              dueDate: typeof item.dueDate === 'string' ? item.dueDate : undefined,
+              dueDate:
+                typeof item.dueDate === 'string' ? item.dueDate : undefined,
             }))
             .filter((t) => t.title.length > 0);
         }

@@ -27,7 +27,9 @@ export class ResendPasswordResetVerificationHandler implements ICommandHandler<R
   async execute(
     command: ResendPasswordResetVerificationCommand,
   ): Promise<{ success: true }> {
-    const user = await this.userRepo.findByEmail(command.email);
+    const user = await this.userRepo.findByEmail(
+      command.email.toLowerCase().trim(),
+    );
     if (user) {
       const code = this.authDomain.generateNumericCode(
         VERIFICATION_CODE_LENGTH,

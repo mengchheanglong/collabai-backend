@@ -1,6 +1,11 @@
 // src/modules/comments/application/dtos/add-comment.dto.ts
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsTrimmedNotEmpty,
+  SanitizeHtml,
+  Trim,
+} from '../../../../common/decorators/sanitizers.decorator';
 
 export class AddCommentDto {
   @ApiPropertyOptional({
@@ -16,9 +21,9 @@ export class AddCommentDto {
     minLength: 1,
     maxLength: 3000,
   })
+  @Trim()
+  @SanitizeHtml()
   @IsString()
-  @MinLength(1)
-  @MaxLength(3000)
+  @IsTrimmedNotEmpty({ minLength: 1, maxLength: 3000 })
   body: string;
 }
-

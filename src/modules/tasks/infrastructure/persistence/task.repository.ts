@@ -84,10 +84,15 @@ export class TaskRepository implements ITaskRepository {
 
   async delete(id: string): Promise<void> {
     if (!isValidUuid(id)) return;
-    await this.prisma.task.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await this.prisma.$transaction([
+      this.prisma.task.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      }),
+      this.prisma.notification.deleteMany({
+        where: { relatedEntityType: 'task', relatedEntityId: id },
+      }),
+    ]);
   }
 
   async list(
@@ -100,13 +105,27 @@ export class TaskRepository implements ITaskRepository {
     const where: Prisma.TaskWhereInput = {
       projectId,
       deletedAt: null,
-      ...(filters.boardId ? { boardId: filters.boardId } : {}),
+      ...(filters.boardId
+        ? {
+            boardId: isValidUuid(filters.boardId)
+              ? filters.boardId
+              : '00000000-0000-0000-0000-000000000000',
+          }
+        : {}),
       ...(filters.status ? { status: filters.status } : {}),
-      ...(filters.assigneeId ? { assignedTo: filters.assigneeId } : {}),
+      ...(filters.assigneeId
+        ? {
+            assignedTo: isValidUuid(filters.assigneeId)
+              ? filters.assigneeId
+              : '00000000-0000-0000-0000-000000000000',
+          }
+        : {}),
       ...(filters.q
         ? { title: { contains: filters.q, mode: 'insensitive' } }
         : {}),
-      ...(filters.dueBefore ? { dueDate: { lte: filters.dueBefore } } : {}),
+      ...(filters.dueBefore && !isNaN(filters.dueBefore.getTime())
+        ? { dueDate: { lte: filters.dueBefore } }
+        : {}),
       ...(filters.label
         ? { labels: { some: { label: { name: filters.label } } } }
         : {}),
@@ -186,16 +205,34 @@ export class TaskRepository implements ITaskRepository {
 
   async addSubtask(subtask: SubtaskEntity): Promise<void> {
     if (!isValidUuid(subtask.id) || !isValidUuid(subtask.taskId)) return;
-    await this.prisma.subtask.create({
-      data: {
-        id: subtask.id,
-        taskId: subtask.taskId,
-        title: subtask.title,
-        completed: subtask.done,
-        completedAt: subtask.completedAt,
-        orderIndex: subtask.orderIndex,
-      },
-    });
+    try {
+      await this.prisma.subtask.create({
+        data: {
+          id: subtask.id,
+          taskId: subtask.taskId,
+          title: subtask.title,
+          completed: subtask.done,
+          completedAt: subtask.completedAt,
+          orderIndex: subtask.orderIndex,
+        },
+      });
+    } catch (err) {
+      if ((err as { code?: string })?.code === 'P2002') {
+        const latestMax = await this.maxSubtaskOrder(subtask.taskId);
+        await this.prisma.subtask.create({
+          data: {
+            id: subtask.id,
+            taskId: subtask.taskId,
+            title: subtask.title,
+            completed: subtask.done,
+            completedAt: subtask.completedAt,
+            orderIndex: latestMax + 1,
+          },
+        });
+        return;
+      }
+      throw err;
+    }
   }
 
   async findSubtask(subtaskId: string): Promise<SubtaskEntity | null> {

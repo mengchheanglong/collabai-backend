@@ -12,6 +12,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { ProjectExceptionFilter } from '../exception-filters/project-exception.filter';
 
+import { parsePaginationParams } from '../../../../common/utils/pagination.util';
 import { CreateProjectCommand } from '../../application/commands/create-project.command';
 import { UpdateProjectCommand } from '../../application/commands/update-project.command';
 import { DeleteProjectCommand } from '../../application/commands/delete-project.command';
@@ -65,8 +67,13 @@ export class ProjectsController {
     @Query('limit') limit?: string,
     @Query('q') q?: string,
   ) {
+    const { page: parsedPage, limit: parsedLimit } = parsePaginationParams(
+      page,
+      limit,
+      20,
+    );
     const result = await this.queryBus.execute(
-      new GetAllProjectsQuery(userId, toInt(page, 1), toInt(limit, 20), q),
+      new GetAllProjectsQuery(userId, parsedPage, parsedLimit, q),
     );
 
     return {
@@ -103,7 +110,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Get a project with its members' })
   async get(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
   ) {
     const view = await this.queryBus.execute(
       new GetProjectQuery(userId, projectId),
@@ -115,7 +122,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Update project metadata (admin/owner)' })
   async update(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Body() dto: UpdateProjectDto,
   ) {
     const view = await this.commandBus.execute(
@@ -133,7 +140,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Delete a project (owner only)' })
   async remove(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
   ) {
     await this.commandBus.execute(new DeleteProjectCommand(userId, projectId));
     return { success: true, message: 'Project deleted' };
@@ -145,7 +152,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'List project members' })
   async listMembers(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
   ) {
     const members = await this.queryBus.execute(
       new ListMembersQuery(userId, projectId),
@@ -160,7 +167,7 @@ export class ProjectsController {
   })
   async addMember(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
     @Body() dto: InviteMemberDto,
   ) {
     const invitation = await this.invitations.invite(projectId, userId, dto.email, dto.role ?? 'member');
@@ -191,8 +198,9 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Change a member role (admin/owner)' })
   async updateMemberRole(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
-    @Param('memberUserId') memberUserId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Param('memberUserId', new ParseUUIDPipe({ version: '4' }))
+    memberUserId: string,
     @Body() dto: UpdateMemberRoleDto,
   ) {
     const view = await this.commandBus.execute(
@@ -205,17 +213,13 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Remove a member (admin/owner, or leave yourself)' })
   async removeMember(
     @CurrentUser('id') userId: string,
-    @Param('projectId') projectId: string,
-    @Param('memberUserId') memberUserId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Param('memberUserId', new ParseUUIDPipe({ version: '4' }))
+    memberUserId: string,
   ) {
     const view = await this.commandBus.execute(
       new RemoveMemberCommand(userId, projectId, memberUserId),
     );
     return { project: toProjectResponse(view), message: 'Member removed' };
   }
-}
-
-function toInt(value: string | undefined, fallback: number): number {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }

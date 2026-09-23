@@ -178,7 +178,11 @@ export class StubAiProvider implements IAiProvider {
     if (msg.includes('how are you')) {
       return `I'm doing great and ready to assist you with **${proj}**! What would you like to work on next?`;
     }
-    if (msg.includes('summary') || msg.includes('status') || msg.includes('progress')) {
+    if (
+      msg.includes('summary') ||
+      msg.includes('status') ||
+      msg.includes('progress')
+    ) {
       if (input.context?.tasksSummary) {
         return `### 📋 Project Overview for **${proj}**\n\n${input.context.tasksSummary}\n\nLet me know if you want to organize, prioritize, or assign any of these tasks!`;
       }

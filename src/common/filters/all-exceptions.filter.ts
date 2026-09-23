@@ -39,20 +39,50 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const res = exception.getResponse();
       if (typeof res === 'string') {
         message = res;
-      } else {
+      } else if (typeof res === 'object' && res !== null) {
         const body = res as Record<string, unknown>;
         const rawMessage = body.message;
-        if (Array.isArray(rawMessage)) {
+        if (Array.isArray(body.details)) {
+          details = body.details as ContractErrorDetail[];
+          message =
+            typeof rawMessage === 'string' ? rawMessage : 'Validation failed';
+        } else if (Array.isArray(rawMessage)) {
           // class-validator produces string[]; surface as details + a summary message.
           details = rawMessage.map((m) => ({ message: String(m) }));
           message = 'Validation failed';
+        } else if (typeof rawMessage === 'string') {
+          message = rawMessage;
         } else {
-          message = String(rawMessage ?? exception.message);
+          message = exception.message;
         }
+      } else {
+        message = exception.message;
       }
     } else if (exception instanceof Error) {
-      const err = exception as Error & { code?: string };
-      if (err.code === 'P2023') {
+      const err = exception as Error & {
+        code?: string;
+        status?: number;
+        statusCode?: number;
+        type?: string;
+      };
+      if (
+        err.status === 413 ||
+        err.statusCode === 413 ||
+        err.type === 'entity.too.large'
+      ) {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+        message = 'Payload Too Large: request entity exceeds 100kb limit';
+      } else if (err.status && err.status >= 400 && err.status < 500) {
+        status = err.status;
+        message = err.message;
+      } else if (
+        err.statusCode &&
+        err.statusCode >= 400 &&
+        err.statusCode < 500
+      ) {
+        status = err.statusCode;
+        message = err.message;
+      } else if (err.code === 'P2023') {
         status = HttpStatus.BAD_REQUEST;
         message = 'Invalid UUID format provided';
       } else if (err.code === 'P2025') {
@@ -61,13 +91,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else if (err.code === 'P2002') {
         status = HttpStatus.CONFLICT;
         message = 'Unique constraint violation';
+      } else if (err.code === 'P2003') {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Foreign key constraint violation';
       } else {
         message = exception.message;
       }
     }
 
+    const method = request?.method ?? 'UNKNOWN';
+    const url = request?.url ?? 'UNKNOWN';
     this.logger.error(
-      `[${request.method}] ${request.url} -> ${status} - ${JSON.stringify(message)}`,
+      `[${method}] ${url} -> ${status} - ${JSON.stringify(message)}`,
     );
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) Sentry.captureException(exception);
 

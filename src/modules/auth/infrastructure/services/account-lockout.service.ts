@@ -29,12 +29,13 @@ export class AccountLockoutService implements IAccountLockoutService {
 
   constructor(private readonly redis: RedisService) {}
 
+  private normalizeEmail = (email: string) => email.toLowerCase().trim();
   private accountAttemptsKey = (email: string) =>
-    `lockout:account:attempts:${email}`;
+    `lockout:account:attempts:${this.normalizeEmail(email)}`;
   private accountBlockedKey = (email: string) =>
-    `lockout:account:blocked:${email}`;
-  private ipAttemptsKey = (ip: string) => `lockout:ip:attempts:${ip}`;
-  private ipBlockedKey = (ip: string) => `lockout:ip:blocked:${ip}`;
+    `lockout:account:blocked:${this.normalizeEmail(email)}`;
+  private ipAttemptsKey = (ip: string) => `lockout:ip:attempts:${ip.trim()}`;
+  private ipBlockedKey = (ip: string) => `lockout:ip:blocked:${ip.trim()}`;
 
   async recordFailedAttempt(email: string, ip: string): Promise<void> {
     try {
@@ -64,6 +65,12 @@ export class AccountLockoutService implements IAccountLockoutService {
     if (count === 1) {
       // First failure in a new window — start the window TTL.
       await this.redis.expire(attemptsKey, ATTEMPT_WINDOW_SECONDS);
+    } else {
+      // High-concurrency safeguard: if count > 1 and TTL is missing (-1), ensure TTL is applied
+      const ttl = await this.redis.ttl(attemptsKey).catch(() => -1);
+      if (ttl < 0) {
+        await this.redis.expire(attemptsKey, ATTEMPT_WINDOW_SECONDS);
+      }
     }
     if (count >= threshold) {
       await this.redis.set(blockedKey, '1', LOCKOUT_SECONDS);

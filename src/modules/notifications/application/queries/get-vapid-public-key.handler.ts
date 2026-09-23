@@ -7,9 +7,7 @@ import { WebPushService } from '../../infrastructure/push/web-push.service';
 
 @Injectable()
 @QueryHandler(GetVapidPublicKeyQuery)
-export class GetVapidPublicKeyHandler
-  implements IQueryHandler<GetVapidPublicKeyQuery>
-{
+export class GetVapidPublicKeyHandler implements IQueryHandler<GetVapidPublicKeyQuery> {
   constructor(private readonly webPush: WebPushService) {}
 
   async execute(): Promise<{ publicKey: string }> {

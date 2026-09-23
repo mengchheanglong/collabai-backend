@@ -2,8 +2,12 @@ node_modules
 dist
 coverage
 .git
+.gitignore
 .env
 .env.*
 !.env.example
 npm-debug.log*
 test
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

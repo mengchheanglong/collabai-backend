@@ -4,6 +4,9 @@ export class ChatCommand {
     public readonly userId: string,
     public readonly message: string,
     public readonly projectId?: string,
-    public readonly history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    public readonly history?: Array<{
+      role: 'user' | 'assistant';
+      content: string;
+    }>,
   ) {}
 }

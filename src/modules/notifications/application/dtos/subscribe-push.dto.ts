@@ -26,7 +26,8 @@ export class PushSubscriptionKeysDto {
 export class SubscribePushDto {
   @ApiProperty({
     example: 'https://fcm.googleapis.com/fcm/send/dK5...',
-    description: 'Unique push service endpoint URL provided by browser PushManager',
+    description:
+      'Unique push service endpoint URL provided by browser PushManager',
   })
   @IsUrl({ require_tld: false })
   @IsNotEmpty()
@@ -40,7 +41,8 @@ export class SubscribePushDto {
 
   @ApiPropertyOptional({
     example: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)...',
-    description: 'User-Agent or device identifier for tracking client installations',
+    description:
+      'User-Agent or device identifier for tracking client installations',
   })
   @IsOptional()
   @IsString()

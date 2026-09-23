@@ -51,7 +51,9 @@ describe('GetDeltaSyncHandler', () => {
       await expect(handler.execute(query)).rejects.toThrow(NotFoundException);
       expect(prisma.project.findFirst).toHaveBeenCalledWith({
         where: { id: validProjectId, deletedAt: null },
-        include: { members: { where: { userId: validUserId, isActive: true } } },
+        include: {
+          members: { where: { userId: validUserId, isActive: true } },
+        },
       });
     });
 
@@ -115,19 +117,29 @@ describe('GetDeltaSyncHandler', () => {
 
     it('should throw BadRequestException if since is an invalid Date', async () => {
       const invalidDate = new Date('invalid-timestamp-string');
-      const query = new GetDeltaSyncQuery(validUserId, validProjectId, invalidDate);
+      const query = new GetDeltaSyncQuery(
+        validUserId,
+        validProjectId,
+        invalidDate,
+      );
 
       await expect(handler.execute(query)).rejects.toThrow(BadRequestException);
     });
 
     it('should handle skewed future timestamps by returning empty deltas and current serverTime', async () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours in the future
-      const query = new GetDeltaSyncQuery(validUserId, validProjectId, futureDate);
+      const query = new GetDeltaSyncQuery(
+        validUserId,
+        validProjectId,
+        futureDate,
+      );
 
       const result = await handler.execute(query);
 
       expect(result.serverTime).toBeDefined();
-      expect(new Date(result.serverTime).getTime()).toBeLessThan(futureDate.getTime());
+      expect(new Date(result.serverTime).getTime()).toBeLessThan(
+        futureDate.getTime(),
+      );
       expect(result.tasks.upserted).toEqual([]);
       expect(result.tasks.deletedIds).toEqual([]);
       expect(result.comments.upserted).toEqual([]);
@@ -170,13 +182,20 @@ describe('GetDeltaSyncHandler', () => {
           completedAt: null,
           createdAt,
           updatedAt,
-          labels: [
-            { label: { name: 'backend' } },
-            { label: { name: 'sync' } },
-          ],
+          labels: [{ label: { name: 'backend' } }, { label: { name: 'sync' } }],
           subtasks: [
-            { id: 'sub-1', title: 'Task 1 subtask', completed: false, orderIndex: 1 },
-            { id: 'sub-2', title: 'Task 2 subtask', completed: true, orderIndex: 2 },
+            {
+              id: 'sub-1',
+              title: 'Task 1 subtask',
+              completed: false,
+              orderIndex: 1,
+            },
+            {
+              id: 'sub-2',
+              title: 'Task 2 subtask',
+              completed: true,
+              orderIndex: 2,
+            },
           ],
           assignee: {
             id: 'user-assignee',
@@ -244,8 +263,22 @@ describe('GetDeltaSyncHandler', () => {
       expect(formattedTask.createdById).toBe(validUserId);
       expect(formattedTask.labels).toEqual(['backend', 'sync']);
       expect(formattedTask.subtasks).toEqual([
-        { id: 'sub-1', _id: 'sub-1', title: 'Task 1 subtask', done: false, completed: false, orderIndex: 1 },
-        { id: 'sub-2', _id: 'sub-2', title: 'Task 2 subtask', done: true, completed: true, orderIndex: 2 },
+        {
+          id: 'sub-1',
+          _id: 'sub-1',
+          title: 'Task 1 subtask',
+          done: false,
+          completed: false,
+          orderIndex: 1,
+        },
+        {
+          id: 'sub-2',
+          _id: 'sub-2',
+          title: 'Task 2 subtask',
+          done: true,
+          completed: true,
+          orderIndex: 2,
+        },
       ]);
       expect(formattedTask.commentCount).toBe(3);
       expect(formattedTask.dueDate).toBe(dueDate.toISOString());
@@ -288,12 +321,17 @@ describe('GetDeltaSyncHandler', () => {
           assignedTo: null,
           createdBy: validUserId,
           labels: ['offline-sync'],
-          subtasks: [{ id: 'sub-1', title: 'Done item', completed: true, orderIndex: 1 }],
+          subtasks: [
+            { id: 'sub-1', title: 'Done item', completed: true, orderIndex: 1 },
+          ],
           createdAt: new Date('2026-08-25T00:00:00Z'),
           updatedAt: new Date('2026-08-31T00:00:00Z'),
         },
       ];
-      const mockDeletedTasks = [{ id: 'task-soft-deleted-1' }, { id: 'task-soft-deleted-2' }];
+      const mockDeletedTasks = [
+        { id: 'task-soft-deleted-1' },
+        { id: 'task-soft-deleted-2' },
+      ];
       const mockUpsertedBoards = [
         {
           id: 'board-1',
@@ -338,9 +376,19 @@ describe('GetDeltaSyncHandler', () => {
       expect(result.tasks.upserted[0].id).toBe('task-updated-1');
       expect(result.tasks.upserted[0].labels).toEqual(['offline-sync']);
       expect(result.tasks.upserted[0].subtasks).toEqual([
-        { id: 'sub-1', _id: 'sub-1', title: 'Done item', done: true, completed: true, orderIndex: 1 },
+        {
+          id: 'sub-1',
+          _id: 'sub-1',
+          title: 'Done item',
+          done: true,
+          completed: true,
+          orderIndex: 1,
+        },
       ]);
-      expect(result.tasks.deletedIds).toEqual(['task-soft-deleted-1', 'task-soft-deleted-2']);
+      expect(result.tasks.deletedIds).toEqual([
+        'task-soft-deleted-1',
+        'task-soft-deleted-2',
+      ]);
 
       expect(result.boards.upserted).toHaveLength(1);
       expect(result.boards.upserted[0].id).toBe('board-1');

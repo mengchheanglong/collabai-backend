@@ -1,5 +1,6 @@
 import { IsEmail, IsOptional, IsString, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NormalizeEmail } from '../../../../common/decorators/sanitizers.decorator';
 
 export class VerifyEmailDto {
   @ApiProperty({
@@ -13,9 +14,11 @@ export class VerifyEmailDto {
 
   @ApiPropertyOptional({
     example: 'user@example.com',
-    description: 'Optional email fallback if registration_verification cookie is absent.',
+    description:
+      'Optional email fallback if registration_verification cookie is absent.',
   })
   @IsOptional()
+  @NormalizeEmail()
   @IsEmail()
   email?: string;
 }

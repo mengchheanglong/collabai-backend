@@ -3,12 +3,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 import * as Sentry from '@sentry/nestjs';
 import { config as loadEnv } from 'dotenv';
+import { validationExceptionFactory } from './common/validation/validation.factory';
 
 loadEnv({ path: '.env.local' });
 loadEnv();
@@ -23,18 +25,41 @@ if (process.env.SENTRY_DSN) {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Security: Payload size limits to protect against memory exhaustion / large payload DoS
+  // Documents allow 100,000 characters; leave room for JSON encoding overhead.
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ extended: true, limit: '100kb' }));
+
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
-  app.setGlobalPrefix('api/v1');
-  // Allow the documented 100,000-character Markdown body, including JSON escaping.
-  app.useBodyParser('json', { limit: '1mb' });
+  // The root banner stays at / (excluded from the prefix) so hitting the bare
+  // host shows the service banner instead of a raw 404 "Cannot GET /".
+  app.setGlobalPrefix('api/v1', { exclude: ['/'] });
 
   // CORS with credentials (so the httpOnly auth cookies flow). In dev, reflect the
-  // request origin so any localhost port/host works; in prod, lock to FRONTEND_ORIGIN.
+  // request origin so any localhost port/host works; in prod, support comma-separated origins.
   const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = (
+    process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200'
+  )
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
   app.enableCors({
-    origin: isProd
-      ? (process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200')
-      : true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server) or in dev mode
+      if (!origin || !isProd) {
+        return callback(null, true);
+      }
+      const cleanOrigin = origin.trim().replace(/\/$/, '');
+      if (
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(cleanOrigin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
   });
 
@@ -47,6 +72,10 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: validationExceptionFactory,
     }),
   );
 
@@ -80,6 +109,7 @@ async function bootstrap() {
     swaggerOptions: { withCredentials: true, persistAuthorization: true },
   });
 
-  await app.listen(process.env.PORT ?? 4000);
+  const port = process.env.PORT ?? 4000;
+  await app.listen(port, '0.0.0.0');
 }
 void bootstrap();
