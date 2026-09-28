@@ -41,7 +41,7 @@ export class DocumentsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Get('projects/:projectId/documents')
+  @Get(['projects/:projectId/docs', 'projects/:projectId/documents'])
   @ApiOperation({ summary: 'List all documents in a project' })
   async listDocuments(
     @CurrentUser('id') userId: string,
@@ -53,7 +53,7 @@ export class DocumentsController {
     return views.map(toDocumentResponse);
   }
 
-  @Post('projects/:projectId/documents')
+  @Post(['projects/:projectId/docs', 'projects/:projectId/documents'])
   @HttpCode(201)
   @ApiOperation({ summary: 'Create a new document in a project' })
   async createDocument(
@@ -67,31 +67,36 @@ export class DocumentsController {
     return { document: toDocumentResponse(view) };
   }
 
-  @Get('projects/:projectId/documents/:documentId')
+  @Get(['projects/:projectId/docs/:documentId', 'projects/:projectId/documents/:documentId'])
   @ApiOperation({ summary: 'Get a document by ID within a project' })
   async getProjectDocument(
     @CurrentUser('id') userId: string,
     @Param('documentId', new ParseUUIDPipe({ version: '4' })) documentId: string,
-  ): Promise<{ document: DocumentResponseDto }> {
+  ): Promise<{ document: DocumentResponseDto; canEdit: boolean }> {
     const view: DocumentView = await this.queryBus.execute(
       new GetDocumentQuery(userId, documentId),
     );
-    return { document: toDocumentResponse(view) };
+    return { document: toDocumentResponse(view), canEdit: true };
   }
 
-  @Get('documents/:documentId')
+  @Get(['docs/:documentId', 'documents/:documentId'])
   @ApiOperation({ summary: 'Get a document by ID' })
   async getDocument(
     @CurrentUser('id') userId: string,
     @Param('documentId', new ParseUUIDPipe({ version: '4' })) documentId: string,
-  ): Promise<{ document: DocumentResponseDto }> {
+  ): Promise<{ document: DocumentResponseDto; canEdit: boolean }> {
     const view: DocumentView = await this.queryBus.execute(
       new GetDocumentQuery(userId, documentId),
     );
-    return { document: toDocumentResponse(view) };
+    return { document: toDocumentResponse(view), canEdit: true };
   }
 
-  @Patch(['projects/:projectId/documents/:documentId', 'documents/:documentId'])
+  @Patch([
+    'projects/:projectId/docs/:documentId',
+    'projects/:projectId/documents/:documentId',
+    'docs/:documentId',
+    'documents/:documentId',
+  ])
   @ApiOperation({ summary: 'Update a document' })
   async updateDocument(
     @CurrentUser('id') userId: string,
@@ -107,7 +112,12 @@ export class DocumentsController {
     return { document: toDocumentResponse(view) };
   }
 
-  @Delete(['projects/:projectId/documents/:documentId', 'documents/:documentId'])
+  @Delete([
+    'projects/:projectId/docs/:documentId',
+    'projects/:projectId/documents/:documentId',
+    'docs/:documentId',
+    'documents/:documentId',
+  ])
   @ApiOperation({ summary: 'Delete a document' })
   async deleteDocument(
     @CurrentUser('id') userId: string,

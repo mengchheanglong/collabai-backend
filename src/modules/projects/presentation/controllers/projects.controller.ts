@@ -39,6 +39,7 @@ import { ListMembersQuery } from '../../application/queries/list-members.query';
 import { ListInvitationsQuery } from '../../application/queries/list-invitations.query';
 import { RevokeInvitationCommand } from '../../application/commands/revoke-invitation.command';
 import { ResendInvitationCommand } from '../../application/commands/resend-invitation.command';
+import { AcceptInvitationCommand } from '../../application/commands/accept-invitation.command';
 
 import { CreateProjectDto } from '../../application/dtos/create-project.dto';
 import { UpdateProjectDto } from '../../application/dtos/update-project.dto';
@@ -163,7 +164,21 @@ export class ProjectsController {
     const members = await this.queryBus.execute(
       new ListMembersQuery(userId, projectId),
     );
-    return { members: members.map(toMemberResponse) };
+    const invitations = await this.queryBus.execute(
+      new ListInvitationsQuery(userId, projectId),
+    );
+    const memberResponses = (members || []).map(toMemberResponse);
+    const pendingResponses = (invitations || []).map((inv: any) => ({
+      userId: null,
+      invitationId: inv.id,
+      role: inv.role,
+      name: inv.email.split('@')[0],
+      email: inv.email,
+      avatarUrl: null,
+      joinedAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : null,
+      pending: true,
+    }));
+    return { members: [...memberResponses, ...pendingResponses] };
   }
 
   @Post(':projectId/members')
@@ -256,5 +271,18 @@ export class ProjectsController {
       new ResendInvitationCommand(userId, projectId, invitationId),
     );
     return { success: true, message: 'Invitation resent' };
+  }
+
+  @Post('invitations/accept')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Accept project invitation via body token (requires auth)' })
+  async acceptInvitation(
+    @CurrentUser('id') userId: string,
+    @Body('token') token: string,
+  ) {
+    const result = await this.commandBus.execute(
+      new AcceptInvitationCommand(userId, token),
+    );
+    return result;
   }
 }

@@ -8,6 +8,8 @@ export interface DocumentResponseDto {
   title: string;
   content: string;
   createdById: string;
+  version: number;
+  canEdit?: boolean;
   creator?: {
     id: string;
     name: string | null;
@@ -26,6 +28,8 @@ export function toDocumentResponse(view: DocumentView): DocumentResponseDto {
     title: view.title,
     content: view.content,
     createdById: view.createdById,
+    version: 1,
+    canEdit: true,
     creator: view.createdById
       ? {
           id: view.createdById,

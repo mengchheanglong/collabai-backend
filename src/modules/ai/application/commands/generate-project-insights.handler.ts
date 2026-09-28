@@ -25,7 +25,7 @@ export class GenerateProjectInsightsHandler
 
   async execute(
     command: GenerateProjectInsightsCommand,
-  ): Promise<{ insights: ProjectInsightsOutput }> {
+  ): Promise<any> {
     await this.access.requireMember(command.projectId, command.userId);
 
     const project = await this.prisma.project.findUnique({
@@ -116,6 +116,28 @@ export class GenerateProjectInsightsHandler
     };
 
     const insights = await this.aiProvider.generateProjectInsights(input);
-    return { insights };
+    return {
+      projectId: command.projectId,
+      projectName: project.name,
+      generatedAt: now.toISOString(),
+      source: 'ai' as const,
+      healthScore: insights.healthScore,
+      status: insights.status,
+      summary: insights.summary,
+      risks: insights.risks,
+      nextBestActions: insights.nextBestActions,
+      recommendations: insights.nextBestActions.map((nba, idx) => ({
+        title: nba.title,
+        rationale: nba.description,
+        urgency: (nba.priority === 'urgent' ? 'high' : nba.priority === 'low' ? 'low' : 'medium') as 'high' | 'medium' | 'low',
+        action: (nba.impact.toLowerCase().includes('workload')
+          ? 'balance_workload'
+          : nba.impact.toLowerCase().includes('review')
+            ? 'review_task'
+            : 'plan') as 'review_task' | 'balance_workload' | 'plan',
+        taskIds: overdueTasks.length > 0 && idx === 0 ? [tasks[0]?.id].filter(Boolean) : [],
+      })),
+      insights,
+    };
   }
 }

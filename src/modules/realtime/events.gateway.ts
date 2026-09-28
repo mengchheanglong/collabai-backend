@@ -294,4 +294,79 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       createdAt: new Date().toISOString(),
     });
   }
+
+  @OnEvent('member.added')
+  handleMemberAdded(event: {
+    projectId: string;
+    actorId: string;
+    userId: string;
+    role: string;
+  }) {
+    if (!this.server) return;
+    this.server.to(`project:${event.projectId}`).emit('member:added', {
+      projectId: event.projectId,
+      actorId: event.actorId,
+      data: { userId: event.userId, role: event.role },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('member.removed')
+  handleMemberRemoved(event: {
+    projectId: string;
+    actorId: string;
+    userId: string;
+  }) {
+    if (!this.server) return;
+    this.server.to(`project:${event.projectId}`).emit('member:removed', {
+      projectId: event.projectId,
+      actorId: event.actorId,
+      data: { userId: event.userId },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('project.updated')
+  handleProjectUpdated(event: {
+    projectId: string;
+    actorId: string;
+    project: any;
+  }) {
+    if (!this.server) return;
+    this.server.to(`project:${event.projectId}`).emit('project:updated', {
+      projectId: event.projectId,
+      actorId: event.actorId,
+      data: { project: event.project },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('project.deleted')
+  handleProjectDeleted(event: {
+    projectId: string;
+    actorId: string;
+  }) {
+    if (!this.server) return;
+    this.server.to(`project:${event.projectId}`).emit('project:deleted', {
+      projectId: event.projectId,
+      actorId: event.actorId,
+      data: { projectId: event.projectId },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('activity.created')
+  handleActivityCreated(event: {
+    projectId: string;
+    actorId: string;
+    activity: any;
+  }) {
+    if (!this.server) return;
+    this.server.to(`project:${event.projectId}`).emit('activity:created', {
+      projectId: event.projectId,
+      actorId: event.actorId,
+      data: { activity: event.activity },
+      createdAt: new Date().toISOString(),
+    });
+  }
 }

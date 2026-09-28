@@ -133,7 +133,7 @@ export class AiController {
     );
   }
 
-  @Post('insights')
+  @Post(['insights', 'project-insights'])
   @HttpCode(200)
   @ApiOperation({
     summary: 'Generate AI project health insights and next-best actions',
