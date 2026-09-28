@@ -13,6 +13,7 @@ import {
   IProjectRepository,
   ListProjectsOptions,
   Paginated,
+  ProjectInvitationView,
   ProjectMemberView,
   ProjectView,
 } from '../../domain/repositories/project.repository.interface';
@@ -236,11 +237,129 @@ export class ProjectRepository implements IProjectRepository {
     });
   }
 
-  async findUserByEmail(email: string): Promise<{ id: string } | null> {
-    return this.prisma.user.findUnique({
+  async findUserByEmail(
+    email: string,
+  ): Promise<{ id: string; name?: string } | null> {
+    const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
-      select: { id: true },
+      select: { id: true, name: true },
     });
+    return user ? { id: user.id, name: user.name } : null;
+  }
+
+  async createInvitation(data: {
+    id: string;
+    projectId: string;
+    email: string;
+    role: string;
+    token: string;
+    invitedBy: string;
+    expiresAt: Date;
+  }): Promise<ProjectInvitationView> {
+    const inv = await (this.prisma as any).projectInvitation.upsert({
+      where: {
+        projectId_email: {
+          projectId: data.projectId,
+          email: data.email.toLowerCase().trim(),
+        },
+      },
+      create: {
+        ...data,
+        email: data.email.toLowerCase().trim(),
+      },
+      update: {
+        role: data.role,
+        token: data.token,
+        invitedBy: data.invitedBy,
+        expiresAt: data.expiresAt,
+      },
+      include: {
+        inviter: { select: { name: true } },
+      },
+    });
+    return {
+      id: inv.id,
+      projectId: inv.projectId,
+      email: inv.email,
+      role: inv.role,
+      token: inv.token,
+      invitedBy: inv.invitedBy,
+      inviterName: inv.inviter?.name,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+    };
+  }
+
+  async findInvitationByToken(
+    token: string,
+  ): Promise<(ProjectInvitationView & { project: { id: string; name: string; description: string | null } }) | null> {
+    const inv = await (this.prisma as any).projectInvitation.findUnique({
+      where: { token },
+      include: {
+        project: { select: { id: true, name: true, description: true } },
+        inviter: { select: { name: true } },
+      },
+    });
+    if (!inv) return null;
+    return {
+      id: inv.id,
+      projectId: inv.projectId,
+      email: inv.email,
+      role: inv.role,
+      token: inv.token,
+      invitedBy: inv.invitedBy,
+      inviterName: inv.inviter?.name,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+      project: inv.project,
+    };
+  }
+
+  async findInvitationById(id: string): Promise<ProjectInvitationView | null> {
+    if (!isValidUuid(id)) return null;
+    const inv = await (this.prisma as any).projectInvitation.findUnique({
+      where: { id },
+      include: { inviter: { select: { name: true } } },
+    });
+    if (!inv) return null;
+    return {
+      id: inv.id,
+      projectId: inv.projectId,
+      email: inv.email,
+      role: inv.role,
+      token: inv.token,
+      invitedBy: inv.invitedBy,
+      inviterName: inv.inviter?.name,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+    };
+  }
+
+  async listInvitations(projectId: string): Promise<ProjectInvitationView[]> {
+    if (!isValidUuid(projectId)) return [];
+    const list = await (this.prisma as any).projectInvitation.findMany({
+      where: { projectId },
+      include: { inviter: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return list.map((inv: any) => ({
+      id: inv.id,
+      projectId: inv.projectId,
+      email: inv.email,
+      role: inv.role,
+      token: inv.token,
+      invitedBy: inv.invitedBy,
+      inviterName: inv.inviter?.name,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+    }));
+  }
+
+  async deleteInvitation(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
+    await (this.prisma as any).projectInvitation
+      .delete({ where: { id } })
+      .catch(() => null);
   }
 
   // ----- mappers -----

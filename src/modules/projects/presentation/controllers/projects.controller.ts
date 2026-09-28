@@ -36,6 +36,9 @@ import { RemoveMemberCommand } from '../../application/commands/remove-member.co
 import { GetAllProjectsQuery } from '../../application/queries/get-all-projects.query';
 import { GetProjectQuery } from '../../application/queries/get-project.query';
 import { ListMembersQuery } from '../../application/queries/list-members.query';
+import { ListInvitationsQuery } from '../../application/queries/list-invitations.query';
+import { RevokeInvitationCommand } from '../../application/commands/revoke-invitation.command';
+import { ResendInvitationCommand } from '../../application/commands/resend-invitation.command';
 
 import { CreateProjectDto } from '../../application/dtos/create-project.dto';
 import { UpdateProjectDto } from '../../application/dtos/update-project.dto';
@@ -211,5 +214,47 @@ export class ProjectsController {
       new RemoveMemberCommand(userId, projectId, memberUserId),
     );
     return { project: toProjectResponse(view), message: 'Member removed' };
+  }
+
+  // ----- invitations -----
+
+  @Get(':projectId/invitations')
+  @ApiOperation({ summary: 'List pending project invitations' })
+  async listInvitations(
+    @CurrentUser('id') userId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+  ) {
+    const invitations = await this.queryBus.execute(
+      new ListInvitationsQuery(userId, projectId),
+    );
+    return { invitations };
+  }
+
+  @Delete(':projectId/invitations/:invitationId')
+  @ApiOperation({ summary: 'Revoke a pending project invitation' })
+  async revokeInvitation(
+    @CurrentUser('id') userId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Param('invitationId', new ParseUUIDPipe({ version: '4' }))
+    invitationId: string,
+  ) {
+    await this.commandBus.execute(
+      new RevokeInvitationCommand(userId, projectId, invitationId),
+    );
+    return { success: true, message: 'Invitation revoked' };
+  }
+
+  @Post(':projectId/invitations/:invitationId/resend')
+  @ApiOperation({ summary: 'Resend a project invitation email' })
+  async resendInvitation(
+    @CurrentUser('id') userId: string,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Param('invitationId', new ParseUUIDPipe({ version: '4' }))
+    invitationId: string,
+  ) {
+    await this.commandBus.execute(
+      new ResendInvitationCommand(userId, projectId, invitationId),
+    );
+    return { success: true, message: 'Invitation resent' };
   }
 }

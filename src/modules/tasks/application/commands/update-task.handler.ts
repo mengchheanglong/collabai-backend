@@ -66,6 +66,14 @@ export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
 
     const view = await this.repo.findViewById(task.id);
     if (!view) throw new TaskNotFoundError();
+
+    this.events.emit('task.updated', {
+      taskId: task.id,
+      projectId: task.projectId,
+      actorId: command.actingUserId,
+      task: view,
+    });
+
     return view;
   }
 }

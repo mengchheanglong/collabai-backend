@@ -3,6 +3,7 @@
 
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DeleteTaskCommand } from './delete-task.command';
 import {
   type ITaskRepository,
@@ -16,6 +17,7 @@ export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
   constructor(
     @Inject(TASK_REPOSITORY) private readonly repo: ITaskRepository,
     private readonly access: TaskAccessService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async execute(command: DeleteTaskCommand): Promise<void> {
@@ -23,5 +25,12 @@ export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
     if (!task) throw new TaskNotFoundError();
     await this.access.requireWriter(task.projectId, command.actingUserId);
     await this.repo.delete(task.id);
+
+    this.events.emit('task.deleted', {
+      taskId: task.id,
+      projectId: task.projectId,
+      boardId: task.boardId,
+      actorId: command.actingUserId,
+    });
   }
 }

@@ -4,6 +4,7 @@
 
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DeleteCommentCommand } from './delete-comment.command';
 import {
   type ICommentRepository,
@@ -20,6 +21,7 @@ export class DeleteCommentHandler implements ICommandHandler<DeleteCommentComman
   constructor(
     @Inject(COMMENT_REPOSITORY) private readonly repo: ICommentRepository,
     private readonly access: CommentAccessService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async execute(command: DeleteCommentCommand): Promise<void> {
@@ -36,5 +38,12 @@ export class DeleteCommentHandler implements ICommandHandler<DeleteCommentComman
     );
 
     await this.repo.delete(comment.id);
+
+    this.events.emit('comment.deleted', {
+      commentId: comment.id,
+      taskId: comment.taskId,
+      projectId,
+      actorId: command.actingUserId,
+    });
   }
 }

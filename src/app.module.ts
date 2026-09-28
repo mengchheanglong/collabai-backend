@@ -14,6 +14,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AiModule } from './modules/ai/ai.module';
 import { BoardsModule } from './modules/boards/boards.module';
 import { SyncModule } from './modules/sync/sync.module';
+import { DocumentsModule } from './modules/documents/documents.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -38,6 +40,8 @@ import { authThrottlers } from './config/throttler.config';
     AiModule,
     BoardsModule,
     SyncModule,
+    DocumentsModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

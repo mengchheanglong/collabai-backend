@@ -206,6 +206,35 @@ export class EmailService implements OnModuleInit {
     });
   }
 
+  async sendProjectInvitation(
+    to: string,
+    projectName: string,
+    inviterName: string,
+    inviteUrl: string,
+  ): Promise<void> {
+    const subject = `You've been invited to join ${projectName} on CollabAI`;
+    const text = `${inviterName} has invited you to collaborate on ${projectName} on CollabAI.\n\nAccept your invitation by visiting the link below:\n${inviteUrl}\n\nThis invitation expires in 7 days.`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 8px;">
+        <h2 style="margin-bottom: 12px; color: #18181b;">You're invited to collaborate!</h2>
+        <p style="color: #3f3f46; font-size: 15px; line-height: 1.5;">
+          <strong>${inviterName}</strong> has invited you to join the project <strong>${projectName}</strong> on CollabAI.
+        </p>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${inviteUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
+            Accept Invitation
+          </a>
+        </div>
+        <p style="color: #71717a; font-size: 13px; line-height: 1.4;">
+          Or copy and paste this URL into your browser:<br/>
+          <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 20px 0;" />
+        <p style="color: #a1a1aa; font-size: 12px;">This invitation will expire in 7 days.</p>
+      </div>`;
+    await this.send(to, subject, { text, html });
+  }
+
   private async send(
     to: string,
     subject: string,

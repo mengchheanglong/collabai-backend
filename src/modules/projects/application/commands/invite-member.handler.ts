@@ -3,7 +3,7 @@
 // requires the actor to be an owner. For MVP the user is added directly (no pending
 // invitation token).
 
-import { Inject } from '@nestjs/common';
+import { Inject, Optional } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { v4 as uuidv4 } from 'uuid';
 import { InviteMemberCommand } from './invite-member.command';
@@ -17,17 +17,18 @@ import { ProjectRoles } from '../../domain/value-objects/project-role.value-obje
 import { ProjectDomainService } from '../../domain/services/project.domain.service';
 import {
   InsufficientProjectPermissionError,
-  InviteeNotFoundError,
   MemberAlreadyExistsError,
   NotProjectMemberError,
   ProjectNotFoundError,
 } from '../errors/project.errors';
+import { EmailService } from '../../../../shared/services/email.service';
 
 @CommandHandler(InviteMemberCommand)
 export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,
+    @Optional() private readonly emailService?: EmailService,
   ) {}
 
   async execute(command: InviteMemberCommand): Promise<ProjectView> {
@@ -46,24 +47,67 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
       );
     }
 
+    const project = await this.repo.findViewById(command.projectId);
+    if (!project) throw new ProjectNotFoundError();
+
     const email = command.email.toLowerCase().trim();
     const invitee = await this.repo.findUserByEmail(email);
-    if (!invitee) throw new InviteeNotFoundError();
 
-    const existing = await this.repo.findMembership(
-      command.projectId,
-      invitee.id,
-    );
-    if (existing) throw new MemberAlreadyExistsError();
+    const frontendOrigin =
+      process.env.FRONTEND_ORIGIN?.split(',')[0]?.trim() ||
+      'http://localhost:4200';
+    const inviterMember = project.members.find((m) => m.userId === command.actingUserId);
+    const inviterName = inviterMember?.name || 'A team member';
 
-    const member = ProjectMemberEntity.create({
-      id: uuidv4(),
-      projectId: command.projectId,
-      userId: invitee.id,
-      role: command.role,
-      invitedBy: command.actingUserId,
-    });
-    await this.repo.addMember(member);
+    if (invitee) {
+      const existing = await this.repo.findMembership(
+        command.projectId,
+        invitee.id,
+      );
+      if (existing) throw new MemberAlreadyExistsError();
+
+      const member = ProjectMemberEntity.create({
+        id: uuidv4(),
+        projectId: command.projectId,
+        userId: invitee.id,
+        role: command.role,
+        invitedBy: command.actingUserId,
+      });
+      await this.repo.addMember(member);
+
+      if (this.emailService) {
+        const boardUrl = `${frontendOrigin}/board/${command.projectId}`;
+        await this.emailService.sendProjectInvitation(
+          email,
+          project.name,
+          inviterName,
+          boardUrl,
+        );
+      }
+    } else {
+      // User is not yet registered: generate token and send invitation
+      const token = uuidv4();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await this.repo.createInvitation({
+        id: uuidv4(),
+        projectId: command.projectId,
+        email,
+        role: command.role,
+        token,
+        invitedBy: command.actingUserId,
+        expiresAt,
+      });
+
+      if (this.emailService) {
+        const inviteUrl = `${frontendOrigin}/accept-invite?token=${token}`;
+        await this.emailService.sendProjectInvitation(
+          email,
+          project.name,
+          inviterName,
+          inviteUrl,
+        );
+      }
+    }
 
     const view = await this.repo.findViewById(command.projectId);
     if (!view) throw new ProjectNotFoundError();

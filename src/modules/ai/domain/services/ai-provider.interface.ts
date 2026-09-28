@@ -64,6 +64,48 @@ export interface ChatInput {
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
+export interface ProjectInsightsInput {
+  projectName: string;
+  projectDescription?: string;
+  totalTasks: number;
+  completedTasks: number;
+  inProgressTasks: number;
+  todoTasks: number;
+  overdueTasks: Array<{
+    title: string;
+    priority: string;
+    dueDate?: string | null;
+    assignee?: string | null;
+  }>;
+  upcomingTasks: Array<{
+    title: string;
+    priority: string;
+    dueDate?: string | null;
+    assignee?: string | null;
+  }>;
+  assigneeWorkload?: Array<{
+    name: string;
+    taskCount: number;
+    overdueCount: number;
+  }>;
+}
+
+export interface NextBestAction {
+  title: string;
+  description: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  impact: string;
+}
+
+export interface ProjectInsightsOutput {
+  healthScore: number; // 0 - 100
+  status: 'on_track' | 'at_risk' | 'off_track';
+  summary: string;
+  risks: string[];
+  recommendations: string[];
+  nextBestActions: NextBestAction[];
+}
+
 export interface IAiProvider {
   suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]>;
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
@@ -71,4 +113,7 @@ export interface IAiProvider {
   interpretSearch(query: string): Promise<TaskSearchInterpretation>;
   generateTasks(input: GenerateTasksInput): Promise<StructuredTask[]>;
   chat(input: ChatInput): Promise<string>;
+  generateProjectInsights(
+    input: ProjectInsightsInput,
+  ): Promise<ProjectInsightsOutput>;
 }
