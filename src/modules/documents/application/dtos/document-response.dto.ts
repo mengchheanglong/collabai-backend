@@ -28,7 +28,7 @@ export function toDocumentResponse(view: DocumentView): DocumentResponseDto {
     title: view.title,
     content: view.content,
     createdById: view.createdById,
-    version: 1,
+    version: Math.floor(view.updatedAt.getTime() / 1000),
     canEdit: true,
     creator: view.createdById
       ? {

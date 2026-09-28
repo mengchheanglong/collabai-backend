@@ -21,7 +21,11 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect({
+        message: 'CollabAI API is running',
+        docs: '/api/docs',
+        health: '/api/v1/health',
+      });
   });
 
   afterAll(async () => {

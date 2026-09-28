@@ -16,6 +16,7 @@ import { PrismaService } from '../../shared/services/prisma.service';
 import { TaskCreatedEvent } from '../tasks/domain/events/task-created.event';
 import { TaskMovedEvent } from '../tasks/domain/events/task-moved.event';
 import { CommentAddedEvent } from '../comments/domain/events/comment-added.event';
+import { isValidUuid } from '../../common/utils/uuid.util';
 
 @WebSocketGateway({
   cors: {
@@ -67,6 +68,17 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
+    if (client.data?.typingProjectId && client.data?.typingTaskId && client.data?.user) {
+      client.to(`project:${client.data.typingProjectId}`).emit('typing:stopped', {
+        projectId: client.data.typingProjectId,
+        actorId: client.data.user.id,
+        data: {
+          taskId: client.data.typingTaskId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
     this.logger.debug(`Socket client disconnected: ${client.id}`);
   }
 
@@ -76,8 +88,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { projectId: string },
   ) {
     const userId = client.data.user?.id;
-    if (!userId || !data?.projectId) {
-      return { success: false, error: 'Unauthorized or missing projectId' };
+    if (!userId || !data?.projectId || !isValidUuid(data.projectId)) {
+      return { success: false, error: 'Unauthorized or invalid projectId' };
     }
 
     const member = await this.prisma.projectMember.findFirst({
@@ -112,12 +124,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId) {
+    if (data?.projectId && client.data.user) {
+      client.data.typingProjectId = data.projectId;
+      client.data.typingTaskId = data.taskId;
       client.to(`project:${data.projectId}`).emit('typing:started', {
         projectId: data.projectId,
-        taskId: data.taskId,
-        userId: client.data.user?.id,
-        userName: client.data.user?.name,
+        actorId: client.data.user.id,
+        data: {
+          taskId: data.taskId,
+          userId: client.data.user.id,
+          name: client.data.user.name,
+          userName: client.data.user.name,
+        },
+        createdAt: new Date().toISOString(),
       });
     }
   }
@@ -127,11 +146,17 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId) {
+    if (data?.projectId && client.data.user) {
+      delete client.data.typingProjectId;
+      delete client.data.typingTaskId;
       client.to(`project:${data.projectId}`).emit('typing:stopped', {
         projectId: data.projectId,
-        taskId: data.taskId,
-        userId: client.data.user?.id,
+        actorId: client.data.user.id,
+        data: {
+          taskId: data.taskId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
       });
     }
   }

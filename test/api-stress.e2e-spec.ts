@@ -403,12 +403,20 @@ describe('CollabAI Phase 1 - Comprehensive API Stress & Edge Case Test Suite', (
         .expect(409);
     });
 
-    it('1.2.9 Rejects inviting non-existent email (404 Not Found)', async () => {
+    it('1.2.9 Inviting non-existent email creates a pending invitation (201 Created)', async () => {
       await request(server)
         .post(`/projects/${projectAId}/members`)
         .set('Authorization', `Bearer ${userA.token}`)
         .send({ email: 'nobody_exists_12345@example.com', role: 'member' })
-        .expect(404);
+        .expect(201);
+    });
+
+    it('1.2.9b Rejects inviting malformed email (400 Bad Request)', async () => {
+      await request(server)
+        .post(`/projects/${projectAId}/members`)
+        .set('Authorization', `Bearer ${userA.token}`)
+        .send({ email: 'not-an-email', role: 'member' })
+        .expect(400);
     });
 
     it('1.2.10 Lists project members', async () => {

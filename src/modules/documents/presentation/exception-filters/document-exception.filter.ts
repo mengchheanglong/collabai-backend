@@ -2,11 +2,12 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { Response } from 'express';
 import {
+  DocumentConflictError,
   DocumentForbiddenError,
   DocumentNotFoundError,
 } from '../../application/errors/document.errors';
 
-@Catch(DocumentNotFoundError, DocumentForbiddenError)
+@Catch(DocumentNotFoundError, DocumentForbiddenError, DocumentConflictError)
 export class DocumentExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -21,6 +22,9 @@ export class DocumentExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof DocumentForbiddenError) {
       status = 403;
       code = 'FORBIDDEN';
+    } else if (exception instanceof DocumentConflictError) {
+      status = 409;
+      code = 'CONFLICT';
     }
 
     response.status(status).json({

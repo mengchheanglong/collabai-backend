@@ -12,3 +12,10 @@ export class DocumentForbiddenError extends Error {
     this.name = 'DocumentForbiddenError';
   }
 }
+
+export class DocumentConflictError extends Error {
+  constructor(message = 'Document has been modified by another user. Please reload and try again.') {
+    super(message);
+    this.name = 'DocumentConflictError';
+  }
+}

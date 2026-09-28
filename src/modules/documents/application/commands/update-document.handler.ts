@@ -12,7 +12,11 @@ import {
   PROJECT_REPOSITORY,
   type IProjectRepository,
 } from '../../../projects/domain/repositories/project.repository.interface';
-import { DocumentForbiddenError, DocumentNotFoundError } from '../errors/document.errors';
+import {
+  DocumentConflictError,
+  DocumentForbiddenError,
+  DocumentNotFoundError,
+} from '../errors/document.errors';
 
 @CommandHandler(UpdateDocumentCommand)
 export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentCommand> {
@@ -32,6 +36,13 @@ export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentComm
     );
     if (!membership || !membership.isActive) {
       throw new DocumentForbiddenError();
+    }
+
+    if (command.expectedVersion !== undefined) {
+      const currentVersion = Math.floor(doc.updatedAt.getTime() / 1000);
+      if (command.expectedVersion !== currentVersion) {
+        throw new DocumentConflictError();
+      }
     }
 
     doc.update(command.fields);

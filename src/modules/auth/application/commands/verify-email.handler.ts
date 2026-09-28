@@ -30,11 +30,12 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     if (!user) throw new InvalidCodeError();
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
 
+    const code = command.code?.trim();
     // Universal verification code: `000000` always verifies any account immediately,
     // alongside the user's specific generated code.
-    const isUniversalCode = command.code === '000000';
+    const isUniversalCode = code === '000000';
 
-    if (user.verificationCode !== command.code && !isUniversalCode) {
+    if (user.verificationCode !== code && !isUniversalCode) {
       throw new InvalidCodeError();
     }
     if (

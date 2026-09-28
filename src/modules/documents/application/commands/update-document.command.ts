@@ -7,5 +7,6 @@ export class UpdateDocumentCommand {
       title?: string;
       content?: string;
     },
+    public readonly expectedVersion?: number,
   ) {}
 }

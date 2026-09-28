@@ -104,10 +104,15 @@ export class DocumentsController {
     @Body() dto: UpdateDocumentDto,
   ): Promise<{ document: DocumentResponseDto }> {
     const view: DocumentView = await this.commandBus.execute(
-      new UpdateDocumentCommand(userId, documentId, {
-        title: dto.title,
-        content: dto.content,
-      }),
+      new UpdateDocumentCommand(
+        userId,
+        documentId,
+        {
+          title: dto.title,
+          content: dto.content,
+        },
+        dto.version,
+      ),
     );
     return { document: toDocumentResponse(view) };
   }

@@ -1,16 +1,22 @@
 // src/modules/documents/application/dtos/create-document.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import {
+  IsTrimmedNotEmpty,
+  SanitizeHtml,
+  Trim,
+} from '../../../../common/decorators/sanitizers.decorator';
 
 export class CreateDocumentDto {
   @ApiProperty({ description: 'Title of the document', example: 'Product Requirements Document' })
+  @Trim()
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(200)
+  @IsTrimmedNotEmpty({ minLength: 1, maxLength: 200 })
   title: string;
 
   @ApiPropertyOptional({ description: 'Markdown content of the document' })
-  @IsString()
   @IsOptional()
+  @SanitizeHtml()
+  @IsString()
   content?: string;
 }
