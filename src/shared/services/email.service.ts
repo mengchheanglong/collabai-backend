@@ -230,10 +230,10 @@ export class EmailService implements OnModuleInit {
   async sendVerificationCode(to: string, code: string): Promise<void> {
     await this.send(
       to,
-      'Verify your email address',
+      'Verify your email address — CollabAI',
       this.codeTemplate(
-        'Verify your email',
-        'Use the code below to verify your email address.',
+        'Verify your email address',
+        'Welcome to CollabAI! Enter the code below to verify your email address and activate your account.',
         code,
       ),
     );
@@ -242,23 +242,55 @@ export class EmailService implements OnModuleInit {
   async sendPasswordResetCode(to: string, code: string): Promise<void> {
     await this.send(
       to,
-      'Reset your password',
+      'Reset your password — CollabAI',
       this.codeTemplate(
         'Reset your password',
-        'Use the code below to reset your password. If you did not request this, ignore this email.',
+        'We received a request to reset your CollabAI account password. Use the code below to proceed.',
         code,
       ),
     );
   }
 
   async sendPasswordResetSuccess(to: string): Promise<void> {
-    await this.send(to, 'Your password was changed', {
-      text:
-        'Your password was changed successfully. ' +
-        "If this wasn't you, contact support immediately.",
-      html:
-        '<p>Your password was changed successfully.</p>' +
-        "<p>If this wasn't you, please contact support immediately.</p>",
+    const title = 'Password changed successfully';
+    const text = [
+      '========================================',
+      'CollabAI — Password Changed Successfully',
+      '========================================',
+      '',
+      'Your CollabAI account password has been changed successfully.',
+      '',
+      "If you did not make this change, please reset your password immediately",
+      'or contact support to protect your account.',
+      '',
+      '--',
+      'CollabAI Team',
+    ].join('\n');
+
+    const contentHtml = `
+      <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+        ${title}
+      </h1>
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6;">
+        The password for your CollabAI account has been changed successfully.
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+        <tr>
+          <td style="background-color: #fef2f2; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; border-radius: 6px; padding: 14px 18px;">
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #991b1b;">
+              Didn't make this change?
+            </p>
+            <p style="margin: 0; font-size: 13px; color: #b91c1c; line-height: 1.5;">
+              If you did not perform this action, your account may be compromised. Please reset your password immediately or contact support.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    await this.send(to, `${title} — CollabAI`, {
+      text,
+      html: this.wrapEmailLayout(title, contentHtml),
     });
   }
 
@@ -269,26 +301,56 @@ export class EmailService implements OnModuleInit {
     inviteUrl: string,
   ): Promise<void> {
     const subject = `You've been invited to join ${projectName} on CollabAI`;
-    const text = `${inviterName} has invited you to collaborate on ${projectName} on CollabAI.\n\nAccept your invitation by visiting the link below:\n${inviteUrl}\n\nThis invitation expires in 7 days.`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 8px;">
-        <h2 style="margin-bottom: 12px; color: #18181b;">You're invited to collaborate!</h2>
-        <p style="color: #3f3f46; font-size: 15px; line-height: 1.5;">
-          <strong>${inviterName}</strong> has invited you to join the project <strong>${projectName}</strong> on CollabAI.
-        </p>
-        <div style="margin: 24px 0; text-align: center;">
-          <a href="${inviteUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
-            Accept Invitation
-          </a>
-        </div>
-        <p style="color: #71717a; font-size: 13px; line-height: 1.4;">
-          Or copy and paste this URL into your browser:<br/>
-          <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
-        </p>
-        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 20px 0;" />
-        <p style="color: #a1a1aa; font-size: 12px;">This invitation will expire in 7 days.</p>
-      </div>`;
-    await this.send(to, subject, { text, html });
+    const text = [
+      '========================================',
+      'CollabAI — Project Invitation',
+      '========================================',
+      '',
+      `${inviterName} has invited you to collaborate on ${projectName} on CollabAI.`,
+      '',
+      `Accept your invitation by visiting: ${inviteUrl}`,
+      '',
+      'This invitation expires in 7 days.',
+      '',
+      '--',
+      'CollabAI Team',
+    ].join('\n');
+
+    const contentHtml = `
+      <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+        You're invited to collaborate!
+      </h1>
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6;">
+        <strong style="color: #0f172a;">${inviterName}</strong> has invited you to collaborate on the project <strong style="color: #4f46e5;">${projectName}</strong> on CollabAI.
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
+        <tr>
+          <td align="center">
+            <a href="${inviteUrl}" target="_blank" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+              Accept Invitation
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0 0 6px 0; font-size: 13px; color: #64748b;">
+        Or copy and paste this URL into your browser:
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 13px; word-break: break-all;">
+        <a href="${inviteUrl}" target="_blank" style="color: #4f46e5; text-decoration: underline;">${inviteUrl}</a>
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td style="background-color: #f8fafc; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #64748b;">
+            ⏳ This invitation will expire in <strong>7 days</strong>.
+          </td>
+        </tr>
+      </table>
+    `;
+
+    await this.send(to, subject, {
+      text,
+      html: this.wrapEmailLayout(subject, contentHtml),
+    });
   }
 
   private async send(
@@ -405,18 +467,133 @@ export class EmailService implements OnModuleInit {
   }
 
   private codeTemplate(title: string, intro: string, code: string): MailBody {
-    const text = `${intro}\n\nYour code: ${code}\n\nThis code expires in 15 minutes.`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
-        <h2 style="margin-bottom: 8px; color: #111827;">${title}</h2>
-        <p style="color: #4b5563; font-size: 15px;">${intro}</p>
-        <div style="font-size: 32px; font-weight: 700; letter-spacing: 6px;
-                    background: #f3f4f6; padding: 18px 0; text-align: center;
-                    border-radius: 8px; margin: 20px 0; color: #1f2937; border: 1px solid #e5e7eb;">
-          ${code}
-        </div>
-        <p style="color: #9ca3af; font-size: 13px;">This code expires in 15 minutes. If you did not request this, please ignore this email.</p>
-      </div>`;
-    return { text, html };
+    const text = [
+      '========================================',
+      `CollabAI — ${title}`,
+      '========================================',
+      '',
+      intro,
+      '',
+      `    Verification Code: ${code}`,
+      '',
+      'This code expires in 15 minutes and can only be used once.',
+      '',
+      'Security Note: Never share this code with anyone.',
+      'If you did not request this, please ignore this email.',
+      '',
+      '--',
+      'CollabAI Team',
+    ].join('\n');
+
+    const contentHtml = `
+      <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+        ${title}
+      </h1>
+      <p style="margin: 0 0 28px 0; font-size: 15px; color: #475569; line-height: 1.6;">
+        ${intro}
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 28px;">
+        <tr>
+          <td style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 26px 16px; text-align: center;">
+            <span style="font-size: 11px; font-weight: 700; color: #4f46e5; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 10px;">
+              Your Verification Code
+            </span>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #0f172a; line-height: 1; padding: 4px 0 8px 10px;">
+              ${code}
+            </div>
+            <span style="font-size: 12px; font-weight: 500; color: #64748b; display: block;">
+              Expires in <strong>15 minutes</strong> • One-time use
+            </span>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 12px;">
+        <tr>
+          <td style="background-color: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 4px; padding: 12px 16px;">
+            <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+              <strong style="color: #0f172a;">Security Note:</strong> Never share this code with anyone. CollabAI will never ask you for your code via phone, chat, or email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    return {
+      text,
+      html: this.wrapEmailLayout(title, contentHtml),
+    };
+  }
+
+  /**
+   * Enterprise-grade, responsive email wrapper compatible with all major email clients
+   * (Gmail, Apple Mail, Outlook, Yahoo, and mobile screens).
+   */
+  private wrapEmailLayout(title: string, contentHtml: string): string {
+    return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${title}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; width: 100%; margin: 0; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Wrapper -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; width: 100%; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);">
+          <!-- Header with Brand Icon -->
+          <tr>
+            <td style="padding: 32px 36px 24px 36px; border-bottom: 1px solid #f1f5f9; text-align: left;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 40px; height: 40px; border-radius: 12px; text-align: center; vertical-align: middle;">
+                    <span style="color: #ffffff; font-weight: 800; font-size: 20px; line-height: 40px; display: inline-block;">✦</span>
+                  </td>
+                  <td style="padding-left: 14px; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">
+                    Collab<span style="color: #4f46e5;">AI</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 36px 36px 28px 36px;">
+              ${contentHtml}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 36px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">
+                CollabAI • Real-Time Collaborative Workspace
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                This automated message was sent to verify your identity. If you did not make this request, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!-- Sub-footer copyright -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; margin-top: 20px; text-align: center;">
+          <tr>
+            <td style="font-size: 12px; color: #94a3b8;">
+              © 2026 CollabAI. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
   }
 }
+
