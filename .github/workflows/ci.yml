@@ -9,6 +9,12 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://user:password@localhost:5432/collabai?schema=public"
+      DIRECT_URL: "postgresql://user:password@localhost:5432/collabai?schema=public"
+      JWT_SECRET: "test-secret-key-min-32-characters-long"
+      JWT_REFRESH_SECRET: "test-refresh-secret-key-min-32-characters"
+      EMAIL_BACKEND: "log"
 
     steps:
       - name: Checkout repository
