@@ -8,6 +8,9 @@ import {
   GenerateDescriptionInput,
   GenerateTasksInput,
   IAiProvider,
+  NextBestAction,
+  ProjectInsightsInput,
+  ProjectInsightsOutput,
   StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
@@ -126,7 +129,11 @@ export class StubAiProvider implements IAiProvider {
     if (msg.includes('how are you')) {
       return `I'm doing great and ready to assist you with **${proj}**! What would you like to work on next?`;
     }
-    if (msg.includes('summary') || msg.includes('status') || msg.includes('progress')) {
+    if (
+      msg.includes('summary') ||
+      msg.includes('status') ||
+      msg.includes('progress')
+    ) {
       if (input.context?.tasksSummary) {
         return `### 📋 Project Overview for **${proj}**\n\n${input.context.tasksSummary}\n\nLet me know if you want to organize, prioritize, or assign any of these tasks!`;
       }
@@ -136,6 +143,101 @@ export class StubAiProvider implements IAiProvider {
       return `I can help you:\n- **Manage tasks**: create, assign, change status/priority, and set due dates.\n- **Brainstorm**: generate structured task lists and breakdown complex goals.\n- **Search & Filter**: find specific tasks and filter your board.\n- **Collaborate**: post comments and summarize team discussions.\n\nYou can talk to me naturally (e.g. *"create a task for Sunday outing"*, *"set priority to high and assign it to Mengchheang"*), or use slash commands like \`/create\`, \`/task\`, and \`/filter\`.`;
     }
     return `I understand you're asking about "${input.message}". For **${proj}**, I can assist with planning, task updates, role assignments, and team coordination. How would you like to proceed?`;
+  }
+
+  async generateProjectInsights(
+    input: ProjectInsightsInput,
+  ): Promise<ProjectInsightsOutput> {
+    const total = input.totalTasks || 0;
+    const completed = input.completedTasks || 0;
+    const overdue = input.overdueTasks?.length || 0;
+    const inProgress = input.inProgressTasks || 0;
+
+    let healthScore = 100;
+    if (total > 0) {
+      const completionRate = completed / total;
+      const overduePenalty = (overdue / total) * 60;
+      healthScore = Math.max(
+        15,
+        Math.min(100, Math.round(completionRate * 60 + 40 - overduePenalty)),
+      );
+    }
+
+    const status: 'on_track' | 'at_risk' | 'off_track' =
+      healthScore >= 75 ? 'on_track' : healthScore >= 50 ? 'at_risk' : 'off_track';
+
+    const risks: string[] = [];
+    if (overdue > 0) {
+      risks.push(
+        `${overdue} task${overdue > 1 ? 's are' : ' is'} past due date and require immediate intervention.`,
+      );
+    }
+    if (total > 0 && inProgress > completed && inProgress > 5) {
+      risks.push(
+        `High work-in-progress (${inProgress} active tasks) may indicate bottlenecks or context switching.`,
+      );
+    }
+    if (total === 0) {
+      risks.push('No tasks defined in this project yet.');
+    }
+    if (risks.length === 0) {
+      risks.push('No critical delivery risks detected at this time.');
+    }
+
+    const recommendations: string[] = [];
+    if (overdue > 0) {
+      recommendations.push(
+        'Review and reschedule or reassign overdue items to unblock milestone progress.',
+      );
+    }
+    if (input.todoTasks > 0 && inProgress === 0) {
+      recommendations.push(
+        'Pick up high-priority tasks from the backlog to kickstart active sprint momentum.',
+      );
+    }
+    recommendations.push(
+      'Maintain regular asynchronous updates and log progress on in-progress cards.',
+    );
+
+    const nextBestActions: NextBestAction[] = [];
+    if (input.overdueTasks && input.overdueTasks.length > 0) {
+      const topOverdue = input.overdueTasks[0];
+      nextBestActions.push({
+        title: `Resolve Overdue: "${topOverdue.title}"`,
+        description: `Task is overdue (${topOverdue.priority} priority). Address blockers or adjust deadline.`,
+        priority: 'urgent' as const,
+        impact: 'Prevents downstream project milestone delays.',
+      });
+    }
+
+    if (input.upcomingTasks && input.upcomingTasks.length > 0) {
+      const nextUpcoming = input.upcomingTasks[0];
+      nextBestActions.push({
+        title: `Prepare: "${nextUpcoming.title}"`,
+        description: `Upcoming task due soon. Ensure prerequisites and assignees are aligned.`,
+        priority: 'high' as const,
+        impact: 'Maintains steady delivery cadence without last-minute crunch.',
+      });
+    }
+
+    if (nextBestActions.length === 0) {
+      nextBestActions.push({
+        title: 'Plan Next Sprint Milestones',
+        description:
+          'Break down upcoming project goals into bite-sized actionable user stories.',
+        priority: 'medium' as const,
+        impact: 'Ensures clear team alignment and pipeline visibility.',
+      });
+    }
+
+    return {
+      healthScore,
+      status,
+      summary: `Project "${input.projectName}" is currently ${status.replace('_', ' ')} with a health rating of ${healthScore}%. ${completed}/${total} tasks completed with ${overdue} overdue items.`,
+      risks,
+      recommendations,
+      nextBestActions,
+    };
   }
 }
 

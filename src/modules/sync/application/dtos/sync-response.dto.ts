@@ -32,7 +32,8 @@ export class SyncDeltaBoardsDto {
 export class SyncResponseDto {
   @ApiProperty({
     example: '2026-09-01T13:40:00.000Z',
-    description: 'Server time to be stored by PWA client as next sync checkpoint',
+    description:
+      'Server time to be stored by PWA client as next sync checkpoint',
   })
   serverTime: string;
 

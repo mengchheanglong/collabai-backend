@@ -6,6 +6,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import { isValidUuid } from '../../../../common/utils/uuid.util';
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 import {
   INotificationRepository,
@@ -22,6 +23,9 @@ export class NotificationRepository implements INotificationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(notification: NotificationEntity): Promise<void> {
+    if (!isValidUuid(notification.id) || !isValidUuid(notification.userId)) {
+      return;
+    }
     await this.prisma.notification.create({
       data: {
         id: notification.id,
@@ -39,6 +43,7 @@ export class NotificationRepository implements INotificationRepository {
   }
 
   async findById(id: string): Promise<NotificationEntity | null> {
+    if (!isValidUuid(id)) return null;
     const row = await this.prisma.notification.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
   }
@@ -47,6 +52,9 @@ export class NotificationRepository implements INotificationRepository {
     userId: string,
     options: ListNotificationsOptions,
   ): Promise<Paginated<NotificationEntity>> {
+    if (!isValidUuid(userId)) {
+      return { items: [], total: 0, page: options.page, limit: options.limit };
+    }
     const where: Prisma.NotificationWhereInput = {
       userId,
       ...(options.unreadOnly ? { isRead: false } : {}),
@@ -71,6 +79,7 @@ export class NotificationRepository implements INotificationRepository {
   }
 
   async markAsRead(id: string): Promise<void> {
+    if (!isValidUuid(id)) return;
     await this.prisma.notification.update({
       where: { id },
       data: { isRead: true, readAt: new Date() },
@@ -78,6 +87,7 @@ export class NotificationRepository implements INotificationRepository {
   }
 
   async markAllAsRead(userId: string): Promise<number> {
+    if (!isValidUuid(userId)) return 0;
     const result = await this.prisma.notification.updateMany({
       where: { userId, isRead: false },
       data: { isRead: true, readAt: new Date() },

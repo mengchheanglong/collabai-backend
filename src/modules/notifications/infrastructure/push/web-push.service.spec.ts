@@ -148,9 +148,9 @@ describe('WebPushService', () => {
         expect(parsed.actions).toEqual([
           { action: 'open', title: 'Open in CollabAI' },
         ]);
-        expect(
-          Buffer.byteLength(jsonStr, 'utf8'),
-        ).toBeLessThanOrEqual(MAX_PUSH_PAYLOAD_BYTES);
+        expect(Buffer.byteLength(jsonStr, 'utf8')).toBeLessThanOrEqual(
+          MAX_PUSH_PAYLOAD_BYTES,
+        );
       });
 
       it('should safely truncate massive task descriptions (>50KB) to stay under 4KB and parse cleanly', () => {
@@ -163,9 +163,9 @@ describe('WebPushService', () => {
 
         const jsonStr = formatAndTruncatePayload(payload);
 
-        expect(
-          Buffer.byteLength(jsonStr, 'utf8'),
-        ).toBeLessThanOrEqual(MAX_PUSH_PAYLOAD_BYTES);
+        expect(Buffer.byteLength(jsonStr, 'utf8')).toBeLessThanOrEqual(
+          MAX_PUSH_PAYLOAD_BYTES,
+        );
 
         // Verify JSON is 100% valid and parseable
         expect(() => JSON.parse(jsonStr)).not.toThrow();
@@ -187,9 +187,9 @@ describe('WebPushService', () => {
 
         expect(parsed.title.length).toBeLessThan(300);
         expect(parsed.title.endsWith('...')).toBe(true);
-        expect(
-          Buffer.byteLength(jsonStr, 'utf8'),
-        ).toBeLessThanOrEqual(MAX_PUSH_PAYLOAD_BYTES);
+        expect(Buffer.byteLength(jsonStr, 'utf8')).toBeLessThanOrEqual(
+          MAX_PUSH_PAYLOAD_BYTES,
+        );
       });
 
       it('should prune oversized data metadata objects while preserving essential routing url/type/entityId', () => {
@@ -209,9 +209,9 @@ describe('WebPushService', () => {
 
         const jsonStr = formatAndTruncatePayload(payload);
 
-        expect(
-          Buffer.byteLength(jsonStr, 'utf8'),
-        ).toBeLessThanOrEqual(MAX_PUSH_PAYLOAD_BYTES);
+        expect(Buffer.byteLength(jsonStr, 'utf8')).toBeLessThanOrEqual(
+          MAX_PUSH_PAYLOAD_BYTES,
+        );
 
         const parsed = JSON.parse(jsonStr);
         expect(parsed.data.url).toBe('/board/feature-x');

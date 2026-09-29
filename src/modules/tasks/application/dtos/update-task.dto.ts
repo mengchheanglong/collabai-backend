@@ -9,23 +9,29 @@ import {
   IsString,
   IsUUID,
   MaxLength,
-  MinLength,
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TASK_PRIORITIES } from '../../domain/value-objects/task-priority.value-object';
+import {
+  IsSafeDate,
+  IsTrimmedNotEmpty,
+  SanitizeHtml,
+  Trim,
+} from '../../../../common/decorators/sanitizers.decorator';
 
 export class UpdateTaskDto {
   @ApiPropertyOptional({ minLength: 2, maxLength: 150 })
   @IsOptional()
+  @Trim()
   @IsString()
-  @MinLength(2)
-  @MaxLength(150)
+  @IsTrimmedNotEmpty({ minLength: 2, maxLength: 150 })
   title?: string;
 
   @ApiPropertyOptional({ maxLength: 5000, nullable: true })
   @IsOptional()
   @ValidateIf((_, v) => v !== null)
+  @SanitizeHtml()
   @IsString()
   @MaxLength(5000)
   description?: string | null;
@@ -45,6 +51,7 @@ export class UpdateTaskDto {
   @IsOptional()
   @ValidateIf((_, v) => v !== null)
   @IsISO8601()
+  @IsSafeDate()
   dueDate?: string | null;
 
   @ApiPropertyOptional({ type: [String] })

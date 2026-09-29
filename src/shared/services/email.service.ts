@@ -1,170 +1,224 @@
 // src/shared/services/email.service.ts
 //
-// Multi-provider email service supporting HTTPS REST APIs and SMTP.
+// Transactional email delivery with pluggable backends:
 //
-// IMPORTANT (Render & Cloud Deployments):
-// Render's free/standard instances block outbound SMTP ports (25, 465, 587), causing
-// traditional SMTP transports (e.g. Gmail SMTP) to fail with connection timeouts
-// or "Network is unreachable".
+//   EMAIL_BACKEND = log | smtp | resend | mailjet   (auto-detected from keys if unset)
+//   (EMAIL_PROVIDER is also accepted as an alias)
 //
-// To solve this, this service supports HTTPS REST API backends that communicate over
-// port 443 (which is never blocked):
-//   1. Mailjet API  — https://api.mailjet.com/v3.1/send (6,000 free/month, no domain needed)
-//   2. Resend API   — https://api.resend.com/emails
-//   3. Brevo API    — https://api.brevo.com/v3/smtp/email (300/day free)
-//   4. SendGrid API — https://api.sendgrid.com/v3/mail/send (100/day free)
-//   5. SMTP         — Nodemailer fallback (for local development or unblocked environments)
-//   6. Console      — Prints verification codes to terminal in dev when unconfigured
+//   - log     — dev default: prints the email (incl. verification codes) to the console
+//   - smtp    — nodemailer SMTP. NOTE: Render's free tier blocks outbound SMTP ports
+//               25/465/587 (since Sept 2025), so SMTP only works locally or on paid plans.
+//   - resend  — Resend HTTP API  (api.resend.com, port 443 — works on Render free tier)
+//   - mailjet — Mailjet HTTP API (api.mailjet.com, port 443 — works on Render free tier)
+//
+// Env precedence for the sender address:
+//   DEFAULT_FROM_EMAIL > SMTP_FROM > EMAIL_USER > 'CollabAI <no-reply@localhost>'
+//
+// Email failures must never break the auth flow (they're triggered from an event
+// listener), so every backend swallows errors after logging them.
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
-export type EmailProviderType =
-  | 'mailjet'
-  | 'resend'
-  | 'brevo'
-  | 'sendgrid'
-  | 'smtp'
-  | 'console';
+export type EmailBackend = 'log' | 'smtp' | 'resend' | 'mailjet';
 
 export interface MailBody {
   text: string;
   html: string;
 }
 
-export interface SenderInfo {
-  name: string;
-  email: string;
-  formatted: string;
+/** Accepts plain values ("resend") and Django-style ones ("notifications.email_backends.ResendAPIBackend"). */
+const BACKEND_ALIASES: Record<string, EmailBackend> = {
+  log: 'log',
+  console: 'log',
+  logemailbackend: 'log',
+  smtp: 'smtp',
+  smtpbackend: 'smtp',
+  smtpemailbackend: 'smtp',
+  resend: 'resend',
+  resendapibackend: 'resend',
+  mailjet: 'mailjet',
+  mailjetapibackend: 'mailjet',
+};
+
+function normalizeBackendName(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return raw
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .toLowerCase()
+    .replace(/^.*email_backends\./, '');
+}
+
+/**
+ * Resolve the active backend. An explicit EMAIL_BACKEND / EMAIL_PROVIDER always wins
+ * (falling back to `log` if its keys are missing); otherwise auto-detect from
+ * whichever API keys are present: resend > mailjet > smtp > log.
+ */
+export function resolveEmailBackend(
+  env: NodeJS.ProcessEnv = process.env,
+): EmailBackend {
+  const configured = env.EMAIL_BACKEND ?? env.EMAIL_PROVIDER;
+  const explicit = BACKEND_ALIASES[normalizeBackendName(configured) ?? ''];
+  if (explicit) return explicit;
+  if (env.RESEND_API_KEY) return 'resend';
+  if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) return 'mailjet';
+  if (env.EMAIL_HOST && env.EMAIL_USER && env.EMAIL_PASS) return 'smtp';
+  return 'log';
+}
+
+/**
+ * True when a real delivery backend is active — i.e. codes actually go out by email.
+ * Used to gate the `000000` development fallback verification code.
+ */
+export function isEmailDeliveryConfigured(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return resolveEmailBackend(env) !== 'log';
+}
+
+/** Parse `"Name" <email@host>` or `email@host` into Mailjet's From shape. */
+function parseFrom(from: string): { email: string; name?: string } {
+  const m = from.match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
+  if (m) {
+    const name = m[1].trim();
+    return { name: name || undefined, email: m[2].trim() };
+  }
+  return { email: from.trim() };
 }
 
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
-  private provider: EmailProviderType = 'console';
+  private backend: EmailBackend = 'log';
   private transporter?: Transporter;
-  private sender: SenderInfo = {
-    name: 'CollabAI',
-    email: 'no-reply@collabai.local',
-    formatted: 'CollabAI <no-reply@collabai.local>',
-  };
-
-  // API credentials
-  private mailjetApiKey = '';
-  private mailjetSecretKey = '';
-  private resendApiKey = '';
-  private brevoApiKey = '';
-  private sendgridApiKey = '';
+  private from = '';
 
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
-    this.sender = this.resolveSender();
-    this.mailjetApiKey = this.config.get<string>('MAILJET_API_KEY') ?? '';
-    this.mailjetSecretKey = this.config.get<string>('MAILJET_SECRET_KEY') ?? '';
-    this.resendApiKey = this.config.get<string>('RESEND_API_KEY') ?? '';
-    this.brevoApiKey = this.config.get<string>('BREVO_API_KEY') ?? '';
-    this.sendgridApiKey = this.config.get<string>('SENDGRID_API_KEY') ?? '';
+    const envObj: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...(this.config.get<string>('EMAIL_BACKEND')
+        ? { EMAIL_BACKEND: this.config.get<string>('EMAIL_BACKEND') }
+        : {}),
+      ...(this.config.get<string>('EMAIL_PROVIDER')
+        ? { EMAIL_PROVIDER: this.config.get<string>('EMAIL_PROVIDER') }
+        : {}),
+      ...(this.config.get<string>('RESEND_API_KEY')
+        ? { RESEND_API_KEY: this.config.get<string>('RESEND_API_KEY') }
+        : {}),
+      ...(this.config.get<string>('MAILJET_API_KEY')
+        ? { MAILJET_API_KEY: this.config.get<string>('MAILJET_API_KEY') }
+        : {}),
+      ...(this.config.get<string>('MAILJET_SECRET_KEY')
+        ? { MAILJET_SECRET_KEY: this.config.get<string>('MAILJET_SECRET_KEY') }
+        : {}),
+      ...(this.config.get<string>('EMAIL_HOST')
+        ? { EMAIL_HOST: this.config.get<string>('EMAIL_HOST') }
+        : {}),
+      ...(this.config.get<string>('EMAIL_USER')
+        ? { EMAIL_USER: this.config.get<string>('EMAIL_USER') }
+        : {}),
+      ...(this.config.get<string>('EMAIL_PASS')
+        ? { EMAIL_PASS: this.config.get<string>('EMAIL_PASS') }
+        : {}),
+      ...(this.config.get<string>('EMAIL_PORT')
+        ? { EMAIL_PORT: this.config.get<string>('EMAIL_PORT') }
+        : {}),
+    };
+    this.backend = resolveEmailBackend(envObj);
+    this.from =
+      this.config.get<string>('DEFAULT_FROM_EMAIL') ??
+      this.config.get<string>('SMTP_FROM') ??
+      this.config.get<string>('EMAIL_USER') ??
+      'CollabAI <no-reply@localhost>';
 
-    this.provider = this.determineProvider();
-
-    if (this.provider === 'smtp') {
+    if (this.backend === 'smtp') {
       const host = this.config.get<string>('EMAIL_HOST');
       const user = this.config.get<string>('EMAIL_USER');
       const pass = this.config.get<string>('EMAIL_PASS');
       const port = parseInt(this.config.get<string>('EMAIL_PORT') ?? '587', 10);
-
+      if (!host || !user || !pass) {
+        this.logger.warn(
+          'EMAIL_BACKEND=smtp but EMAIL_HOST/EMAIL_USER/EMAIL_PASS are missing — falling back to log.',
+        );
+        this.backend = 'log';
+        return;
+      }
       this.transporter = nodemailer.createTransport({
         host,
         port,
-        secure: port === 465,
+        secure: port === 465, // 465 = implicit TLS, 587 = STARTTLS
         auth: { user, pass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
       });
-      this.logger.log(`Email transport initialized: SMTP (${host}:${port})`);
-    } else {
-      this.logger.log(`Email transport initialized: ${this.provider.toUpperCase()} (HTTPS API)`);
+      this.logger.log(`Email backend: smtp (host=${host}, port=${port}).`);
+      return;
     }
-  }
 
-  /**
-   * Determine which provider to use based on EMAIL_PROVIDER / EMAIL_BACKEND
-   * or available API credentials.
-   */
-  private determineProvider(): EmailProviderType {
-    const raw = (
-      this.config.get<string>('EMAIL_PROVIDER') ??
-      this.config.get<string>('EMAIL_BACKEND') ??
-      ''
-    ).toLowerCase();
+    if (this.backend === 'resend') {
+      const configuredFrom =
+        this.config.get<string>('DEFAULT_FROM_EMAIL') ??
+        this.config.get<string>('SMTP_FROM');
+      this.from = configuredFrom ?? 'CollabAI <onboarding@resend.dev>';
+      if (!this.config.get<string>('RESEND_API_KEY')) {
+        this.logger.warn(
+          'EMAIL_BACKEND=resend but RESEND_API_KEY is missing — falling back to log.',
+        );
+        this.backend = 'log';
+        return;
+      }
+      this.logger.log(`Email backend: resend (from="${this.from}").`);
+      return;
+    }
 
-    if (raw.includes('mailjet')) return 'mailjet';
-    if (raw.includes('resend')) return 'resend';
-    if (raw.includes('brevo')) return 'brevo';
-    if (raw.includes('sendgrid')) return 'sendgrid';
-    if (raw.includes('smtp')) return 'smtp';
-    if (raw.includes('console')) return 'console';
+    if (
+      this.backend === 'mailjet' &&
+      !(
+        this.config.get<string>('MAILJET_API_KEY') &&
+        this.config.get<string>('MAILJET_SECRET_KEY')
+      )
+    ) {
+      this.logger.warn(
+        'EMAIL_BACKEND=mailjet but MAILJET_API_KEY/MAILJET_SECRET_KEY are missing — falling back to log.',
+      );
+      this.backend = 'log';
+      return;
+    }
 
-    // Auto-detection fallback
-    if (this.mailjetApiKey && this.mailjetSecretKey) return 'mailjet';
-    if (this.resendApiKey) return 'resend';
-    if (this.brevoApiKey) return 'brevo';
-    if (this.sendgridApiKey) return 'sendgrid';
-
-    const host = this.config.get<string>('EMAIL_HOST');
-    const user = this.config.get<string>('EMAIL_USER');
-    const pass = this.config.get<string>('EMAIL_PASS');
-    if (host && user && pass) return 'smtp';
-
-    this.logger.warn(
-      'No email API keys or SMTP configured — falling back to CONSOLE email logging.',
+    this.logger.log(
+      this.backend === 'log'
+        ? 'Email backend: log (emails printed to console — set EMAIL_BACKEND/keys for real delivery).'
+        : `Email backend: ${this.backend} (from="${this.from}").`,
     );
-    return 'console';
   }
 
-  private resolveSender(): SenderInfo {
-    const raw =
-      this.config.get<string>('DEFAULT_FROM_EMAIL') ??
-      this.config.get<string>('SMTP_FROM') ??
-      this.config.get<string>('EMAIL_USER') ??
-      'CollabAI <no-reply@collabai.local>';
-
-    const trimmed = raw.trim();
-    const match = trimmed.match(/^(?:["']?([^"']*)["']?\s*)?<([^>]+)>$/);
-    if (match) {
-      const name = match[1]?.trim() || 'CollabAI';
-      const email = match[2]?.trim() || '';
-      return {
-        name,
-        email,
-        formatted: name ? `"${name}" <${email}>` : email,
-      };
-    }
-    return { name: 'CollabAI', email: trimmed, formatted: trimmed };
+  /** Whether a real delivery backend is active (exposed for health checks / guards). */
+  get activeBackend(): EmailBackend {
+    return this.backend;
   }
 
-  /**
-   * Verify provider readiness / connection.
-   */
+  /** Verify provider readiness / connection. */
   async verifyConnection(): Promise<boolean> {
     try {
-      if (this.provider === 'smtp') {
+      if (this.backend === 'smtp') {
         if (!this.transporter) return false;
         await this.transporter.verify();
         return true;
       }
-      if (this.provider === 'mailjet') {
-        return Boolean(this.mailjetApiKey && this.mailjetSecretKey);
+      if (this.backend === 'mailjet') {
+        return Boolean(
+          this.config.get<string>('MAILJET_API_KEY') &&
+            this.config.get<string>('MAILJET_SECRET_KEY'),
+        );
       }
-      if (this.provider === 'resend') {
-        return Boolean(this.resendApiKey);
-      }
-      if (this.provider === 'brevo') {
-        return Boolean(this.brevoApiKey);
-      }
-      if (this.provider === 'sendgrid') {
-        return Boolean(this.sendgridApiKey);
+      if (this.backend === 'resend') {
+        return Boolean(this.config.get<string>('RESEND_API_KEY'));
       }
       return true;
     } catch (err) {
@@ -208,215 +262,146 @@ export class EmailService implements OnModuleInit {
     });
   }
 
-  /**
-   * Main dispatch: calls the appropriate provider over HTTPS (or SMTP/console).
-   * Failures are logged and caught so auth flows are never interrupted.
-   */
-  private async send(to: string, subject: string, body: MailBody): Promise<void> {
+  async sendProjectInvitation(
+    to: string,
+    projectName: string,
+    inviterName: string,
+    inviteUrl: string,
+  ): Promise<void> {
+    const subject = `You've been invited to join ${projectName} on CollabAI`;
+    const text = `${inviterName} has invited you to collaborate on ${projectName} on CollabAI.\n\nAccept your invitation by visiting the link below:\n${inviteUrl}\n\nThis invitation expires in 7 days.`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 8px;">
+        <h2 style="margin-bottom: 12px; color: #18181b;">You're invited to collaborate!</h2>
+        <p style="color: #3f3f46; font-size: 15px; line-height: 1.5;">
+          <strong>${inviterName}</strong> has invited you to join the project <strong>${projectName}</strong> on CollabAI.
+        </p>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${inviteUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
+            Accept Invitation
+          </a>
+        </div>
+        <p style="color: #71717a; font-size: 13px; line-height: 1.4;">
+          Or copy and paste this URL into your browser:<br/>
+          <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 20px 0;" />
+        <p style="color: #a1a1aa; font-size: 12px;">This invitation will expire in 7 days.</p>
+      </div>`;
+    await this.send(to, subject, { text, html });
+  }
+
+  private async send(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
     try {
-      switch (this.provider) {
-        case 'mailjet':
-          await this.sendViaMailjet(to, subject, body);
-          break;
+      switch (this.backend) {
+        case 'smtp':
+          if (this.transporter) {
+            const info = (await this.transporter.sendMail({
+              from: this.from,
+              to,
+              subject,
+              text: body.text,
+              html: body.html,
+            })) as { messageId?: string };
+            this.logger.log(
+              `Email sent: "${subject}" -> ${to} (messageId=${info.messageId})`,
+            );
+          }
+          return;
         case 'resend':
           await this.sendViaResend(to, subject, body);
-          break;
-        case 'brevo':
-          await this.sendViaBrevo(to, subject, body);
-          break;
-        case 'sendgrid':
-          await this.sendViaSendGrid(to, subject, body);
-          break;
-        case 'smtp':
-          await this.sendViaSmtp(to, subject, body);
-          break;
-        case 'console':
+          this.logger.log(`Email sent: "${subject}" -> ${to} (via Resend)`);
+          return;
+        case 'mailjet':
+          await this.sendViaMailjet(to, subject, body);
+          this.logger.log(`Email sent: "${subject}" -> ${to} (via Mailjet)`);
+          return;
         default:
-          this.sendViaConsole(to, subject, body);
-          break;
+          this.logger.log(`[LOG-EMAIL] "${subject}" -> ${to}\n${body.text}`);
+          return;
       }
     } catch (err) {
+      // Never rethrow — an email failure must not break registration / reset flows.
       this.logger.error(
-        `[${this.provider.toUpperCase()}] Email send failed: "${subject}" -> ${to}: ${(err as Error).message}`,
+        `Email send failed (${this.backend}): "${subject}" -> ${to}: ${(err as Error).message}`,
       );
     }
   }
 
-  // ── HTTPS Provider: Mailjet (v3.1) ──────────────────────────────────────────
-  private async sendViaMailjet(to: string, subject: string, body: MailBody): Promise<void> {
-    const authHeader =
-      'Basic ' +
-      Buffer.from(`${this.mailjetApiKey}:${this.mailjetSecretKey}`).toString('base64');
-
-    const payload = {
-      Messages: [
-        {
-          From: {
-            Email: this.sender.email,
-            Name: this.sender.name,
-          },
-          To: [{ Email: to }],
-          Subject: subject,
-          TextPart: body.text,
-          HTMLPart: body.html,
-        },
-      ],
-    };
-
-    const res = await fetch('https://api.mailjet.com/v3.1/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authHeader,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    const data = (await res.json()) as {
-      Messages?: Array<{
-        Status?: string;
-        Errors?: unknown[];
-        To?: Array<{ MessageID?: number; MessageUUID?: string }>;
-      }>;
-    };
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
+  /** Resend HTTP API — https://resend.com/docs/api-reference (port 443, Render-safe). */
+  private async sendViaResend(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
+    const key = this.config.get<string>('RESEND_API_KEY');
+    let from = this.from;
+    if (!from || from.includes('@localhost')) {
+      from = 'CollabAI <onboarding@resend.dev>';
     }
-
-    const firstMsg = data?.Messages?.[0];
-    if (firstMsg?.Status !== 'success') {
-      throw new Error(`Message rejected: ${JSON.stringify(firstMsg?.Errors ?? data)}`);
-    }
-
-    const messageId = firstMsg?.To?.[0]?.MessageID;
-    this.logger.log(`Mailjet accepted email: "${subject}" -> ${to} (id=${messageId})`);
-  }
-
-  // ── HTTPS Provider: Resend ──────────────────────────────────────────────────
-  private async sendViaResend(to: string, subject: string, body: MailBody): Promise<void> {
-    const payload = {
-      from: this.sender.formatted,
-      to: [to],
-      subject,
-      text: body.text,
-      html: body.html,
-    };
-
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.resendApiKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        text: body.text,
+        html: body.html,
+      }),
       signal: AbortSignal.timeout(15000),
     });
-
-    const data = (await res.json()) as { id?: string; message?: string };
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Resend API ${res.status}: ${(await res.text()).slice(0, 300)}`,
+      );
     }
-
-    this.logger.log(`Resend accepted email: "${subject}" -> ${to} (id=${data.id})`);
   }
 
-  // ── HTTPS Provider: Brevo ───────────────────────────────────────────────────
-  private async sendViaBrevo(to: string, subject: string, body: MailBody): Promise<void> {
-    const payload = {
-      sender: {
-        name: this.sender.name,
-        email: this.sender.email,
-      },
-      to: [{ email: to }],
-      subject,
-      textContent: body.text,
-      htmlContent: body.html,
-    };
-
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+  /** Mailjet Send API v3.1 — https://dev.mailjet.com (port 443, Render-safe). */
+  private async sendViaMailjet(
+    to: string,
+    subject: string,
+    body: MailBody,
+  ): Promise<void> {
+    const key = this.config.get<string>('MAILJET_API_KEY');
+    const secret = this.config.get<string>('MAILJET_SECRET_KEY');
+    const auth = Buffer.from(`${key}:${secret}`).toString('base64');
+    const from = parseFrom(this.from);
+    const res = await fetch('https://api.mailjet.com/v3.1/send', {
       method: 'POST',
       headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'api-key': this.brevoApiKey,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    const data = (await res.json()) as { messageId?: string };
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
-    }
-
-    this.logger.log(`Brevo accepted email: "${subject}" -> ${to} (id=${data.messageId})`);
-  }
-
-  // ── HTTPS Provider: SendGrid ────────────────────────────────────────────────
-  private async sendViaSendGrid(to: string, subject: string, body: MailBody): Promise<void> {
-    const payload = {
-      personalizations: [{ to: [{ email: to }] }],
-      from: {
-        email: this.sender.email,
-        name: this.sender.name,
-      },
-      subject,
-      content: [
-        { type: 'text/plain', value: body.text },
-        { type: 'text/html', value: body.html },
-      ],
-    };
-
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
+        Authorization: `Basic ${auth}`,
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.sendgridApiKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: {
+              Email: from.email,
+              ...(from.name ? { Name: from.name } : {}),
+            },
+            To: [{ Email: to }],
+            Subject: subject,
+            TextPart: body.text,
+            HTMLPart: body.html,
+          },
+        ],
+      }),
       signal: AbortSignal.timeout(15000),
     });
-
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errText}`);
+      throw new Error(
+        `Mailjet API ${res.status}: ${(await res.text()).slice(0, 300)}`,
+      );
     }
-
-    const messageId = res.headers.get('x-message-id');
-    this.logger.log(`SendGrid accepted email: "${subject}" -> ${to} (id=${messageId})`);
-  }
-
-  // ── SMTP Fallback (Nodemailer) ──────────────────────────────────────────────
-  private async sendViaSmtp(to: string, subject: string, body: MailBody): Promise<void> {
-    if (!this.transporter) {
-      throw new Error('SMTP transporter is not configured');
-    }
-
-    const info = await this.transporter.sendMail({
-      from: this.sender.formatted,
-      to,
-      subject,
-      text: body.text,
-      html: body.html,
-    });
-
-    this.logger.log(
-      `Email sent via SMTP: "${subject}" -> ${to} (messageId=${info.messageId})`,
-    );
-  }
-
-  // ── Console Fallback (Development & Testing) ────────────────────────────────
-  private sendViaConsole(to: string, subject: string, body: MailBody): void {
-    this.logger.log(
-      `\n------------------- [CONSOLE EMAIL] -------------------\n` +
-        `To: ${to}\n` +
-        `From: ${this.sender.formatted}\n` +
-        `Subject: ${subject}\n` +
-        `Body:\n${body.text}\n` +
-        `-------------------------------------------------------`,
-    );
   }
 
   private codeTemplate(title: string, intro: string, code: string): MailBody {

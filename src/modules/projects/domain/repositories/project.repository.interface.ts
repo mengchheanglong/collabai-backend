@@ -97,5 +97,39 @@ export interface IProjectRepository {
   // ----- cross-aggregate lookup for invitations -----
 
   /** Minimal user lookup by email (to resolve an invitee). */
-  findUserByEmail(email: string): Promise<{ id: string } | null>;
+  findUserByEmail(email: string): Promise<{ id: string; name?: string } | null>;
+
+  // ----- project invitations -----
+
+  createInvitation(data: {
+    id: string;
+    projectId: string;
+    email: string;
+    role: string;
+    token: string;
+    invitedBy: string;
+    expiresAt: Date;
+  }): Promise<ProjectInvitationView>;
+
+  findInvitationByToken(
+    token: string,
+  ): Promise<(ProjectInvitationView & { project: { id: string; name: string; description: string | null } }) | null>;
+
+  findInvitationById(id: string): Promise<ProjectInvitationView | null>;
+
+  listInvitations(projectId: string): Promise<ProjectInvitationView[]>;
+
+  deleteInvitation(id: string): Promise<void>;
+}
+
+export interface ProjectInvitationView {
+  id: string;
+  projectId: string;
+  email: string;
+  role: string;
+  token: string;
+  invitedBy: string;
+  inviterName?: string;
+  expiresAt: Date;
+  createdAt: Date;
 }

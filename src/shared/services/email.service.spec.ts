@@ -1,8 +1,104 @@
 // src/shared/services/email.service.spec.ts
-import { ConfigService } from '@nestjs/config';
-import { EmailService } from './email.service';
+// Unit tests for backend resolution + email dispatching.
 
-describe('EmailService', () => {
+import { ConfigService } from '@nestjs/config';
+import {
+  EmailService,
+  resolveEmailBackend,
+  isEmailDeliveryConfigured,
+} from './email.service';
+
+describe('EmailService backend resolution', () => {
+  const baseEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...baseEnv };
+  });
+
+  it('defaults to log when nothing is configured', () => {
+    expect(resolveEmailBackend({})).toBe('log');
+    expect(isEmailDeliveryConfigured({})).toBe(false);
+  });
+
+  it('explicit EMAIL_BACKEND always wins', () => {
+    const env = {
+      EMAIL_BACKEND: 'log',
+      RESEND_API_KEY: 're_x',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('log');
+    expect(isEmailDeliveryConfigured(env)).toBe(false);
+  });
+
+  it('accepts EMAIL_PROVIDER as alias to EMAIL_BACKEND', () => {
+    const env = {
+      EMAIL_PROVIDER: 'mailjet',
+      RESEND_API_KEY: 're_x',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('mailjet');
+    expect(isEmailDeliveryConfigured(env)).toBe(true);
+  });
+
+  it('accepts Django-style backend names (notifications.email_backends.*)', () => {
+    expect(
+      resolveEmailBackend({
+        EMAIL_BACKEND: 'notifications.email_backends.ResendAPIBackend',
+        RESEND_API_KEY: 're_x',
+      }),
+    ).toBe('resend');
+    expect(
+      resolveEmailBackend({
+        EMAIL_BACKEND: 'notifications.email_backends.MailjetAPIBackend',
+      }),
+    ).toBe('mailjet');
+  });
+
+  it('auto-detects resend from RESEND_API_KEY', () => {
+    const env = { RESEND_API_KEY: 're_x' } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('resend');
+    expect(isEmailDeliveryConfigured(env)).toBe(true);
+  });
+
+  it('auto-detects mailjet from its key pair', () => {
+    const env = {
+      MAILJET_API_KEY: 'k',
+      MAILJET_SECRET_KEY: 's',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('mailjet');
+    expect(isEmailDeliveryConfigured(env)).toBe(true);
+  });
+
+  it('auto-detects smtp from EMAIL_HOST/USER/PASS', () => {
+    const env = {
+      EMAIL_HOST: 'smtp.gmail.com',
+      EMAIL_USER: 'a@b.c',
+      EMAIL_PASS: 'x',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('smtp');
+    expect(isEmailDeliveryConfigured(env)).toBe(true);
+  });
+
+  it('resend has priority over mailjet and smtp when auto-detecting', () => {
+    const env = {
+      RESEND_API_KEY: 're_x',
+      MAILJET_API_KEY: 'k',
+      MAILJET_SECRET_KEY: 's',
+      EMAIL_HOST: 'smtp.gmail.com',
+      EMAIL_USER: 'a@b.c',
+      EMAIL_PASS: 'x',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('resend');
+  });
+
+  it('empty-string EMAIL_BACKEND falls through to auto-detect', () => {
+    const env = {
+      EMAIL_BACKEND: '',
+      RESEND_API_KEY: 're_x',
+    } as NodeJS.ProcessEnv;
+    expect(resolveEmailBackend(env)).toBe('resend');
+  });
+});
+
+describe('EmailService dispatching', () => {
   let service: EmailService;
   let configService: ConfigService;
   let fetchMock: jest.SpyInstance;
@@ -16,25 +112,9 @@ describe('EmailService', () => {
     jest.clearAllMocks();
   });
 
-  it('initializes with Mailjet provider when MAILJET_API_KEY is configured', () => {
-    configService = new ConfigService({
-      EMAIL_PROVIDER: 'mailjet',
-      MAILJET_API_KEY: 'test-api-key',
-      MAILJET_SECRET_KEY: 'test-secret-key',
-      DEFAULT_FROM_EMAIL: 'CollabAI <noreply@collabai.com>',
-    });
-
-    service = new EmailService(configService);
-    service.onModuleInit();
-
-    expect((service as any).provider).toBe('mailjet');
-    expect((service as any).sender.email).toBe('noreply@collabai.com');
-    expect((service as any).sender.name).toBe('CollabAI');
-  });
-
   it('dispatches verification email via Mailjet HTTPS API successfully', async () => {
     configService = new ConfigService({
-      EMAIL_PROVIDER: 'mailjet',
+      EMAIL_BACKEND: 'mailjet',
       MAILJET_API_KEY: 'key123',
       MAILJET_SECRET_KEY: 'secret123',
       DEFAULT_FROM_EMAIL: 'CollabAI <soviseth@example.com>',
@@ -71,14 +151,14 @@ describe('EmailService', () => {
 
   it('dispatches email via Resend HTTPS API when Resend is configured', async () => {
     configService = new ConfigService({
-      EMAIL_PROVIDER: 'resend',
+      EMAIL_BACKEND: 'resend',
       RESEND_API_KEY: 're_test_key',
       DEFAULT_FROM_EMAIL: 'CollabAI <soviseth@example.com>',
     });
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 'resend-msg-123' }),
+      text: async () => '',
     });
 
     service = new EmailService(configService);
@@ -98,7 +178,7 @@ describe('EmailService', () => {
 
   it('swallows send errors so auth flow is not broken', async () => {
     configService = new ConfigService({
-      EMAIL_PROVIDER: 'mailjet',
+      EMAIL_BACKEND: 'mailjet',
       MAILJET_API_KEY: 'key123',
       MAILJET_SECRET_KEY: 'secret123',
     });
@@ -108,7 +188,6 @@ describe('EmailService', () => {
     service = new EmailService(configService);
     service.onModuleInit();
 
-    // Should not throw
     await expect(
       service.sendVerificationCode('user@example.com', '123456'),
     ).resolves.not.toThrow();

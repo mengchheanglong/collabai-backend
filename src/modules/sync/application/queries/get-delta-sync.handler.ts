@@ -107,7 +107,7 @@ function formatComment(c: any, projectId: string) {
           email: c.user.email,
           avatarUrl: c.user.avatarUrl ?? null,
         }
-      : c.author ?? null,
+      : (c.author ?? null),
     body: c.content ?? c.body,
     createdAt:
       c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,

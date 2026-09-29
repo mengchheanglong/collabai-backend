@@ -31,7 +31,9 @@ export class NotificationEventsListener {
     try {
       // Don't notify someone for assigning a task to themselves.
       if (event.assigneeId === event.assignedById) return;
-      const { type, title, message } = this.content.forTaskAssigned(event.title);
+      const { type, title, message } = this.content.forTaskAssigned(
+        event.title,
+      );
       await this.dispatch(
         event.assigneeId,
         type,

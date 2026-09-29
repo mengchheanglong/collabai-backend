@@ -12,6 +12,8 @@ import {
   GenerateDescriptionInput,
   GenerateTasksInput,
   IAiProvider,
+  ProjectInsightsInput,
+  ProjectInsightsOutput,
   StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
@@ -171,6 +173,29 @@ Context Information:
     return this.fallback.chat(input);
   }
 
+  async generateProjectInsights(
+    input: ProjectInsightsInput,
+  ): Promise<ProjectInsightsOutput> {
+    try {
+      const prompt = `Project: ${input.projectName}
+Description: ${input.projectDescription ?? 'None'}
+Total Tasks: ${input.totalTasks}, Completed: ${input.completedTasks}, In-Progress: ${input.inProgressTasks}, Todo: ${input.todoTasks}
+Overdue Tasks: ${JSON.stringify(input.overdueTasks)}
+Upcoming Tasks: ${JSON.stringify(input.upcomingTasks)}
+Workload: ${JSON.stringify(input.assigneeWorkload ?? [])}`;
+
+      const content = await this.complete(
+        'You are an executive agile delivery and project health expert. Analyze the project metrics, identify delivery risks, provide actionable recommendations, calculate a health score (0-100), status ("on_track"|"at_risk"|"off_track"), and prioritize 2-4 next-best actions. Return ONLY a valid JSON object with keys: "healthScore" (number 0-100), "status" ("on_track"|"at_risk"|"off_track"), "summary" (concise executive summary string), "risks" (array of string risk statements), "recommendations" (array of actionable recommendations), "nextBestActions" (array of objects with { "title": string, "description": string, "priority": "urgent"|"high"|"medium"|"low", "impact": string }). Do not wrap in markdown or backticks.',
+        prompt,
+      );
+      const parsed = safeJsonInsights(content);
+      if (parsed) return parsed;
+    } catch (err) {
+      this.warn('generateProjectInsights', err);
+    }
+    return this.fallback.generateProjectInsights(input);
+  }
+
   private async complete(system: string, user: string): Promise<string> {
     const response = await this.client.chat.completions.create({
       model: this.model,
@@ -245,6 +270,46 @@ function safeStructuredTasks(text: string): StructuredTask[] | null {
             : [],
         }))
         .filter((t) => t.title.length > 0);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function safeJsonInsights(raw: string): ProjectInsightsOutput | null {
+  try {
+    const trimmed = raw.trim().replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+    const json = extractJson(trimmed) || trimmed;
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed.healthScore === 'number') {
+      return {
+        healthScore: Math.min(100, Math.max(0, parsed.healthScore)),
+        status: ['on_track', 'at_risk', 'off_track'].includes(parsed.status)
+          ? parsed.status
+          : parsed.healthScore >= 75
+            ? 'on_track'
+            : parsed.healthScore >= 50
+              ? 'at_risk'
+              : 'off_track',
+        summary: String(parsed.summary || '').trim(),
+        risks: Array.isArray(parsed.risks)
+          ? parsed.risks.map((r: any) => String(r).trim()).filter(Boolean)
+          : [],
+        recommendations: Array.isArray(parsed.recommendations)
+          ? parsed.recommendations.map((r: any) => String(r).trim()).filter(Boolean)
+          : [],
+        nextBestActions: Array.isArray(parsed.nextBestActions)
+          ? parsed.nextBestActions.map((a: any) => ({
+              title: String(a.title || '').trim(),
+              description: String(a.description || '').trim(),
+              priority: ['urgent', 'high', 'medium', 'low'].includes(a.priority)
+                ? a.priority
+                : 'medium',
+              impact: String(a.impact || '').trim(),
+            })).filter((a: any) => a.title.length > 0)
+          : [],
+      };
     }
   } catch {
     /* ignore */

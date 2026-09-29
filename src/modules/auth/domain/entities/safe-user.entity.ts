@@ -14,6 +14,7 @@ export interface SafeUser {
   role: string;
   isVerified: boolean;
   isActive: boolean;
+  avatarUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
   lastLogin: Date | null;

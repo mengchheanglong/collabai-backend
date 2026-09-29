@@ -24,6 +24,7 @@ export class TaskDomainService {
     if (before === null && after === null) return POSITION_GAP;
     if (before === null) return (after as number) - POSITION_GAP;
     if (after === null) return before + POSITION_GAP;
+    if (before >= after) return before + 1;
     return (before + after) / 2;
   }
 }

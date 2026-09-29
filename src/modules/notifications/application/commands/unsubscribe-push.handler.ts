@@ -8,18 +8,13 @@ import { PUSH_SUBSCRIPTION_REPOSITORY } from '../../domain/repositories/push-sub
 
 @Injectable()
 @CommandHandler(UnsubscribePushCommand)
-export class UnsubscribePushHandler
-  implements ICommandHandler<UnsubscribePushCommand>
-{
+export class UnsubscribePushHandler implements ICommandHandler<UnsubscribePushCommand> {
   constructor(
     @Inject(PUSH_SUBSCRIPTION_REPOSITORY)
     private readonly repo: IPushSubscriptionRepository,
   ) {}
 
   async execute(command: UnsubscribePushCommand): Promise<void> {
-    await this.repo.deleteByEndpointAndUserId(
-      command.endpoint,
-      command.userId,
-    );
+    await this.repo.deleteByEndpointAndUserId(command.endpoint, command.userId);
   }
 }

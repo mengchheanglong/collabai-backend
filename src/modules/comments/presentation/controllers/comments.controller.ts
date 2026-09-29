@@ -11,6 +11,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseFilters,
@@ -48,7 +49,7 @@ export class CommentsController {
   @ApiOperation({ summary: "List a task's comments (oldest first)" })
   async list(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
   ) {
     const comments = await this.queryBus.execute(
       new GetTaskCommentsQuery(userId, taskId),
@@ -61,7 +62,7 @@ export class CommentsController {
   @ApiOperation({ summary: 'Add a comment to a task' })
   async add(
     @CurrentUser('id') userId: string,
-    @Param('taskId') taskId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
     @Body() dto: AddCommentDto,
   ) {
     const view = await this.commandBus.execute(
@@ -74,7 +75,7 @@ export class CommentsController {
   @ApiOperation({ summary: 'Edit a comment (author or moderator)' })
   async edit(
     @CurrentUser('id') userId: string,
-    @Param('commentId') commentId: string,
+    @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() dto: EditCommentDto,
   ) {
     const view = await this.commandBus.execute(
@@ -87,7 +88,8 @@ export class CommentsController {
   @ApiOperation({ summary: 'Edit a comment nested route' })
   async editNested(
     @CurrentUser('id') userId: string,
-    @Param('commentId') commentId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
+    @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() dto: EditCommentDto,
   ) {
     return this.edit(userId, commentId, dto);
@@ -97,7 +99,7 @@ export class CommentsController {
   @ApiOperation({ summary: 'Delete a comment (author or moderator)' })
   async remove(
     @CurrentUser('id') userId: string,
-    @Param('commentId') commentId: string,
+    @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
   ) {
     await this.commandBus.execute(new DeleteCommentCommand(userId, commentId));
     return { success: true, message: 'Comment deleted' };
@@ -107,7 +109,8 @@ export class CommentsController {
   @ApiOperation({ summary: 'Delete a comment nested route' })
   async removeNested(
     @CurrentUser('id') userId: string,
-    @Param('commentId') commentId: string,
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
+    @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
   ) {
     return this.remove(userId, commentId);
   }

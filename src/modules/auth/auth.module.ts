@@ -40,6 +40,7 @@ import { ResendPasswordResetVerificationHandler } from './application/commands/r
 import { LoginHandler } from './application/commands/login.handler';
 import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
 import { LogoutHandler } from './application/commands/logout.handler';
+import { UpdateProfileHandler } from './application/commands/update-profile.handler';
 import { GetCurrentUserHandler } from './application/queries/get-current-user.handler';
 
 const QueryHandlers = [GetCurrentUserHandler];
@@ -55,6 +56,7 @@ const CommandHandlers = [
   LoginHandler,
   RefreshTokenHandler,
   LogoutHandler,
+  UpdateProfileHandler,
 ];
 
 @Module({

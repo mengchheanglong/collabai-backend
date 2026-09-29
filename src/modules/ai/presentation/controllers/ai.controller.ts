@@ -25,6 +25,7 @@ import { SummarizeCommentsCommand } from '../../application/commands/summarize-c
 import { SearchTasksCommand } from '../../application/commands/search-tasks.command';
 import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
 import { ChatCommand } from '../../application/commands/chat.command';
+import { GenerateProjectInsightsCommand } from '../../application/commands/generate-project-insights.command';
 
 import {
   ChatDto,
@@ -34,6 +35,7 @@ import {
   SuggestSubtasksDto,
   SummarizeCommentsDto,
 } from '../../application/dtos/ai.dto';
+import { ProjectInsightsDto } from '../../application/dtos/project-insights.dto';
 
 @ApiTags('AI')
 @ApiBearerAuth('access-token')
@@ -105,25 +107,43 @@ export class AiController {
 
   @Post('generate-tasks')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Generate structured tasks with subtasks from prompt' })
+  @ApiOperation({
+    summary: 'Generate structured tasks with subtasks from prompt',
+  })
   async generateTasks(
     @CurrentUser('id') userId: string,
     @Body() dto: GenerateTasksDto,
   ) {
     return this.commandBus.execute(
-      new GenerateTasksCommand(userId, dto.projectId, dto.prompt, dto.count ?? 5),
+      new GenerateTasksCommand(
+        userId,
+        dto.projectId,
+        dto.prompt,
+        dto.count ?? 5,
+      ),
     );
   }
 
   @Post('chat')
   @HttpCode(200)
   @ApiOperation({ summary: 'Conversational project assistant chat' })
-  async chat(
-    @CurrentUser('id') userId: string,
-    @Body() dto: ChatDto,
-  ) {
+  async chat(@CurrentUser('id') userId: string, @Body() dto: ChatDto) {
     return this.commandBus.execute(
       new ChatCommand(userId, dto.message, dto.projectId, dto.history),
+    );
+  }
+
+  @Post(['insights', 'project-insights'])
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Generate AI project health insights and next-best actions',
+  })
+  async projectInsights(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ProjectInsightsDto,
+  ) {
+    return this.commandBus.execute(
+      new GenerateProjectInsightsCommand(userId, dto.projectId),
     );
   }
 }

@@ -101,6 +101,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.expire(key, ttlSeconds);
   }
 
+  async ttl(key: string): Promise<number> {
+    return this.client.ttl(key);
+  }
+
   async exists(key: string): Promise<boolean> {
     return (await this.client.exists(key)) > 0;
   }

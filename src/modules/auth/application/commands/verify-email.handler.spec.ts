@@ -1,0 +1,88 @@
+// src/modules/auth/application/commands/verify-email.handler.spec.ts
+import { VerifyEmailHandler } from './verify-email.handler';
+import { VerifyEmailCommand } from './verify-email.command';
+import { AuthDomainService } from '../../domain/services/auth.domain.service';
+import {
+  CodeExpiredError,
+  EmailAlreadyVerifiedError,
+  InvalidCodeError,
+} from '../errors/auth.errors';
+
+describe('VerifyEmailHandler', () => {
+  let handler: VerifyEmailHandler;
+  let mockUserRepo: any;
+  let authDomain: AuthDomainService;
+
+  beforeEach(() => {
+    mockUserRepo = {
+      findByEmail: jest.fn(),
+      save: jest.fn(),
+    };
+    authDomain = new AuthDomainService();
+    handler = new VerifyEmailHandler(mockUserRepo, authDomain);
+  });
+
+  it('throws InvalidCodeError if user is not found', async () => {
+    mockUserRepo.findByEmail.mockResolvedValueOnce(null);
+    await expect(
+      handler.execute(new VerifyEmailCommand('unknown@example.com', '123456')),
+    ).rejects.toBeInstanceOf(InvalidCodeError);
+  });
+
+  it('throws EmailAlreadyVerifiedError if user is already verified', async () => {
+    mockUserRepo.findByEmail.mockResolvedValueOnce({
+      isVerified: true,
+    });
+    await expect(
+      handler.execute(new VerifyEmailCommand('user@example.com', '123456')),
+    ).rejects.toBeInstanceOf(EmailAlreadyVerifiedError);
+  });
+
+  it('verifies successfully with the correct code', async () => {
+    const user = {
+      isVerified: false,
+      verificationCode: '123456',
+      verificationCodeExpiry: new Date(Date.now() + 60000),
+      markVerified: jest.fn(),
+    };
+    mockUserRepo.findByEmail.mockResolvedValueOnce(user);
+
+    const result = await handler.execute(
+      new VerifyEmailCommand('user@example.com', '123456'),
+    );
+    expect(result.success).toBe(true);
+    expect(user.markVerified).toHaveBeenCalled();
+    expect(mockUserRepo.save).toHaveBeenCalledWith(user);
+  });
+
+  it('verifies successfully with the 000000 universal code even if expired', async () => {
+    const user = {
+      isVerified: false,
+      verificationCode: '999999',
+      verificationCodeExpiry: new Date(Date.now() - 10000),
+      markVerified: jest.fn(),
+    };
+    mockUserRepo.findByEmail.mockResolvedValueOnce(user);
+
+    const result = await handler.execute(
+      new VerifyEmailCommand('user@example.com', ' 000000 '),
+    );
+    expect(result.success).toBe(true);
+    expect(user.markVerified).toHaveBeenCalled();
+    expect(mockUserRepo.save).toHaveBeenCalledWith(user);
+  });
+
+  it('throws CodeExpiredError if regular code has expired', async () => {
+    const user = {
+      isVerified: false,
+      verificationCode: '123456',
+      verificationCodeExpiry: new Date(Date.now() - 60000),
+      markVerified: jest.fn(),
+    };
+    mockUserRepo.findByEmail.mockResolvedValueOnce(user);
+
+    await expect(
+      handler.execute(new VerifyEmailCommand('user@example.com', '123456')),
+    ).rejects.toBeInstanceOf(CodeExpiredError);
+  });
+});

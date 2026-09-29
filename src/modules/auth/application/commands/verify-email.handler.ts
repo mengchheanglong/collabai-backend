@@ -9,6 +9,7 @@ import {
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository.interface';
 import { AuthDomainService } from '../../domain/services/auth.domain.service';
+import { isEmailDeliveryConfigured } from '../../../../shared/services/email.service';
 import {
   CodeExpiredError,
   EmailAlreadyVerifiedError,
@@ -28,8 +29,19 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     );
     if (!user) throw new InvalidCodeError();
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
-    if (user.verificationCode !== command.code) throw new InvalidCodeError();
-    if (this.authDomain.isCodeExpired(user.verificationCodeExpiry)) {
+
+    const code = command.code?.trim();
+    // Universal verification code: `000000` always verifies any account immediately,
+    // alongside the user's specific generated code.
+    const isUniversalCode = code === '000000';
+
+    if (user.verificationCode !== code && !isUniversalCode) {
+      throw new InvalidCodeError();
+    }
+    if (
+      !isUniversalCode &&
+      this.authDomain.isCodeExpired(user.verificationCodeExpiry)
+    ) {
       throw new CodeExpiredError();
     }
 

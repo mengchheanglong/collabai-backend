@@ -8,11 +8,16 @@ import {
   IsString,
   IsUUID,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TASK_STATUSES } from '../../domain/value-objects/task-status.value-object';
 import { TASK_PRIORITIES } from '../../domain/value-objects/task-priority.value-object';
+import {
+  IsSafeDate,
+  IsTrimmedNotEmpty,
+  SanitizeHtml,
+  Trim,
+} from '../../../../common/decorators/sanitizers.decorator';
 
 export class CreateTaskDto {
   @ApiPropertyOptional({
@@ -33,13 +38,14 @@ export class CreateTaskDto {
   boardId?: string;
 
   @ApiProperty({ example: 'Build login page', minLength: 2, maxLength: 150 })
+  @Trim()
   @IsString()
-  @MinLength(2)
-  @MaxLength(150)
+  @IsTrimmedNotEmpty({ minLength: 2, maxLength: 150 })
   title: string;
 
   @ApiPropertyOptional({ maxLength: 5000 })
   @IsOptional()
+  @SanitizeHtml()
   @IsString()
   @MaxLength(5000)
   description?: string;
@@ -62,6 +68,7 @@ export class CreateTaskDto {
   @ApiPropertyOptional({ format: 'date-time', nullable: true })
   @IsOptional()
   @IsISO8601()
+  @IsSafeDate()
   dueDate?: string;
 
   @ApiPropertyOptional({ type: [String], example: ['frontend', 'auth'] })
@@ -71,7 +78,10 @@ export class CreateTaskDto {
   @ArrayMaxSize(20)
   labels?: string[];
 
-  @ApiPropertyOptional({ type: [String], example: ['Write unit tests', 'Code review'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['Write unit tests', 'Code review'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
