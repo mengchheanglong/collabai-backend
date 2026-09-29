@@ -317,6 +317,8 @@ model Document {
   projectId   String   @db.Uuid
   title       String
   content     String   @default("")
+  attachments Json?    @default("[]")
+  fileType    String?
   createdById String   @db.Uuid
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

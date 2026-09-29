@@ -6,6 +6,8 @@ export class UpdateDocumentCommand {
     public readonly fields: {
       title?: string;
       content?: string;
+      attachments?: any[];
+      fileType?: string;
     },
     public readonly expectedVersion?: number,
   ) {}

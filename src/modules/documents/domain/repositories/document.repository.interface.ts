@@ -8,6 +8,8 @@ export interface DocumentView {
   projectId: string;
   title: string;
   content: string;
+  attachments?: any[];
+  fileType?: string | null;
   createdById: string;
   creatorName?: string | null;
   creatorEmail?: string | null;

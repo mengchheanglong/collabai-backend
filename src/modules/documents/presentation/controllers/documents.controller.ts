@@ -62,7 +62,14 @@ export class DocumentsController {
     @Body() dto: CreateDocumentDto,
   ): Promise<{ document: DocumentResponseDto }> {
     const view: DocumentView = await this.commandBus.execute(
-      new CreateDocumentCommand(userId, projectId, dto.title, dto.content),
+      new CreateDocumentCommand(
+        userId,
+        projectId,
+        dto.title,
+        dto.content,
+        dto.attachments,
+        dto.fileType,
+      ),
     );
     return { document: toDocumentResponse(view) };
   }
@@ -110,6 +117,8 @@ export class DocumentsController {
         {
           title: dto.title,
           content: dto.content,
+          attachments: dto.attachments,
+          fileType: dto.fileType,
         },
         dto.version,
       ),

@@ -7,6 +7,8 @@ export interface DocumentResponseDto {
   projectId: string;
   title: string;
   content: string;
+  attachments?: any[];
+  fileType?: string | null;
   createdById: string;
   version: number;
   canEdit?: boolean;
@@ -27,6 +29,8 @@ export function toDocumentResponse(view: DocumentView): DocumentResponseDto {
     projectId: view.projectId,
     title: view.title,
     content: view.content,
+    attachments: view.attachments ?? [],
+    fileType: view.fileType ?? null,
     createdById: view.createdById,
     version: Math.floor(view.updatedAt.getTime() / 1000),
     canEdit: true,

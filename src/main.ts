@@ -12,9 +12,9 @@ import { validationExceptionFactory } from './common/validation/validation.facto
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security: Payload size limits to protect against memory exhaustion / large payload DoS
-  app.use(json({ limit: '100kb' }));
-  app.use(urlencoded({ extended: true, limit: '100kb' }));
+  // Security: Payload size limits allowing documents with file attachments (PDFs, DOC, DOCX)
+  app.use(json({ limit: '25mb' }));
+  app.use(urlencoded({ extended: true, limit: '25mb' }));
 
   // Contract base path: the frontend targets http://localhost:4000/api/v1.
   // The root banner stays at / (excluded from the prefix) so hitting the bare

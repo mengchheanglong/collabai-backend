@@ -38,6 +38,8 @@ export class CreateDocumentHandler implements ICommandHandler<CreateDocumentComm
       projectId: command.projectId,
       title: command.title,
       content: command.content,
+      attachments: command.attachments,
+      fileType: command.fileType,
       createdById: command.userId,
     });
 

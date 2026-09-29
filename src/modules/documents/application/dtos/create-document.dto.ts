@@ -19,4 +19,13 @@ export class CreateDocumentDto {
   @SanitizeHtml()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({ description: 'Attached files (e.g. PDF, Word, Markdown, etc.)' })
+  @IsOptional()
+  attachments?: any[];
+
+  @ApiPropertyOptional({ description: 'File type format (e.g. pdf, docx, doc, md, etc.)' })
+  @IsOptional()
+  @IsString()
+  fileType?: string;
 }
