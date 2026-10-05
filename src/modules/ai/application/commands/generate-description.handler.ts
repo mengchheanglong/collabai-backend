@@ -20,9 +20,8 @@ export class GenerateDescriptionHandler implements ICommandHandler<GenerateDescr
   async execute(
     command: GenerateDescriptionCommand,
   ): Promise<{ description: string }> {
-    if (command.projectId) {
-      await this.access.requireMember(command.projectId, command.userId);
-    }
+    // Generated content is meant to be written into the project — viewers can't use it.
+    await this.access.requireWriter(command.projectId, command.userId);
     const description = await this.ai.generateDescription({
       title: command.title,
       mode: command.mode,

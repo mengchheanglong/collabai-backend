@@ -6,7 +6,7 @@ export class GenerateDescriptionCommand {
     public readonly userId: string,
     public readonly title: string,
     public readonly mode: DescriptionMode,
-    public readonly currentDescription?: string,
-    public readonly projectId?: string,
+    public readonly currentDescription: string | undefined,
+    public readonly projectId: string,
   ) {}
 }

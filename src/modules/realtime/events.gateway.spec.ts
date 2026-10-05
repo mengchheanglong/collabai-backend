@@ -164,7 +164,7 @@ describe('EventsGateway', () => {
     it('broadcasts typing:started to project room and stores state', () => {
       const emitMock = jest.fn();
       const client: any = {
-        data: { user: { id: 'user-123', name: 'Tester' } },
+        data: { user: { id: 'user-123', name: 'Tester' }, joinedProjects: new Set(['proj-1']) },
         to: jest.fn().mockReturnValue({ emit: emitMock }),
       };
 
@@ -194,6 +194,7 @@ describe('EventsGateway', () => {
       const client: any = {
         data: {
           user: { id: 'user-123' },
+          joinedProjects: new Set(['proj-1']),
           typingProjectId: 'proj-1',
           typingTaskId: 'task-1',
         },
@@ -220,11 +221,40 @@ describe('EventsGateway', () => {
     });
   });
 
+  describe('presence signals from non-members', () => {
+    it('ignores typing, doc editing and task viewing for projects the socket has not joined', () => {
+      const emitMock = jest.fn();
+      const client: any = {
+        data: {
+          user: { id: 'outsider', name: 'Mallory' },
+          joinedProjects: new Set(['other-project']),
+        },
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      gateway.handleTypingStart(client, { projectId: 'proj-1', taskId: 't' });
+      gateway.handleDocEditingStart(client, {
+        projectId: 'proj-1',
+        documentId: 'doc-1',
+      });
+      gateway.handleTaskViewingStart(client, {
+        projectId: 'proj-1',
+        taskId: 't',
+      });
+
+      expect(client.to).not.toHaveBeenCalled();
+      expect(emitMock).not.toHaveBeenCalled();
+      expect(client.data.typingProjectId).toBeUndefined();
+      expect(client.data.editingProjectId).toBeUndefined();
+      expect(client.data.viewingProjectId).toBeUndefined();
+    });
+  });
+
   describe('doc editing events', () => {
     it('broadcasts doc:editing:started to project room and stores state', () => {
       const emitMock = jest.fn();
       const client: any = {
-        data: { user: { id: 'user-123', name: 'Alice' } },
+        data: { user: { id: 'user-123', name: 'Alice' }, joinedProjects: new Set(['proj-1']) },
         to: jest.fn().mockReturnValue({ emit: emitMock }),
       };
 
@@ -254,6 +284,7 @@ describe('EventsGateway', () => {
       const client: any = {
         data: {
           user: { id: 'user-123' },
+          joinedProjects: new Set(['proj-1']),
           editingProjectId: 'proj-1',
           editingDocId: 'doc-1',
         },
@@ -348,7 +379,7 @@ describe('EventsGateway', () => {
     it('broadcasts task:viewing:started and task:viewing:stopped', () => {
       const emitMock = jest.fn();
       const client: any = {
-        data: { user: { id: 'user-1', name: 'Alice' } },
+        data: { user: { id: 'user-1', name: 'Alice' }, joinedProjects: new Set(['proj-1']) },
         to: jest.fn().mockReturnValue({ emit: emitMock }),
       };
 

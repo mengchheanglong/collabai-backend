@@ -279,10 +279,11 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Accept project invitation via body token (requires auth)' })
   async acceptInvitation(
     @CurrentUser('id') userId: string,
+    @CurrentUser('email') userEmail: string,
     @Body('token') token: string,
   ) {
     const result = await this.commandBus.execute(
-      new AcceptInvitationCommand(userId, token),
+      new AcceptInvitationCommand(userId, token, userEmail),
     );
     return result;
   }

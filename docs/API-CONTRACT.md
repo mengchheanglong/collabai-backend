@@ -1125,7 +1125,7 @@ All AI endpoints require auth. Backend must use server-side API keys only.
 
 Generate subtasks for a task title/description.
 
-Auth: required. If `projectId` is provided, user must be project member.
+Auth: project member with write access (owner/admin/member). Viewers get `403`.
 
 Request:
 
@@ -1140,6 +1140,7 @@ Request:
 
 Validation:
 
+- `projectId`: required UUID.
 - `title`: required.
 - `count`: optional 3-10, default 5.
 
@@ -1164,7 +1165,7 @@ Response `200`:
 
 Generate or improve task description.
 
-Auth: required.
+Auth: project member with write access (owner/admin/member). Viewers get `403`.
 
 Request:
 
@@ -1253,7 +1254,8 @@ MVP implementation can parse with AI into filters, then run MongoDB query. Full 
 Queue a long-running AI job in the background (RabbitMQ `collabai.ai.jobs`, or in-process when
 the broker is unavailable). The synchronous endpoints above are unchanged.
 
-Auth: project member (checked before the job is queued).
+Auth: project member (checked before the job is queued). `generate-tasks` additionally
+requires write access (owner/admin/member); viewers get `403`.
 
 Request:
 

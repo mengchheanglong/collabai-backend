@@ -2,7 +2,11 @@
 
 import { AcceptInvitationHandler } from './accept-invitation.handler';
 import { AcceptInvitationCommand } from './accept-invitation.command';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('AcceptInvitationHandler', () => {
   let handler: AcceptInvitationHandler;
@@ -23,7 +27,7 @@ describe('AcceptInvitationHandler', () => {
     mockRepo.findInvitationByToken.mockResolvedValueOnce(null);
 
     await expect(
-      handler.execute(new AcceptInvitationCommand('user-1', 'invalid-token')),
+      handler.execute(new AcceptInvitationCommand('user-1', 'invalid-token', 'guest@example.com')),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -35,7 +39,7 @@ describe('AcceptInvitationHandler', () => {
     });
 
     await expect(
-      handler.execute(new AcceptInvitationCommand('user-1', 'expired-token')),
+      handler.execute(new AcceptInvitationCommand('user-1', 'expired-token', 'guest@example.com')),
     ).rejects.toThrow(BadRequestException);
     expect(mockRepo.deleteInvitation).toHaveBeenCalledWith('inv-1');
   });
@@ -45,6 +49,7 @@ describe('AcceptInvitationHandler', () => {
       id: 'inv-1',
       token: 'valid-token',
       projectId: 'proj-1',
+      email: 'guest@example.com',
       role: 'member',
       invitedBy: 'inviter-1',
       expiresAt: new Date(Date.now() + 100000),
@@ -53,11 +58,31 @@ describe('AcceptInvitationHandler', () => {
     mockRepo.findViewById.mockResolvedValueOnce({ id: 'proj-1', name: 'Project 1' });
 
     const res = await handler.execute(
-      new AcceptInvitationCommand('user-1', 'valid-token'),
+      new AcceptInvitationCommand('user-1', 'valid-token', 'Guest@Example.com '),
     );
 
     expect(mockRepo.addMember).toHaveBeenCalled();
     expect(mockRepo.deleteInvitation).toHaveBeenCalledWith('inv-1');
     expect(res.message).toBe('Successfully joined the project');
+  });
+
+  it('rejects a user whose email does not match the invitation', async () => {
+    mockRepo.findInvitationByToken.mockResolvedValueOnce({
+      id: 'inv-1',
+      token: 'valid-token',
+      projectId: 'proj-1',
+      email: 'guest@example.com',
+      role: 'admin',
+      invitedBy: 'inviter-1',
+      expiresAt: new Date(Date.now() + 100000),
+    });
+
+    await expect(
+      handler.execute(
+        new AcceptInvitationCommand('user-2', 'valid-token', 'someone@else.com'),
+      ),
+    ).rejects.toThrow(ForbiddenException);
+    expect(mockRepo.addMember).not.toHaveBeenCalled();
+    expect(mockRepo.deleteInvitation).not.toHaveBeenCalled();
   });
 });

@@ -37,10 +37,11 @@ export class InvitationsController {
   @ApiOperation({ summary: 'Accept project invitation (requires auth)' })
   async acceptInvitation(
     @CurrentUser('id') userId: string,
+    @CurrentUser('email') userEmail: string,
     @Param('token') token: string,
   ) {
     const result = await this.commandBus.execute(
-      new AcceptInvitationCommand(userId, token),
+      new AcceptInvitationCommand(userId, token, userEmail),
     );
     return result;
   }

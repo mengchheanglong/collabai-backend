@@ -31,7 +31,11 @@ export class EnqueueAiJobHandler implements ICommandHandler<EnqueueAiJobCommand>
   ) {}
 
   async execute(command: EnqueueAiJobCommand): Promise<EnqueuedAiJob> {
-    await this.access.requireMember(command.projectId, command.userId);
+    if (command.type === 'generate-tasks') {
+      await this.access.requireWriter(command.projectId, command.userId);
+    } else {
+      await this.access.requireMember(command.projectId, command.userId);
+    }
 
     const job: AiJob = {
       jobId: uuidv4(),

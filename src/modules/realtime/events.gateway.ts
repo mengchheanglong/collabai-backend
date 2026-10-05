@@ -207,12 +207,22 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { success: false };
   }
 
+  /**
+   * Presence/typing/editing signals are only accepted for projects this socket joined via
+   * `project:join` (which verifies membership) — a non-member must not be able to inject
+   * fake indicators into another project's room.
+   */
+  private inProject(client: Socket, projectId: string | undefined): boolean {
+    const joined = client.data.joinedProjects as Set<string> | undefined;
+    return !!projectId && !!client.data.user && joined?.has(projectId) === true;
+  }
+
   @SubscribeMessage('task:viewing:start')
   handleTaskViewingStart(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId && data?.taskId && client.data.user) {
+    if (data?.taskId && this.inProject(client, data?.projectId)) {
       client.data.viewingProjectId = data.projectId;
       client.data.viewingTaskId = data.taskId;
       client.to(`project:${data.projectId}`).emit('task:viewing:started', {
@@ -234,7 +244,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId && client.data.user) {
+    if (this.inProject(client, data?.projectId)) {
       delete client.data.viewingProjectId;
       delete client.data.viewingTaskId;
       client.to(`project:${data.projectId}`).emit('task:viewing:stopped', {
@@ -254,7 +264,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId && client.data.user) {
+    if (this.inProject(client, data?.projectId)) {
       client.data.typingProjectId = data.projectId;
       client.data.typingTaskId = data.taskId;
       client.to(`project:${data.projectId}`).emit('typing:started', {
@@ -276,7 +286,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; taskId: string },
   ) {
-    if (data?.projectId && client.data.user) {
+    if (this.inProject(client, data?.projectId)) {
       delete client.data.typingProjectId;
       delete client.data.typingTaskId;
       client.to(`project:${data.projectId}`).emit('typing:stopped', {
@@ -296,7 +306,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; documentId: string },
   ) {
-    if (data?.projectId && data?.documentId && client.data.user) {
+    if (data?.documentId && this.inProject(client, data?.projectId)) {
       client.data.editingProjectId = data.projectId;
       client.data.editingDocId = data.documentId;
       client.to(`project:${data.projectId}`).emit('doc:editing:started', {
@@ -318,7 +328,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: string; documentId: string },
   ) {
-    if (data?.projectId && client.data.user) {
+    if (this.inProject(client, data?.projectId)) {
       delete client.data.editingProjectId;
       delete client.data.editingDocId;
       client.to(`project:${data.projectId}`).emit('doc:editing:stopped', {

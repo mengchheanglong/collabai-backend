@@ -37,8 +37,9 @@ export class CommentAccessService {
   }
 
   /**
-   * Throws unless `userId` is the comment's author or a project moderator (owner/admin).
-   * Requires the caller to still be a project member.
+   * Throws unless `userId` is a project moderator (owner/admin), or the comment's author
+   * with write access — a viewer cannot edit/delete comments, even ones written before
+   * they were downgraded.
    */
   async requireAuthorOrModerator(
     projectId: string,
@@ -47,8 +48,8 @@ export class CommentAccessService {
   ): Promise<void> {
     const membership = await this.projects.findMembership(projectId, userId);
     if (!membership) throw new NotProjectMemberError();
-    if (userId === authorId) return;
     if (ProjectRoles.canManageMembers(membership.role)) return; // moderator
+    if (userId === authorId && ProjectRoles.canWriteContent(membership.role)) return;
     throw new CommentModerationForbiddenError();
   }
 

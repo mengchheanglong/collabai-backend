@@ -4,7 +4,7 @@ export class SuggestSubtasksCommand {
     public readonly userId: string,
     public readonly title: string,
     public readonly count: number,
-    public readonly description?: string,
-    public readonly projectId?: string,
+    public readonly description: string | undefined,
+    public readonly projectId: string,
   ) {}
 }

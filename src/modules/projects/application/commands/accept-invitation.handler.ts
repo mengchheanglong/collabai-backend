@@ -1,6 +1,11 @@
 // src/modules/projects/application/commands/accept-invitation.handler.ts
 
-import { BadRequestException, Inject, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { v4 as uuidv4 } from 'uuid';
 import { AcceptInvitationCommand } from './accept-invitation.command';
@@ -32,6 +37,14 @@ export class AcceptInvitationHandler
       throw new BadRequestException('This invitation link has expired');
     }
 
+    // The link is bound to the invited address — a forwarded or leaked link must not
+    // let someone else join (possibly with an elevated role).
+    if (normalizeEmail(inv.email) !== normalizeEmail(command.userEmail)) {
+      throw new ForbiddenException(
+        'This invitation was sent to a different email address. Sign in with the invited email to accept it.',
+      );
+    }
+
     const existingMembership = await this.repo.findMembership(
       inv.projectId,
       command.userId,
@@ -59,4 +72,8 @@ export class AcceptInvitationHandler
       message: 'Successfully joined the project',
     };
   }
+}
+
+function normalizeEmail(email: string | null | undefined): string {
+  return (email ?? '').trim().toLowerCase();
 }

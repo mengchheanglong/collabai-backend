@@ -20,9 +20,8 @@ export class SuggestSubtasksHandler implements ICommandHandler<SuggestSubtasksCo
   async execute(
     command: SuggestSubtasksCommand,
   ): Promise<{ subtasks: string[] }> {
-    if (command.projectId) {
-      await this.access.requireMember(command.projectId, command.userId);
-    }
+    // Generated content is meant to be written into the project — viewers can't use it.
+    await this.access.requireWriter(command.projectId, command.userId);
     const subtasks = await this.ai.suggestSubtasks({
       title: command.title,
       description: command.description,

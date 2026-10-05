@@ -2,15 +2,21 @@
 
 import { EnqueueAiJobHandler } from './enqueue-ai-job.handler';
 import { EnqueueAiJobCommand } from './enqueue-ai-job.command';
-import { NotProjectMemberError } from '../errors/ai.errors';
+import {
+  InsufficientAiPermissionError,
+  NotProjectMemberError,
+} from '../errors/ai.errors';
 
 describe('EnqueueAiJobHandler', () => {
-  let access: { requireMember: jest.Mock };
+  let access: { requireMember: jest.Mock; requireWriter: jest.Mock };
   let bus: { publish: jest.Mock };
   let handler: EnqueueAiJobHandler;
 
   beforeEach(() => {
-    access = { requireMember: jest.fn().mockResolvedValue(undefined) };
+    access = {
+      requireMember: jest.fn().mockResolvedValue(undefined),
+      requireWriter: jest.fn().mockResolvedValue(undefined),
+    };
     bus = { publish: jest.fn().mockResolvedValue(undefined) };
     handler = new EnqueueAiJobHandler(access as any, bus);
   });
@@ -56,6 +62,19 @@ describe('EnqueueAiJobHandler', () => {
         new EnqueueAiJobCommand('user-9', 'project-insights', 'proj-1'),
       ),
     ).rejects.toThrow(NotProjectMemberError);
+    expect(bus.publish).not.toHaveBeenCalled();
+  });
+
+  it('requires write access to queue task generation', async () => {
+    access.requireWriter.mockRejectedValueOnce(
+      new InsufficientAiPermissionError('viewer'),
+    );
+    await expect(
+      handler.execute(
+        new EnqueueAiJobCommand('viewer-1', 'generate-tasks', 'proj-1', 'X'),
+      ),
+    ).rejects.toThrow(InsufficientAiPermissionError);
+    expect(access.requireMember).not.toHaveBeenCalled();
     expect(bus.publish).not.toHaveBeenCalled();
   });
 });

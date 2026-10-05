@@ -24,10 +24,9 @@ import {
 } from '../../../../common/decorators/sanitizers.decorator';
 
 export class SuggestSubtasksDto {
-  @ApiPropertyOptional({ format: 'uuid' })
-  @IsOptional()
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  projectId?: string;
+  projectId: string;
 
   @ApiProperty({ example: 'Build login page' })
   @SanitizePrompt()
@@ -53,10 +52,9 @@ export class SuggestSubtasksDto {
 }
 
 export class GenerateDescriptionDto {
-  @ApiPropertyOptional({ format: 'uuid' })
-  @IsOptional()
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  projectId?: string;
+  projectId: string;
 
   @ApiProperty({ example: 'Build login page' })
   @SanitizePrompt()

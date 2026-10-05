@@ -56,6 +56,7 @@ describe('AiController', () => {
         title: 'Task Title',
         mode: 'improve',
         currentDescription: 'Draft text',
+        projectId: '11111111-1111-4111-a111-111111111111',
       });
 
       expect(commandBus.execute).toHaveBeenCalledWith(
@@ -64,7 +65,7 @@ describe('AiController', () => {
           'Task Title',
           'improve',
           'Draft text',
-          undefined,
+          '11111111-1111-4111-a111-111111111111',
         ),
       );
       expect(res).toEqual({ description: 'Generated description text' });
