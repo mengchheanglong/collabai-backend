@@ -14,6 +14,8 @@ import { JwtService } from './services/jwt.service';
 import { EmailService } from './services/email.service';
 import { LoggerService } from './services/logger.service';
 import { RedisService } from './services/redis.service';
+import { RabbitMQModule } from './infrastructure/rabbitmq/rabbitmq.module';
+import { EmailWorker } from './infrastructure/rabbitmq/workers/email.worker';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { RedisService } from './services/redis.service';
       }),
       inject: [ConfigService],
     }),
+    RabbitMQModule,
   ],
   providers: [
     PrismaService,
@@ -31,6 +34,7 @@ import { RedisService } from './services/redis.service';
     EmailService,
     LoggerService,
     RedisService,
+    EmailWorker,
   ],
   exports: [
     PrismaService,
@@ -39,6 +43,7 @@ import { RedisService } from './services/redis.service';
     LoggerService,
     RedisService,
     JwtModule,
+    RabbitMQModule,
   ],
 })
 export class SharedModule {}

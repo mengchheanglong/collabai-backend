@@ -11,7 +11,7 @@ import {
 describe('ResendInvitationHandler', () => {
   let handler: ResendInvitationHandler;
   let mockRepo: any;
-  let mockEmail: any;
+  let mockBus: any;
 
   beforeEach(() => {
     mockRepo = {
@@ -20,10 +20,10 @@ describe('ResendInvitationHandler', () => {
       findViewById: jest.fn(),
       createInvitation: jest.fn(),
     };
-    mockEmail = {
-      sendProjectInvitation: jest.fn().mockResolvedValue(true),
+    mockBus = {
+      publish: jest.fn().mockResolvedValue(undefined),
     };
-    handler = new ResendInvitationHandler(mockRepo, mockEmail);
+    handler = new ResendInvitationHandler(mockRepo, mockBus);
   });
 
   it('throws NotProjectMemberError if actor is not in project', async () => {
@@ -58,7 +58,7 @@ describe('ResendInvitationHandler', () => {
       new ResendInvitationCommand('user-1', 'proj-1', 'inv-1'),
     );
     expect(mockRepo.createInvitation).not.toHaveBeenCalled();
-    expect(mockEmail.sendProjectInvitation).not.toHaveBeenCalled();
+    expect(mockBus.publish).not.toHaveBeenCalled();
   });
 
   it('does nothing if invitation belongs to a different project', async () => {
@@ -77,7 +77,7 @@ describe('ResendInvitationHandler', () => {
       new ResendInvitationCommand('user-1', 'proj-1', 'inv-1'),
     );
     expect(mockRepo.createInvitation).not.toHaveBeenCalled();
-    expect(mockEmail.sendProjectInvitation).not.toHaveBeenCalled();
+    expect(mockBus.publish).not.toHaveBeenCalled();
   });
 
   it('throws ProjectNotFoundError if project view cannot be loaded', async () => {
@@ -100,7 +100,7 @@ describe('ResendInvitationHandler', () => {
     ).rejects.toThrow(ProjectNotFoundError);
   });
 
-  it('regenerates fresh token, extends expiration by 7 days, and resends email', async () => {
+  it('regenerates fresh token, extends expiration by 7 days, and queues the invitation email', async () => {
     mockRepo.findMembership.mockResolvedValueOnce({
       projectId: 'proj-1',
       userId: 'admin-1',
@@ -140,11 +140,13 @@ describe('ResendInvitationHandler', () => {
     expect(diffDays).toBeGreaterThan(6.9);
     expect(diffDays).toBeLessThan(7.1);
 
-    expect(mockEmail.sendProjectInvitation).toHaveBeenCalledWith(
-      'guest@example.com',
-      'Alpha Project',
-      'Admin Alice',
-      expect.stringContaining(`/accept-invite?token=${createCall.token}`),
-    );
+    expect(mockBus.publish).toHaveBeenCalledWith('email.project-invitation', {
+      to: 'guest@example.com',
+      projectName: 'Alpha Project',
+      inviterName: 'Admin Alice',
+      inviteUrl: expect.stringContaining(
+        `/accept-invite?token=${createCall.token}`,
+      ),
+    });
   });
 });

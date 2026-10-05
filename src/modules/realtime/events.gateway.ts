@@ -552,6 +552,40 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @OnEvent('ai.job.completed')
+  handleAiJobCompleted(event: {
+    jobId: string;
+    type: string;
+    userId: string;
+    projectId: string;
+    result: unknown;
+  }) {
+    if (!this.server) return;
+    this.server.to(`user:${event.userId}`).emit('ai:job:completed', {
+      projectId: event.projectId,
+      actorId: event.userId,
+      data: { jobId: event.jobId, type: event.type, result: event.result },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('ai.job.failed')
+  handleAiJobFailed(event: {
+    jobId: string;
+    type: string;
+    userId: string;
+    projectId: string;
+    error: string;
+  }) {
+    if (!this.server) return;
+    this.server.to(`user:${event.userId}`).emit('ai:job:failed', {
+      projectId: event.projectId,
+      actorId: event.userId,
+      data: { jobId: event.jobId, type: event.type, error: event.error },
+      createdAt: new Date().toISOString(),
+    });
+  }
+
   @OnEvent('activity.created')
   handleActivityCreated(event: {
     projectId: string;

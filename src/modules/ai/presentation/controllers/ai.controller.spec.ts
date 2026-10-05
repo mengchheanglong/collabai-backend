@@ -9,6 +9,7 @@ import { ChatCommand } from '../../application/commands/chat.command';
 import { GenerateProjectInsightsCommand } from '../../application/commands/generate-project-insights.command';
 import { ProposeTaskActionsCommand } from '../../application/commands/propose-task-actions.command';
 import { ApplyTaskActionsCommand } from '../../application/commands/apply-task-actions.command';
+import { EnqueueAiJobCommand } from '../../application/commands/enqueue-ai-job.command';
 
 describe('AiController', () => {
   let controller: AiController;
@@ -223,6 +224,32 @@ describe('AiController', () => {
         status: 'applied',
         appliedActionIds: ['action-1'],
       });
+    });
+  });
+
+  describe('enqueueJob', () => {
+    it('executes EnqueueAiJobCommand and returns the queued job', async () => {
+      commandBus.execute.mockResolvedValueOnce({
+        jobId: 'job-1',
+        type: 'project-insights',
+        status: 'queued',
+      });
+
+      const res = await controller.enqueueJob('user-1', {
+        type: 'project-insights',
+        projectId: '11111111-1111-4111-a111-111111111111',
+      });
+
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        new EnqueueAiJobCommand(
+          'user-1',
+          'project-insights',
+          '11111111-1111-4111-a111-111111111111',
+          undefined,
+          undefined,
+        ),
+      );
+      expect(res).toEqual({ jobId: 'job-1', type: 'project-insights', status: 'queued' });
     });
   });
 });

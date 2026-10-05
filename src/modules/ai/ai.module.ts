@@ -19,6 +19,8 @@ import { AI_PROVIDER } from './domain/services/ai-provider.interface';
 import { OpenAiProvider } from './infrastructure/providers/openai.provider';
 import { DeepSeekProvider } from './infrastructure/providers/deepseek.provider';
 import { StubAiProvider } from './infrastructure/providers/stub-ai.provider';
+import { AiInsightsWorker } from '../../shared/infrastructure/rabbitmq/workers/ai-insights.worker';
+import { EnqueueAiJobHandler } from './application/commands/enqueue-ai-job.handler';
 import { AiAccessService } from './application/services/ai-access.service';
 
 import { SuggestSubtasksHandler } from './application/commands/suggest-subtasks.handler';
@@ -41,6 +43,7 @@ const CommandHandlers = [
   GenerateProjectInsightsHandler,
   ProposeTaskActionsHandler,
   ApplyTaskActionsHandler,
+  EnqueueAiJobHandler,
 ];
 
 @Module({
@@ -75,6 +78,7 @@ const CommandHandlers = [
       inject: [ConfigService],
     },
     AiAccessService,
+    AiInsightsWorker,
     ...CommandHandlers,
   ],
 })

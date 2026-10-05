@@ -24,6 +24,11 @@ import type { Transporter } from 'nodemailer';
 
 export type EmailBackend = 'log' | 'smtp' | 'resend' | 'mailjet';
 
+/** `throwOnError` lets a queue worker see delivery failures so it can retry them. */
+export interface SendOptions {
+  throwOnError?: boolean;
+}
+
 export interface MailBody {
   text: string;
   html: string;
@@ -214,7 +219,7 @@ export class EmailService implements OnModuleInit {
       if (this.backend === 'mailjet') {
         return Boolean(
           this.config.get<string>('MAILJET_API_KEY') &&
-            this.config.get<string>('MAILJET_SECRET_KEY'),
+          this.config.get<string>('MAILJET_SECRET_KEY'),
         );
       }
       if (this.backend === 'resend') {
@@ -222,12 +227,18 @@ export class EmailService implements OnModuleInit {
       }
       return true;
     } catch (err) {
-      this.logger.error(`Email connection verify failed: ${(err as Error).message}`);
+      this.logger.error(
+        `Email connection verify failed: ${(err as Error).message}`,
+      );
       return false;
     }
   }
 
-  async sendVerificationCode(to: string, code: string): Promise<void> {
+  async sendVerificationCode(
+    to: string,
+    code: string,
+    options: SendOptions = {},
+  ): Promise<void> {
     await this.send(
       to,
       'Verify your email address — CollabAI',
@@ -236,10 +247,15 @@ export class EmailService implements OnModuleInit {
         'Welcome to CollabAI! Enter the code below to verify your email address and activate your account.',
         code,
       ),
+      options,
     );
   }
 
-  async sendPasswordResetCode(to: string, code: string): Promise<void> {
+  async sendPasswordResetCode(
+    to: string,
+    code: string,
+    options: SendOptions = {},
+  ): Promise<void> {
     await this.send(
       to,
       'Reset your password — CollabAI',
@@ -248,10 +264,14 @@ export class EmailService implements OnModuleInit {
         'We received a request to reset your CollabAI account password. Use the code below to proceed.',
         code,
       ),
+      options,
     );
   }
 
-  async sendPasswordResetSuccess(to: string): Promise<void> {
+  async sendPasswordResetSuccess(
+    to: string,
+    options: SendOptions = {},
+  ): Promise<void> {
     const title = 'Password changed successfully';
     const text = [
       '========================================',
@@ -260,7 +280,7 @@ export class EmailService implements OnModuleInit {
       '',
       'Your CollabAI account password has been changed successfully.',
       '',
-      "If you did not make this change, please reset your password immediately",
+      'If you did not make this change, please reset your password immediately',
       'or contact support to protect your account.',
       '',
       '--',
@@ -288,10 +308,15 @@ export class EmailService implements OnModuleInit {
       </table>
     `;
 
-    await this.send(to, `${title} — CollabAI`, {
-      text,
-      html: this.wrapEmailLayout(title, contentHtml),
-    });
+    await this.send(
+      to,
+      `${title} — CollabAI`,
+      {
+        text,
+        html: this.wrapEmailLayout(title, contentHtml),
+      },
+      options,
+    );
   }
 
   async sendProjectInvitation(
@@ -299,6 +324,7 @@ export class EmailService implements OnModuleInit {
     projectName: string,
     inviterName: string,
     inviteUrl: string,
+    options: SendOptions = {},
   ): Promise<void> {
     const subject = `You've been invited to join ${projectName} on CollabAI`;
     const text = [
@@ -347,16 +373,22 @@ export class EmailService implements OnModuleInit {
       </table>
     `;
 
-    await this.send(to, subject, {
-      text,
-      html: this.wrapEmailLayout(subject, contentHtml),
-    });
+    await this.send(
+      to,
+      subject,
+      {
+        text,
+        html: this.wrapEmailLayout(subject, contentHtml),
+      },
+      options,
+    );
   }
 
   private async send(
     to: string,
     subject: string,
     body: MailBody,
+    options: SendOptions = {},
   ): Promise<void> {
     try {
       switch (this.backend) {
@@ -387,10 +419,12 @@ export class EmailService implements OnModuleInit {
           return;
       }
     } catch (err) {
-      // Never rethrow — an email failure must not break registration / reset flows.
+      // Only rethrow when asked (queue worker retries) — an email failure must not
+      // break registration / reset flows.
       this.logger.error(
         `Email send failed (${this.backend}): "${subject}" -> ${to}: ${(err as Error).message}`,
       );
+      if (options.throwOnError) throw err;
     }
   }
 
@@ -596,4 +630,3 @@ export class EmailService implements OnModuleInit {
 </html>`;
   }
 }
-

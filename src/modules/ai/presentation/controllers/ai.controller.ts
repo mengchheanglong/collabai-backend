@@ -29,6 +29,7 @@ import { ChatCommand } from '../../application/commands/chat.command';
 import { GenerateProjectInsightsCommand } from '../../application/commands/generate-project-insights.command';
 import { ProposeTaskActionsCommand } from '../../application/commands/propose-task-actions.command';
 import { ApplyTaskActionsCommand } from '../../application/commands/apply-task-actions.command';
+import { EnqueueAiJobCommand } from '../../application/commands/enqueue-ai-job.command';
 
 import {
   ChatDto,
@@ -39,6 +40,7 @@ import {
   SummarizeCommentsDto,
 } from '../../application/dtos/ai.dto';
 import { ProjectInsightsDto } from '../../application/dtos/project-insights.dto';
+import { CreateAiJobDto } from '../../application/dtos/ai-jobs.dto';
 import {
   ProposeTaskActionsDto,
   ApplyTaskActionsDto,
@@ -151,6 +153,27 @@ export class AiController {
   ) {
     return this.commandBus.execute(
       new GenerateProjectInsightsCommand(userId, dto.projectId),
+    );
+  }
+
+  @Post('jobs')
+  @HttpCode(202)
+  @ApiOperation({
+    summary:
+      'Queue a background AI job (project-insights | generate-tasks); result arrives as ai:job:completed',
+  })
+  async enqueueJob(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateAiJobDto,
+  ) {
+    return this.commandBus.execute(
+      new EnqueueAiJobCommand(
+        userId,
+        dto.type,
+        dto.projectId,
+        dto.prompt,
+        dto.count,
+      ),
     );
   }
 

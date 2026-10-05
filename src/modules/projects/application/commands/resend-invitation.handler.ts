@@ -14,13 +14,17 @@ import {
   NotProjectMemberError,
   ProjectNotFoundError,
 } from '../errors/project.errors';
-import { EmailService } from '../../../../shared/services/email.service';
+import {
+  EVENT_BUS,
+  type IEventBus,
+} from '../../../../shared/event-bus/event-bus.interface';
+import { ROUTING_KEY } from '../../../../shared/infrastructure/rabbitmq/rabbitmq.constants';
 
 @CommandHandler(ResendInvitationCommand)
 export class ResendInvitationHandler implements ICommandHandler<ResendInvitationCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
-    private readonly emailService: EmailService,
+    @Inject(EVENT_BUS) private readonly bus: IEventBus,
   ) {}
 
   async execute(command: ResendInvitationCommand): Promise<void> {
@@ -61,11 +65,11 @@ export class ResendInvitationHandler implements ICommandHandler<ResendInvitation
     const inviteUrl = `${frontendOrigin}/accept-invite?token=${freshToken}`;
     const inviterName = invitation.inviterName || 'A team member';
 
-    await this.emailService.sendProjectInvitation(
-      invitation.email,
-      project.name,
+    await this.bus.publish(ROUTING_KEY.EMAIL_PROJECT_INVITATION, {
+      to: invitation.email,
+      projectName: project.name,
       inviterName,
       inviteUrl,
-    );
+    });
   }
 }

@@ -21,14 +21,18 @@ import {
   NotProjectMemberError,
   ProjectNotFoundError,
 } from '../errors/project.errors';
-import { EmailService } from '../../../../shared/services/email.service';
+import {
+  EVENT_BUS,
+  type IEventBus,
+} from '../../../../shared/event-bus/event-bus.interface';
+import { ROUTING_KEY } from '../../../../shared/infrastructure/rabbitmq/rabbitmq.constants';
 
 @CommandHandler(InviteMemberCommand)
 export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly domain: ProjectDomainService,
-    @Optional() private readonly emailService?: EmailService,
+    @Optional() @Inject(EVENT_BUS) private readonly bus?: IEventBus,
   ) {}
 
   async execute(command: InviteMemberCommand): Promise<ProjectView> {
@@ -56,7 +60,9 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
     const frontendOrigin =
       process.env.FRONTEND_ORIGIN?.split(',')[0]?.trim() ||
       'http://localhost:4200';
-    const inviterMember = project.members.find((m) => m.userId === command.actingUserId);
+    const inviterMember = project.members.find(
+      (m) => m.userId === command.actingUserId,
+    );
     const inviterName = inviterMember?.name || 'A team member';
 
     if (invitee) {
@@ -75,15 +81,12 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
       });
       await this.repo.addMember(member);
 
-      if (this.emailService) {
-        const boardUrl = `${frontendOrigin}/board/${command.projectId}`;
-        await this.emailService.sendProjectInvitation(
-          email,
-          project.name,
-          inviterName,
-          boardUrl,
-        );
-      }
+      await this.bus?.publish(ROUTING_KEY.EMAIL_PROJECT_INVITATION, {
+        to: email,
+        projectName: project.name,
+        inviterName,
+        inviteUrl: `${frontendOrigin}/board/${command.projectId}`,
+      });
     } else {
       // User is not yet registered: generate token and send invitation
       const token = uuidv4();
@@ -98,15 +101,12 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
         expiresAt,
       });
 
-      if (this.emailService) {
-        const inviteUrl = `${frontendOrigin}/accept-invite?token=${token}`;
-        await this.emailService.sendProjectInvitation(
-          email,
-          project.name,
-          inviterName,
-          inviteUrl,
-        );
-      }
+      await this.bus?.publish(ROUTING_KEY.EMAIL_PROJECT_INVITATION, {
+        to: email,
+        projectName: project.name,
+        inviterName,
+        inviteUrl: `${frontendOrigin}/accept-invite?token=${token}`,
+      });
     }
 
     const view = await this.repo.findViewById(command.projectId);

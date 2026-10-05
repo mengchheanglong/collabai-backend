@@ -4,11 +4,18 @@
 // events emitted by the tasks and comments modules in Phases 2–3. Registered as a provider
 // so @OnEvent handlers are picked up (EventEmitterModule is global).
 // Enforces user notification preferences from UserSettings before dispatching Web Push.
+// Web Push fan-out is enqueued as a `push.broadcast` job (PushWorker) when the bus exists.
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../../shared/services/prisma.service';
+import {
+  EVENT_BUS,
+  type IEventBus,
+} from '../../../../shared/event-bus/event-bus.interface';
+import { ROUTING_KEY } from '../../../../shared/infrastructure/rabbitmq/rabbitmq.constants';
+import type { PushBroadcastJob } from '../../../../shared/infrastructure/rabbitmq/workers/push.worker';
 import { TaskAssignedEvent } from '../../../tasks/domain/events/task-assigned.event';
 import { MentionCreatedEvent } from '../../../comments/domain/events/mention-created.event';
 import { NotificationDomainService } from '../../domain/services/notification.domain.service';
@@ -24,6 +31,7 @@ export class NotificationEventsListener {
     private readonly commandBus: CommandBus,
     private readonly content: NotificationDomainService,
     private readonly prisma: PrismaService,
+    @Optional() @Inject(EVENT_BUS) private readonly bus?: IEventBus,
   ) {}
 
   @OnEvent(TaskAssignedEvent.eventName)
@@ -106,15 +114,26 @@ export class NotificationEventsListener {
         return;
       }
 
-      await this.commandBus.execute(
-        new SendPushNotificationCommand(
-          userId,
-          title,
-          message,
-          relatedEntityType === 'task' ? '/board' : '/dashboard',
-          { type, relatedEntityType, relatedEntityId },
-        ),
-      );
+      const job: PushBroadcastJob = {
+        userId,
+        title,
+        body: message,
+        url: relatedEntityType === 'task' ? '/board' : '/dashboard',
+        data: { type, relatedEntityType, relatedEntityId },
+      };
+      if (this.bus) {
+        await this.bus.publish(ROUTING_KEY.PUSH_BROADCAST, job);
+      } else {
+        await this.commandBus.execute(
+          new SendPushNotificationCommand(
+            job.userId,
+            job.title,
+            job.body,
+            job.url,
+            job.data,
+          ),
+        );
+      }
     } catch (err) {
       // A failed push notification must never break the originating action.
       this.logger.error(

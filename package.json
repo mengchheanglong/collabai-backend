@@ -37,6 +37,8 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.27",
     "@prisma/client": "^6.19.3",
+    "@types/amqplib": "^0.10.8",
+    "amqplib": "^2.2.0",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",

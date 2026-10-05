@@ -197,4 +197,43 @@ describe('NotificationEventsListener', () => {
       expect(commandBus.execute).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('with the background job bus', () => {
+    it('queues push fan-out as a push.broadcast job instead of sending inline', async () => {
+      const bus = { publish: jest.fn().mockResolvedValue(undefined) };
+      const queued = new NotificationEventsListener(
+        commandBus,
+        content,
+        prisma as unknown as PrismaService,
+        bus,
+      );
+      prisma.userSettings.findUnique.mockResolvedValue(null);
+
+      await queued.onTaskAssigned(
+        new TaskAssignedEvent(
+          'task-1',
+          'proj-1',
+          'user-a',
+          'user-b',
+          'Ship it',
+        ),
+      );
+
+      expect(commandBus.execute).toHaveBeenCalledTimes(1);
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.any(CreateNotificationCommand),
+      );
+      expect(bus.publish).toHaveBeenCalledWith('push.broadcast', {
+        userId: 'user-a',
+        title: expect.any(String),
+        body: expect.any(String),
+        url: '/board',
+        data: {
+          type: 'task_assigned',
+          relatedEntityType: 'task',
+          relatedEntityId: 'task-1',
+        },
+      });
+    });
+  });
 });

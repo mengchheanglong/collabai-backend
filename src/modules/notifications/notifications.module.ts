@@ -18,6 +18,7 @@ import { PushSubscriptionRepository } from './infrastructure/persistence/push-su
 import { NotificationDomainService } from './domain/services/notification.domain.service';
 import { NotificationEventsListener } from './infrastructure/event-handlers/notification-events.listener';
 import { WebPushService } from './infrastructure/push/web-push.service';
+import { PushWorker } from '../../shared/infrastructure/rabbitmq/workers/push.worker';
 
 import { CreateNotificationHandler } from './application/commands/create-notification.handler';
 import { MarkAsReadHandler } from './application/commands/mark-as-read.handler';
@@ -52,6 +53,7 @@ const QueryHandlers = [GetUserNotificationsHandler, GetVapidPublicKeyHandler];
     NotificationDomainService,
     NotificationEventsListener,
     WebPushService,
+    PushWorker,
     ...CommandHandlers,
     ...QueryHandlers,
   ],
