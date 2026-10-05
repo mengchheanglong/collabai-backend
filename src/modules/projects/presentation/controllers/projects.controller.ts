@@ -177,6 +177,7 @@ export class ProjectsController {
       avatarUrl: null,
       joinedAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : null,
       pending: true,
+      invitationExpiresAt: inv.expiresAt ? new Date(inv.expiresAt).toISOString() : null,
     }));
     return { members: [...memberResponses, ...pendingResponses] };
   }

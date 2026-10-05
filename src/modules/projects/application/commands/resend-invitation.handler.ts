@@ -2,6 +2,7 @@
 
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { v4 as uuidv4 } from 'uuid';
 import { ResendInvitationCommand } from './resend-invitation.command';
 import {
   type IProjectRepository,
@@ -16,9 +17,7 @@ import {
 import { EmailService } from '../../../../shared/services/email.service';
 
 @CommandHandler(ResendInvitationCommand)
-export class ResendInvitationHandler
-  implements ICommandHandler<ResendInvitationCommand>
-{
+export class ResendInvitationHandler implements ICommandHandler<ResendInvitationCommand> {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly repo: IProjectRepository,
     private readonly emailService: EmailService,
@@ -42,10 +41,24 @@ export class ResendInvitationHandler
     const project = await this.repo.findViewById(command.projectId);
     if (!project) throw new ProjectNotFoundError();
 
+    // Regenerate fresh token and extend expiration by 7 days
+    const freshToken = uuidv4();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.repo.createInvitation({
+      id: invitation.id,
+      projectId: command.projectId,
+      email: invitation.email,
+      role: invitation.role,
+      token: freshToken,
+      invitedBy: command.actingUserId,
+      expiresAt,
+    });
+
     const frontendOrigin =
       process.env.FRONTEND_ORIGIN?.split(',')[0]?.trim() ||
       'http://localhost:4200';
-    const inviteUrl = `${frontendOrigin}/accept-invite?token=${invitation.token}`;
+    const inviteUrl = `${frontendOrigin}/accept-invite?token=${freshToken}`;
     const inviterName = invitation.inviterName || 'A team member';
 
     await this.emailService.sendProjectInvitation(
