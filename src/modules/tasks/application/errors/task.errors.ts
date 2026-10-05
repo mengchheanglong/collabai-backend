@@ -3,7 +3,10 @@
 // Domain-specific task errors. Each carries a stable `code`; TaskExceptionFilter maps
 // `code` -> HTTP status. Mirrors the auth/projects error pattern.
 
-import { VIEW_ONLY_MESSAGE } from '../../../projects/domain/value-objects/project-role.value-object';
+import {
+  ASSIGN_FORBIDDEN_MESSAGE,
+  VIEW_ONLY_MESSAGE,
+} from '../../../projects/domain/value-objects/project-role.value-object';
 
 export abstract class TaskError extends Error {
   abstract readonly code: string;
@@ -60,6 +63,14 @@ export class AssigneeNotMemberError extends TaskError {
 export class InvalidTaskFieldError extends TaskError {
   readonly code = 'INVALID_TASK_FIELD';
   constructor(message = 'Invalid task field value') {
+    super(message);
+  }
+}
+
+/** A member tried to assign a task to someone else (only owners/admins may). */
+export class TaskAssignForbiddenError extends TaskError {
+  readonly code = 'TASK_ASSIGN_FORBIDDEN';
+  constructor(message = ASSIGN_FORBIDDEN_MESSAGE) {
     super(message);
   }
 }

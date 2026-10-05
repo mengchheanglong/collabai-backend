@@ -9,6 +9,7 @@ import {
   PROJECT_REPOSITORY,
 } from '../../../projects/domain/repositories/project.repository.interface';
 import {
+  type ProjectRole,
   ProjectRoles,
   VIEW_ONLY_MESSAGE,
 } from '../../../projects/domain/value-objects/project-role.value-object';
@@ -26,6 +27,12 @@ export class AiAccessService {
   async requireMember(projectId: string, userId: string): Promise<void> {
     const membership = await this.projects.findMembership(projectId, userId);
     if (!membership) throw new NotProjectMemberError();
+  }
+
+  /** The caller's project role (null when not a member). */
+  async roleOf(projectId: string, userId: string): Promise<ProjectRole | null> {
+    const membership = await this.projects.findMembership(projectId, userId);
+    return membership?.role ?? null;
   }
 
   async requireWriter(projectId: string, userId: string): Promise<void> {

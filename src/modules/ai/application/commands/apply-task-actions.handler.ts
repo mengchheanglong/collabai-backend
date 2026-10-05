@@ -12,6 +12,7 @@ import {
   AiTaskActionPlan,
   proposalPlanStore,
 } from '../../infrastructure/storage/proposal-plan.store';
+import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 
 export interface ApplyTaskActionsResult {
   planId: string;
@@ -51,6 +52,7 @@ export class ApplyTaskActionsHandler
     }
 
     await this.access.requireWriter(plan.projectId, command.userId);
+    const actorRole = await this.access.roleOf(plan.projectId, command.userId);
 
     const targetActions =
       command.actionIds && command.actionIds.length > 0
@@ -73,6 +75,27 @@ export class ApplyTaskActionsHandler
       }
 
       if (Object.keys(updateData).length > 0) {
+        // Only touch tasks of this plan's project (AI output is untrusted input).
+        const current = await this.prisma.task.findFirst({
+          where: { id: action.taskId, projectId: plan.projectId },
+          select: { assignedTo: true },
+        });
+        if (!current) continue;
+        // Same assignment rule as the task API: members can't give tasks to others.
+        if (
+          action.changes.assigneeId !== undefined &&
+          !(
+            actorRole &&
+            ProjectRoles.canChangeAssignee(
+              actorRole,
+              command.userId,
+              current.assignedTo ?? null,
+              action.changes.assigneeId ?? null,
+            )
+          )
+        ) {
+          continue;
+        }
         try {
           const updated = await this.prisma.task.update({
             where: { id: action.taskId },

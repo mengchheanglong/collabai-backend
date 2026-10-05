@@ -17,9 +17,11 @@ describe('ApplyTaskActionsHandler', () => {
   beforeEach(() => {
     mockAccess = {
       requireWriter: jest.fn().mockResolvedValue(undefined),
+      roleOf: jest.fn().mockResolvedValue('admin'),
     };
     mockPrisma = {
       task: {
+        findFirst: jest.fn().mockResolvedValue({ assignedTo: null }),
         update: jest.fn().mockImplementation(({ where, data }) => ({
           id: where.id,
           title: 'Fix payment timeout',
@@ -91,5 +93,52 @@ describe('ApplyTaskActionsHandler', () => {
     expect(result.planId).toBe(planId);
     expect(result.status).toBe('applied');
     expect(result.appliedActionIds).toContain('action-1');
+  });
+
+  const planWith = (id: string, changes: any): AiTaskActionPlan => ({
+    id,
+    projectId: 'project-123',
+    request: 'Reassign tasks',
+    actions: [
+      {
+        id: 'action-1',
+        taskId: 'task-1',
+        taskTitle: 'Fix payment timeout',
+        rationale: 'test',
+        previous: { status: 'todo', priority: 'medium', assigneeId: null, dueDate: null },
+        changes,
+      },
+    ],
+    source: 'ai',
+    status: 'pending',
+    expiresAt: new Date(Date.now() + 900000).toISOString(),
+  });
+
+  it("skips an AI reassignment a member isn't allowed to make", async () => {
+    mockAccess.roleOf.mockResolvedValueOnce('member');
+    mockPrisma.task.findFirst.mockResolvedValueOnce({ assignedTo: 'user-9' });
+    proposalPlanStore.set('plan-member', planWith('plan-member', { assigneeId: 'user-2' }));
+
+    const result = await handler.execute(
+      new ApplyTaskActionsCommand('user-1', 'plan-member', ['action-1']),
+    );
+
+    expect(mockPrisma.task.update).not.toHaveBeenCalled();
+    expect(result.appliedActionIds).toEqual([]);
+  });
+
+  it('never touches a task outside the plan project', async () => {
+    mockPrisma.task.findFirst.mockResolvedValueOnce(null);
+    proposalPlanStore.set('plan-other', planWith('plan-other', { priority: 'high' }));
+
+    const result = await handler.execute(
+      new ApplyTaskActionsCommand('user-1', 'plan-other', ['action-1']),
+    );
+
+    expect(mockPrisma.task.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'task-1', projectId: 'project-123' } }),
+    );
+    expect(mockPrisma.task.update).not.toHaveBeenCalled();
+    expect(result.appliedActionIds).toEqual([]);
   });
 });

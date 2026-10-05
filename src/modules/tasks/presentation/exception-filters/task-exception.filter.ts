@@ -15,6 +15,7 @@ import {
   InvalidTaskFieldError,
   NotProjectMemberError,
   SubtaskNotFoundError,
+  TaskAssignForbiddenError,
   TaskError,
   TaskNotFoundError,
   TaskWriteForbiddenError,
@@ -48,7 +49,8 @@ export class TaskExceptionFilter implements ExceptionFilter {
     }
     if (
       exception instanceof NotProjectMemberError ||
-      exception instanceof TaskWriteForbiddenError
+      exception instanceof TaskWriteForbiddenError ||
+      exception instanceof TaskAssignForbiddenError
     ) {
       return HttpStatus.FORBIDDEN; // 403
     }

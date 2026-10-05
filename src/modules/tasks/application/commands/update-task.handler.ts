@@ -32,6 +32,14 @@ export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
     await this.access.requireWriter(task.projectId, command.actingUserId);
 
     const newAssignee = command.fields.assigneeId;
+    if (newAssignee !== undefined) {
+      await this.access.requireCanAssign(
+        task.projectId,
+        command.actingUserId,
+        task.assigneeId ?? null,
+        newAssignee ?? null,
+      );
+    }
     if (newAssignee) {
       const ok = await this.access.isMember(task.projectId, newAssignee);
       if (!ok) throw new AssigneeNotMemberError();

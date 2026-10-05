@@ -58,6 +58,13 @@ export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
     }
 
     if (command.assigneeId) {
+      // A new task starts unassigned — members may only assign it to themselves.
+      await this.access.requireCanAssign(
+        command.projectId,
+        command.actingUserId,
+        null,
+        command.assigneeId,
+      );
       const ok = await this.access.isMember(
         command.projectId,
         command.assigneeId,

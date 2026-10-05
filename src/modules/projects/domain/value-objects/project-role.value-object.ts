@@ -6,6 +6,10 @@
 
 export type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer';
 
+/** Shown when a member tries to give a task to someone else. */
+export const ASSIGN_FORBIDDEN_MESSAGE =
+  'Only project owners and admins can assign tasks to other people. You can take an unassigned task yourself or remove yourself from a task.';
+
 /** Shown whenever a viewer tries to change project content (same wording as the frontend). */
 export const VIEW_ONLY_MESSAGE =
   'You have view-only access to this project. Ask an owner or admin for Member access to make changes.';
@@ -51,6 +55,23 @@ export const ProjectRoles = {
   /** Only the owner may delete the project. */
   canDeleteProject(role: ProjectRole): boolean {
     return role === 'owner';
+  },
+
+  /**
+   * Who may set a task's assignee from `current` to `next` (null = unassigned):
+   * owners/admins — anyone; members — only take an unassigned task themselves or
+   * remove themselves; viewers — never. No change is always allowed.
+   */
+  canChangeAssignee(
+    role: ProjectRole,
+    actorId: string,
+    current: string | null,
+    next: string | null,
+  ): boolean {
+    if (current === next) return true;
+    if (this.canManageMembers(role)) return true;
+    if (!this.canWriteContent(role)) return false;
+    return (current === null && next === actorId) || (current === actorId && next === null);
   },
 
   /** Members and above may create/modify content (tasks, comments); viewers are read-only. */

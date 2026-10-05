@@ -49,6 +49,7 @@ describe('CreateTaskHandler (Offline Sync, Concurrency & Idempotency)', () => {
 
     access = {
       requireWriter: jest.fn().mockResolvedValue(undefined),
+      requireCanAssign: jest.fn().mockResolvedValue(undefined),
       isMember: jest.fn().mockResolvedValue(true),
     } as any;
 
