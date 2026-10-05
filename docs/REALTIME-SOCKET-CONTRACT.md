@@ -284,6 +284,21 @@ Emitted after status/position change.
 }
 ```
 
+### ai:job:completed / ai:job:failed
+
+Emitted to the requester's room `user:{userId}` when a job queued with `POST /ai/jobs` finishes.
+
+```json
+{
+  "projectId": "66f000000000000000000010",
+  "actorId": "66f000000000000000000001",
+  "data": { "jobId": "0b6f…", "type": "project-insights", "result": {} },
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}
+```
+
+`ai:job:failed` carries `data: { jobId, type, error }` instead of `result`.
+
 ### notification:created
 
 Can be emitted directly to user's socket room `user:{userId}` if implemented.

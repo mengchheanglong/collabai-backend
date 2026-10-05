@@ -1248,6 +1248,37 @@ Response `200`:
 
 MVP implementation can parse with AI into filters, then run MongoDB query. Full embeddings are bonus.
 
+## POST /ai/jobs
+
+Queue a long-running AI job in the background (RabbitMQ `collabai.ai.jobs`, or in-process when
+the broker is unavailable). The synchronous endpoints above are unchanged.
+
+Auth: project member (checked before the job is queued).
+
+Request:
+
+```json
+{
+  "type": "project-insights",
+  "projectId": "66f000000000000000000010"
+}
+```
+
+`type` is `project-insights` or `generate-tasks`. `generate-tasks` also requires `prompt`
+(2–5000 chars) and accepts `count` (1–15, default 5).
+
+Response `202`:
+
+```json
+{
+  "success": true,
+  "data": { "jobId": "0b6f…", "type": "project-insights", "status": "queued" }
+}
+```
+
+The result is delivered to the requester's socket room `user:{userId}` as `ai:job:completed`
+(`data: { jobId, type, result }`) or `ai:job:failed` (`data: { jobId, type, error }`).
+
 ---
 
 # 13. Endpoint implementation order
