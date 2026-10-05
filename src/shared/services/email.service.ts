@@ -76,7 +76,7 @@ export function resolveEmailBackend(
 
 /**
  * True when a real delivery backend is active — i.e. codes actually go out by email.
- * Used to gate the `000000` development fallback verification code.
+ * With the `log` backend, codes are printed to the server console for local development.
  */
 export function isEmailDeliveryConfigured(
   env: NodeJS.ProcessEnv = process.env,

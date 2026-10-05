@@ -26,14 +26,10 @@ export class VerifyPasswordResetHandler implements ICommandHandler<VerifyPasswor
     );
     if (!user) throw new InvalidCodeError();
     const code = command.code?.trim();
-    const isUniversalCode = code === '000000';
-    if (user.passwordResetCode !== code && !isUniversalCode) {
+    if (!code || user.passwordResetCode !== code) {
       throw new InvalidCodeError();
     }
-    if (
-      !isUniversalCode &&
-      this.authDomain.isCodeExpired(user.passwordResetCodeExpiry)
-    ) {
+    if (this.authDomain.isCodeExpired(user.passwordResetCodeExpiry)) {
       throw new CodeExpiredError();
     }
 

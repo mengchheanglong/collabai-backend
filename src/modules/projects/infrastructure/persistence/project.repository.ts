@@ -355,6 +355,25 @@ export class ProjectRepository implements IProjectRepository {
     }));
   }
 
+  async listInvitationsByEmail(email: string): Promise<ProjectInvitationView[]> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return [];
+    const list = await (this.prisma as any).projectInvitation.findMany({
+      where: { email: { equals: normalized, mode: 'insensitive' } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return list.map((inv: any) => ({
+      id: inv.id,
+      projectId: inv.projectId,
+      email: inv.email,
+      role: inv.role,
+      token: inv.token,
+      invitedBy: inv.invitedBy,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+    }));
+  }
+
   async deleteInvitation(id: string): Promise<void> {
     if (!isValidUuid(id)) return;
     await (this.prisma as any).projectInvitation

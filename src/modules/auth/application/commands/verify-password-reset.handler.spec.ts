@@ -52,20 +52,34 @@ describe('VerifyPasswordResetHandler', () => {
     expect(mockUserRepo.save).toHaveBeenCalledWith(user);
   });
 
-  it('verifies successfully with the 000000 universal code even if code differed', async () => {
+  it('rejects 000000 — there is no universal bypass code', async () => {
     const user = {
       passwordResetCode: '888888',
-      passwordResetCodeExpiry: new Date(Date.now() - 10000), // even if expired
+      passwordResetCodeExpiry: new Date(Date.now() + 60000),
       clearPasswordResetCode: jest.fn(),
     };
     mockUserRepo.findByEmail.mockResolvedValueOnce(user);
 
-    const result = await handler.execute(
-      new VerifyPasswordResetCommand('user@example.com', '000000'),
-    );
-    expect(result.success).toBe(true);
-    expect(user.clearPasswordResetCode).toHaveBeenCalled();
-    expect(mockUserRepo.save).toHaveBeenCalledWith(user);
+    await expect(
+      handler.execute(
+        new VerifyPasswordResetCommand('user@example.com', '000000'),
+      ),
+    ).rejects.toThrow(InvalidCodeError);
+    expect(user.clearPasswordResetCode).not.toHaveBeenCalled();
+    expect(mockUserRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing code even when no reset was requested', async () => {
+    const user = {
+      passwordResetCode: null,
+      passwordResetCodeExpiry: null,
+      clearPasswordResetCode: jest.fn(),
+    };
+    mockUserRepo.findByEmail.mockResolvedValueOnce(user);
+
+    await expect(
+      handler.execute(new VerifyPasswordResetCommand('user@example.com', '')),
+    ).rejects.toThrow(InvalidCodeError);
   });
 
   it('throws CodeExpiredError if regular code has expired', async () => {

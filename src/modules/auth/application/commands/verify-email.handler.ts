@@ -3,13 +3,14 @@
 
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VerifyEmailCommand } from './verify-email.command';
 import {
   type IUserRepository,
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository.interface';
 import { AuthDomainService } from '../../domain/services/auth.domain.service';
-import { isEmailDeliveryConfigured } from '../../../../shared/services/email.service';
+import { EmailVerifiedEvent } from '../../domain/events/email-verified.event';
 import {
   CodeExpiredError,
   EmailAlreadyVerifiedError,
@@ -21,6 +22,7 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authDomain: AuthDomainService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(command: VerifyEmailCommand): Promise<{ success: true }> {
@@ -31,22 +33,22 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     if (user.isVerified) throw new EmailAlreadyVerifiedError();
 
     const code = command.code?.trim();
-    // Universal verification code: `000000` always verifies any account immediately,
-    // alongside the user's specific generated code.
-    const isUniversalCode = code === '000000';
-
-    if (user.verificationCode !== code && !isUniversalCode) {
+    if (!code || user.verificationCode !== code) {
       throw new InvalidCodeError();
     }
-    if (
-      !isUniversalCode &&
-      this.authDomain.isCodeExpired(user.verificationCodeExpiry)
-    ) {
+    if (this.authDomain.isCodeExpired(user.verificationCodeExpiry)) {
       throw new CodeExpiredError();
     }
 
     user.markVerified();
     await this.userRepo.save(user);
+
+    // Ownership of the address is now proven — e.g. pending project invitations to it
+    // are turned into memberships (InvitationEventsListener).
+    this.eventEmitter.emit(
+      EmailVerifiedEvent.eventName,
+      new EmailVerifiedEvent(user.id, user.email),
+    );
     return { success: true };
   }
 }

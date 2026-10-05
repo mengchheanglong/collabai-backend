@@ -34,6 +34,7 @@ import { ListInvitationsHandler } from './application/queries/list-invitations.h
 import { GetInvitationHandler } from './application/queries/get-invitation.handler';
 import { GetProjectAnalyticsSummaryHandler } from './application/queries/get-project-analytics-summary.handler';
 import { GetProjectAnalyticsBurndownHandler } from './application/queries/get-project-analytics-burndown.handler';
+import { InvitationEventsListener } from './infrastructure/event-handlers/invitation-events.listener';
 
 const CommandHandlers = [
   CreateProjectHandler,
@@ -67,6 +68,7 @@ const QueryHandlers = [
   providers: [
     { provide: PROJECT_REPOSITORY, useClass: ProjectRepository },
     ProjectDomainService,
+    InvitationEventsListener,
     ...CommandHandlers,
     ...QueryHandlers,
   ],

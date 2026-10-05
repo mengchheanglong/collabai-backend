@@ -119,6 +119,9 @@ export interface IProjectRepository {
 
   listInvitations(projectId: string): Promise<ProjectInvitationView[]>;
 
+  /** Pending invitations (any project) addressed to `email`, matched case-insensitively. */
+  listInvitationsByEmail(email: string): Promise<ProjectInvitationView[]>;
+
   deleteInvitation(id: string): Promise<void>;
 }
 
