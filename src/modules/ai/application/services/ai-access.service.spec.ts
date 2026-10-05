@@ -44,12 +44,14 @@ describe('AiAccessService', () => {
 
   it('GenerateTasksHandler refuses viewers before calling the AI provider', async () => {
     const ai = { generateTasks: jest.fn() };
-    const handler = new GenerateTasksHandler(ai as any, access);
+    const prisma = { document: { findMany: jest.fn() } };
+    const handler = new GenerateTasksHandler(ai as any, access, prisma as any);
     projects.findMembership.mockResolvedValueOnce({ role: 'viewer' });
 
     await expect(
       handler.execute(new GenerateTasksCommand('u', 'p', 'Plan the sprint', 3)),
     ).rejects.toThrow(InsufficientAiPermissionError);
     expect(ai.generateTasks).not.toHaveBeenCalled();
+    expect(prisma.document.findMany).not.toHaveBeenCalled();
   });
 });
