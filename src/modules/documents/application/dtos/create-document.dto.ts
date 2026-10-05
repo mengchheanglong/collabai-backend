@@ -7,6 +7,15 @@ import {
   Trim,
 } from '../../../../common/decorators/sanitizers.decorator';
 
+export interface DocumentAttachment {
+  id: string;
+  name: string;
+  url: string;
+  size?: number;
+  mimeType?: string;
+  uploadedAt?: string;
+}
+
 export class CreateDocumentDto {
   @ApiProperty({ description: 'Title of the document', example: 'Product Requirements Document' })
   @Trim()
@@ -22,7 +31,7 @@ export class CreateDocumentDto {
 
   @ApiPropertyOptional({ description: 'Attached files (e.g. PDF, Word, Markdown, etc.)' })
   @IsOptional()
-  attachments?: any[];
+  attachments?: DocumentAttachment[];
 
   @ApiPropertyOptional({ description: 'File type format (e.g. pdf, docx, doc, md, etc.)' })
   @IsOptional()

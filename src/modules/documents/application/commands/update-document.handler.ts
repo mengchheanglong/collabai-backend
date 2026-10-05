@@ -12,6 +12,7 @@ import {
   PROJECT_REPOSITORY,
   type IProjectRepository,
 } from '../../../projects/domain/repositories/project.repository.interface';
+import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 import {
   DocumentConflictError,
   DocumentForbiddenError,
@@ -34,7 +35,7 @@ export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentComm
       doc.projectId,
       command.userId,
     );
-    if (!membership || !membership.isActive) {
+    if (!membership || !membership.isActive || !ProjectRoles.canWriteContent(membership.role)) {
       throw new DocumentForbiddenError();
     }
 

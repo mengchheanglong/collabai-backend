@@ -81,6 +81,24 @@ describe('UpdateDocumentHandler', () => {
     ).rejects.toThrow(DocumentForbiddenError);
   });
 
+  it('throws DocumentForbiddenError when user role is viewer', async () => {
+    projectRepo.findMembership.mockResolvedValueOnce({
+      id: 'm-1',
+      projectId: 'proj-1',
+      userId: 'user-viewer',
+      role: 'viewer',
+      isActive: true,
+    } as any);
+
+    await expect(
+      handler.execute(
+        new UpdateDocumentCommand('user-viewer', 'doc-1', { title: 'New' }),
+      ),
+    ).rejects.toThrow(DocumentForbiddenError);
+
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
   it('throws DocumentConflictError when expectedVersion does not match current version', async () => {
     await expect(
       handler.execute(

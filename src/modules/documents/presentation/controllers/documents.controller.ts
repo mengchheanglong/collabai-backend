@@ -80,10 +80,10 @@ export class DocumentsController {
     @CurrentUser('id') userId: string,
     @Param('documentId', new ParseUUIDPipe({ version: '4' })) documentId: string,
   ): Promise<{ document: DocumentResponseDto; canEdit: boolean }> {
-    const view: DocumentView = await this.queryBus.execute(
+    const view: any = await this.queryBus.execute(
       new GetDocumentQuery(userId, documentId),
     );
-    return { document: toDocumentResponse(view), canEdit: true };
+    return { document: toDocumentResponse(view), canEdit: view.canEdit ?? true };
   }
 
   @Get(['docs/:documentId', 'documents/:documentId'])
@@ -92,10 +92,10 @@ export class DocumentsController {
     @CurrentUser('id') userId: string,
     @Param('documentId', new ParseUUIDPipe({ version: '4' })) documentId: string,
   ): Promise<{ document: DocumentResponseDto; canEdit: boolean }> {
-    const view: DocumentView = await this.queryBus.execute(
+    const view: any = await this.queryBus.execute(
       new GetDocumentQuery(userId, documentId),
     );
-    return { document: toDocumentResponse(view), canEdit: true };
+    return { document: toDocumentResponse(view), canEdit: view.canEdit ?? true };
   }
 
   @Patch([

@@ -13,6 +13,7 @@ import {
   PROJECT_REPOSITORY,
   type IProjectRepository,
 } from '../../../projects/domain/repositories/project.repository.interface';
+import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 import { DocumentEntity } from '../../domain/entities/document.entity';
 import { DocumentForbiddenError, DocumentNotFoundError } from '../errors/document.errors';
 
@@ -29,7 +30,7 @@ export class CreateDocumentHandler implements ICommandHandler<CreateDocumentComm
       command.projectId,
       command.userId,
     );
-    if (!membership || !membership.isActive) {
+    if (!membership || !membership.isActive || !ProjectRoles.canWriteContent(membership.role)) {
       throw new DocumentForbiddenError();
     }
 

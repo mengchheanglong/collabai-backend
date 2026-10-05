@@ -11,6 +11,7 @@ import {
   PROJECT_REPOSITORY,
   type IProjectRepository,
 } from '../../../projects/domain/repositories/project.repository.interface';
+import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 import { DocumentForbiddenError, DocumentNotFoundError } from '../errors/document.errors';
 
 @QueryHandler(GetDocumentQuery)
@@ -20,7 +21,7 @@ export class GetDocumentHandler implements IQueryHandler<GetDocumentQuery> {
     @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
   ) {}
 
-  async execute(query: GetDocumentQuery): Promise<DocumentView> {
+  async execute(query: GetDocumentQuery): Promise<DocumentView & { canEdit: boolean }> {
     const view = await this.repo.findViewById(query.documentId);
     if (!view) throw new DocumentNotFoundError();
 
@@ -32,6 +33,7 @@ export class GetDocumentHandler implements IQueryHandler<GetDocumentQuery> {
       throw new DocumentForbiddenError();
     }
 
-    return view;
+    const canEdit = ProjectRoles.canWriteContent(membership.role);
+    return { ...view, canEdit };
   }
 }

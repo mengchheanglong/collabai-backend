@@ -44,6 +44,22 @@ describe('CreateDocumentHandler', () => {
     expect(repo.create).not.toHaveBeenCalled();
   });
 
+  it('throws DocumentForbiddenError when user role is viewer', async () => {
+    projectRepo.findMembership.mockResolvedValueOnce({
+      id: 'm-1',
+      projectId: 'proj-1',
+      userId: 'user-viewer',
+      role: 'viewer',
+      isActive: true,
+    } as any);
+
+    await expect(
+      handler.execute(new CreateDocumentCommand('user-viewer', 'proj-1', 'PRD', 'Content')),
+    ).rejects.toThrow(DocumentForbiddenError);
+
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
   it('creates document and emits document.created when user is a member', async () => {
     projectRepo.findMembership.mockResolvedValueOnce({
       id: 'm-1',
