@@ -219,4 +219,220 @@ describe('EventsGateway', () => {
       });
     });
   });
+
+  describe('doc editing events', () => {
+    it('broadcasts doc:editing:started to project room and stores state', () => {
+      const emitMock = jest.fn();
+      const client: any = {
+        data: { user: { id: 'user-123', name: 'Alice' } },
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      gateway.handleDocEditingStart(client, {
+        projectId: 'proj-1',
+        documentId: 'doc-1',
+      });
+
+      expect(client.data.editingProjectId).toBe('proj-1');
+      expect(client.data.editingDocId).toBe('doc-1');
+      expect(client.to).toHaveBeenCalledWith('project:proj-1');
+      expect(emitMock).toHaveBeenCalledWith('doc:editing:started', {
+        projectId: 'proj-1',
+        actorId: 'user-123',
+        data: {
+          documentId: 'doc-1',
+          userId: 'user-123',
+          name: 'Alice',
+          userName: 'Alice',
+        },
+        createdAt: expect.any(String),
+      });
+    });
+
+    it('broadcasts doc:editing:stopped and removes doc editing state', () => {
+      const emitMock = jest.fn();
+      const client: any = {
+        data: {
+          user: { id: 'user-123' },
+          editingProjectId: 'proj-1',
+          editingDocId: 'doc-1',
+        },
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      gateway.handleDocEditingStop(client, {
+        projectId: 'proj-1',
+        documentId: 'doc-1',
+      });
+
+      expect(client.data.editingProjectId).toBeUndefined();
+      expect(client.data.editingDocId).toBeUndefined();
+      expect(client.to).toHaveBeenCalledWith('project:proj-1');
+      expect(emitMock).toHaveBeenCalledWith('doc:editing:stopped', {
+        projectId: 'proj-1',
+        actorId: 'user-123',
+        data: {
+          documentId: 'doc-1',
+          userId: 'user-123',
+        },
+        createdAt: expect.any(String),
+      });
+    });
+
+    it('emits doc:editing:stopped on disconnect if user was editing a doc', () => {
+      const emitMock = jest.fn();
+      const client: any = {
+        id: 'client-1',
+        data: {
+          user: { id: 'user-123' },
+          editingProjectId: 'proj-1',
+          editingDocId: 'doc-1',
+        },
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      gateway.handleDisconnect(client);
+
+      expect(client.to).toHaveBeenCalledWith('project:proj-1');
+      expect(emitMock).toHaveBeenCalledWith('doc:editing:stopped', {
+        projectId: 'proj-1',
+        actorId: 'user-123',
+        data: {
+          documentId: 'doc-1',
+          userId: 'user-123',
+        },
+        createdAt: expect.any(String),
+      });
+    });
+  });
+
+  describe('presence tracking & task viewing', () => {
+    it('broadcasts presence:update on project:join and project:leave', async () => {
+      const validUuid = '11111111-1111-4111-a111-111111111111';
+      const client: any = {
+        id: 'client-pres-1',
+        data: { user: { id: 'user-1', name: 'Alice', email: 'alice@example.com' } },
+        join: jest.fn(),
+        leave: jest.fn(),
+      };
+
+      (prisma.projectMember.findFirst as jest.Mock).mockResolvedValue({ id: 'mem-1' });
+
+      await gateway.handleProjectJoin(client, { projectId: validUuid });
+
+      expect(mockServer.to).toHaveBeenCalledWith(`project:${validUuid}`);
+      expect(mockServer.emit).toHaveBeenCalledWith('presence:update', {
+        projectId: validUuid,
+        actorId: 'system',
+        data: {
+          users: [{ userId: 'user-1', name: 'Alice', email: 'alice@example.com' }],
+          count: 1,
+        },
+        createdAt: expect.any(String),
+      });
+
+      gateway.handleProjectLeave(client, { projectId: validUuid });
+
+      expect(client.leave).toHaveBeenCalledWith(`project:${validUuid}`);
+      expect(mockServer.emit).toHaveBeenCalledWith('presence:update', {
+        projectId: validUuid,
+        actorId: 'system',
+        data: {
+          users: [],
+          count: 0,
+        },
+        createdAt: expect.any(String),
+      });
+    });
+
+    it('broadcasts task:viewing:started and task:viewing:stopped', () => {
+      const emitMock = jest.fn();
+      const client: any = {
+        data: { user: { id: 'user-1', name: 'Alice' } },
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      gateway.handleTaskViewingStart(client, {
+        projectId: 'proj-1',
+        taskId: 'task-100',
+      });
+
+      expect(client.data.viewingProjectId).toBe('proj-1');
+      expect(client.data.viewingTaskId).toBe('task-100');
+      expect(client.to).toHaveBeenCalledWith('project:proj-1');
+      expect(emitMock).toHaveBeenCalledWith('task:viewing:started', {
+        projectId: 'proj-1',
+        actorId: 'user-1',
+        data: {
+          taskId: 'task-100',
+          userId: 'user-1',
+          name: 'Alice',
+          userName: 'Alice',
+        },
+        createdAt: expect.any(String),
+      });
+
+      gateway.handleTaskViewingStop(client, {
+        projectId: 'proj-1',
+        taskId: 'task-100',
+      });
+
+      expect(client.data.viewingProjectId).toBeUndefined();
+      expect(client.data.viewingTaskId).toBeUndefined();
+      expect(emitMock).toHaveBeenCalledWith('task:viewing:stopped', {
+        projectId: 'proj-1',
+        actorId: 'user-1',
+        data: {
+          taskId: 'task-100',
+          userId: 'user-1',
+        },
+        createdAt: expect.any(String),
+      });
+    });
+
+    it('cleans up task viewing and presence on handleDisconnect', async () => {
+      const emitMock = jest.fn();
+      const validUuid = '11111111-1111-4111-a111-111111111111';
+      const client: any = {
+        id: 'client-1',
+        data: {
+          user: { id: 'user-1', name: 'Alice', email: 'alice@example.com' },
+          viewingProjectId: validUuid,
+          viewingTaskId: 'task-100',
+        },
+        join: jest.fn(),
+        to: jest.fn().mockReturnValue({ emit: emitMock }),
+      };
+
+      (prisma.projectMember.findFirst as jest.Mock).mockResolvedValue({ id: 'mem-1' });
+      await gateway.handleProjectJoin(client, { projectId: validUuid });
+
+      mockServer.to.mockClear();
+      mockServer.emit.mockClear();
+
+      gateway.handleDisconnect(client);
+
+      expect(client.to).toHaveBeenCalledWith(`project:${validUuid}`);
+      expect(emitMock).toHaveBeenCalledWith('task:viewing:stopped', {
+        projectId: validUuid,
+        actorId: 'user-1',
+        data: {
+          taskId: 'task-100',
+          userId: 'user-1',
+        },
+        createdAt: expect.any(String),
+      });
+      expect(mockServer.to).toHaveBeenCalledWith(`project:${validUuid}`);
+      expect(mockServer.emit).toHaveBeenCalledWith('presence:update', {
+        projectId: validUuid,
+        actorId: 'system',
+        data: {
+          users: [],
+          count: 0,
+        },
+        createdAt: expect.any(String),
+      });
+    });
+  });
 });
+

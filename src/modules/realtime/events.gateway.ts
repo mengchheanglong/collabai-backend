@@ -30,11 +30,40 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   private readonly logger = new Logger(EventsGateway.name);
+  private readonly projectPresence = new Map<
+    string,
+    Map<string, { userId: string; name: string; email: string; socketId: string }>
+  >();
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
   ) {}
+
+  private broadcastPresence(projectId: string) {
+    if (!this.server) return;
+    const presence = this.projectPresence.get(projectId);
+    const uniqueUsers = presence
+      ? Array.from(
+          Array.from(presence.values()).reduce((acc, u) => {
+            if (!acc.has(u.userId)) {
+              acc.set(u.userId, { userId: u.userId, name: u.name, email: u.email });
+            }
+            return acc;
+          }, new Map<string, { userId: string; name: string; email: string }>()).values(),
+        )
+      : [];
+
+    this.server.to(`project:${projectId}`).emit('presence:update', {
+      projectId,
+      actorId: 'system',
+      data: {
+        users: uniqueUsers,
+        count: uniqueUsers.length,
+      },
+      createdAt: new Date().toISOString(),
+    });
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -79,6 +108,40 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         createdAt: new Date().toISOString(),
       });
     }
+    if (client.data?.editingProjectId && client.data?.editingDocId && client.data?.user) {
+      client.to(`project:${client.data.editingProjectId}`).emit('doc:editing:stopped', {
+        projectId: client.data.editingProjectId,
+        actorId: client.data.user.id,
+        data: {
+          documentId: client.data.editingDocId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+    if (client.data?.viewingProjectId && client.data?.viewingTaskId && client.data?.user) {
+      client.to(`project:${client.data.viewingProjectId}`).emit('task:viewing:stopped', {
+        projectId: client.data.viewingProjectId,
+        actorId: client.data.user.id,
+        data: {
+          taskId: client.data.viewingTaskId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    const joinedProjects = client.data?.joinedProjects as Set<string> | undefined;
+    if (joinedProjects) {
+      for (const pid of joinedProjects) {
+        const pres = this.projectPresence.get(pid);
+        if (pres) {
+          pres.delete(client.id);
+          if (pres.size === 0) this.projectPresence.delete(pid);
+          this.broadcastPresence(pid);
+        }
+      }
+    }
     this.logger.debug(`Socket client disconnected: ${client.id}`);
   }
 
@@ -104,6 +167,24 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     client.join(`project:${data.projectId}`);
+    if (!client.data.joinedProjects) {
+      client.data.joinedProjects = new Set<string>();
+    }
+    client.data.joinedProjects.add(data.projectId);
+
+    let presence = this.projectPresence.get(data.projectId);
+    if (!presence) {
+      presence = new Map();
+      this.projectPresence.set(data.projectId, presence);
+    }
+    presence.set(client.id, {
+      userId: client.data.user.id,
+      name: client.data.user.name,
+      email: client.data.user.email,
+      socketId: client.id,
+    });
+    this.broadcastPresence(data.projectId);
+
     return { success: true, projectId: data.projectId };
   }
 
@@ -114,9 +195,58 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     if (data?.projectId) {
       client.leave(`project:${data.projectId}`);
+      client.data?.joinedProjects?.delete(data.projectId);
+      const presence = this.projectPresence.get(data.projectId);
+      if (presence) {
+        presence.delete(client.id);
+        if (presence.size === 0) this.projectPresence.delete(data.projectId);
+        this.broadcastPresence(data.projectId);
+      }
       return { success: true, projectId: data.projectId };
     }
     return { success: false };
+  }
+
+  @SubscribeMessage('task:viewing:start')
+  handleTaskViewingStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { projectId: string; taskId: string },
+  ) {
+    if (data?.projectId && data?.taskId && client.data.user) {
+      client.data.viewingProjectId = data.projectId;
+      client.data.viewingTaskId = data.taskId;
+      client.to(`project:${data.projectId}`).emit('task:viewing:started', {
+        projectId: data.projectId,
+        actorId: client.data.user.id,
+        data: {
+          taskId: data.taskId,
+          userId: client.data.user.id,
+          userName: client.data.user.name,
+          name: client.data.user.name,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  @SubscribeMessage('task:viewing:stop')
+  handleTaskViewingStop(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { projectId: string; taskId: string },
+  ) {
+    if (data?.projectId && client.data.user) {
+      delete client.data.viewingProjectId;
+      delete client.data.viewingTaskId;
+      client.to(`project:${data.projectId}`).emit('task:viewing:stopped', {
+        projectId: data.projectId,
+        actorId: client.data.user.id,
+        data: {
+          taskId: data.taskId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
   }
 
   @SubscribeMessage('typing:start')
@@ -154,6 +284,48 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         actorId: client.data.user.id,
         data: {
           taskId: data.taskId,
+          userId: client.data.user.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  @SubscribeMessage('doc:editing:start')
+  handleDocEditingStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { projectId: string; documentId: string },
+  ) {
+    if (data?.projectId && data?.documentId && client.data.user) {
+      client.data.editingProjectId = data.projectId;
+      client.data.editingDocId = data.documentId;
+      client.to(`project:${data.projectId}`).emit('doc:editing:started', {
+        projectId: data.projectId,
+        actorId: client.data.user.id,
+        data: {
+          documentId: data.documentId,
+          userId: client.data.user.id,
+          name: client.data.user.name,
+          userName: client.data.user.name,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  @SubscribeMessage('doc:editing:stop')
+  handleDocEditingStop(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { projectId: string; documentId: string },
+  ) {
+    if (data?.projectId && client.data.user) {
+      delete client.data.editingProjectId;
+      delete client.data.editingDocId;
+      client.to(`project:${data.projectId}`).emit('doc:editing:stopped', {
+        projectId: data.projectId,
+        actorId: client.data.user.id,
+        data: {
+          documentId: data.documentId,
           userId: client.data.user.id,
         },
         createdAt: new Date().toISOString(),
