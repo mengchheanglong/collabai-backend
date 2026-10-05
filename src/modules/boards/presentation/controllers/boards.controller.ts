@@ -101,6 +101,7 @@ export class BoardsController {
           dueDate: t.dueDate ? t.dueDate.toISOString() : null,
           labels: t.labels,
           subtasks: t.subtasks.map((s) => ({
+            id: s.id,
             _id: s.id,
             title: s.title,
             done: s.done,
