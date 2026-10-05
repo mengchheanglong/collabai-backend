@@ -4,7 +4,7 @@
 // label links (upserting per-project Label rows). Maps DB columns `assignedTo`/`createdBy`
 // to domain `assigneeId`/`createdById`.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../../../shared/services/prisma.service';
@@ -42,6 +42,8 @@ const taskInclude = {
 
 @Injectable()
 export class TaskRepository implements ITaskRepository {
+  private readonly logger = new Logger(TaskRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async create(task: TaskEntity): Promise<void> {
@@ -174,31 +176,62 @@ export class TaskRepository implements ITaskRepository {
     const names = Array.from(
       new Set(labelNames.map((n) => n.trim()).filter((n) => n.length > 0)),
     );
+    if (names.length === 0) return;
 
-    await this.prisma.$transaction(async (tx) => {
-      const labelIds: string[] = [];
-      for (const name of names) {
-        const label = await tx.label.upsert({
-          where: { projectId_name: { projectId, name } },
-          create: { id: uuidv4(), projectId, name, createdBy: createdById },
-          update: {},
-          select: { id: true },
-        });
-        labelIds.push(label.id);
-      }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          const labelIds: string[] = [];
+          for (const name of names) {
+            let labelId: string | undefined;
+            try {
+              const label = await tx.label.upsert({
+                where: { projectId_name: { projectId, name } },
+                create: { id: uuidv4(), projectId, name, createdBy: createdById },
+                update: {},
+                select: { id: true },
+              });
+              labelId = label.id;
+            } catch (err: any) {
+              if (err?.code === 'P2002') {
+                const existing = await tx.label.findUnique({
+                  where: { projectId_name: { projectId, name } },
+                  select: { id: true },
+                });
+                labelId = existing?.id;
+              } else {
+                throw err;
+              }
+            }
+            if (labelId) {
+              labelIds.push(labelId);
+            }
+          }
 
-      await tx.taskLabel.deleteMany({ where: { taskId } });
-      if (labelIds.length > 0) {
-        await tx.taskLabel.createMany({
-          data: labelIds.map((labelId) => ({
-            id: uuidv4(),
-            taskId,
-            labelId,
-          })),
-          skipDuplicates: true,
+          await tx.taskLabel.deleteMany({ where: { taskId } });
+          if (labelIds.length > 0) {
+            await tx.taskLabel.createMany({
+              data: labelIds.map((labelId) => ({
+                id: uuidv4(),
+                taskId,
+                labelId,
+              })),
+              skipDuplicates: true,
+            });
+          }
         });
+        return;
+      } catch (err: any) {
+        if (err?.code === 'P2002' && attempt < 2) {
+          await new Promise((r) => setTimeout(r, 50 * (attempt + 1)));
+          continue;
+        }
+        this.logger.warn(
+          `setLabels failed for task ${taskId}: ${err.message}`,
+        );
+        return;
       }
-    });
+    }
   }
 
   // ----- subtasks -----
