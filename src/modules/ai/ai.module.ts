@@ -28,6 +28,8 @@ import { SearchTasksHandler } from './application/commands/search-tasks.handler'
 import { GenerateTasksHandler } from './application/commands/generate-tasks.handler';
 import { ChatHandler } from './application/commands/chat.handler';
 import { GenerateProjectInsightsHandler } from './application/commands/generate-project-insights.handler';
+import { ProposeTaskActionsHandler } from './application/commands/propose-task-actions.handler';
+import { ApplyTaskActionsHandler } from './application/commands/apply-task-actions.handler';
 
 const CommandHandlers = [
   SuggestSubtasksHandler,
@@ -37,6 +39,8 @@ const CommandHandlers = [
   GenerateTasksHandler,
   ChatHandler,
   GenerateProjectInsightsHandler,
+  ProposeTaskActionsHandler,
+  ApplyTaskActionsHandler,
 ];
 
 @Module({

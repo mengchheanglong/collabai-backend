@@ -6,6 +6,9 @@ import { SummarizeCommentsCommand } from '../../application/commands/summarize-c
 import { SearchTasksCommand } from '../../application/commands/search-tasks.command';
 import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
 import { ChatCommand } from '../../application/commands/chat.command';
+import { GenerateProjectInsightsCommand } from '../../application/commands/generate-project-insights.command';
+import { ProposeTaskActionsCommand } from '../../application/commands/propose-task-actions.command';
+import { ApplyTaskActionsCommand } from '../../application/commands/apply-task-actions.command';
 
 describe('AiController', () => {
   let controller: AiController;
@@ -154,6 +157,72 @@ describe('AiController', () => {
         ),
       );
       expect(res).toEqual({ reply: 'Hello! How can I assist you today?' });
+    });
+  });
+
+  describe('projectInsights', () => {
+    it('executes GenerateProjectInsightsCommand', async () => {
+      commandBus.execute.mockResolvedValueOnce({
+        insights: { healthScore: 85 },
+      });
+
+      const res = await controller.projectInsights('user-1', {
+        projectId: '11111111-1111-4111-a111-111111111111',
+      });
+
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        new GenerateProjectInsightsCommand(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+        ),
+      );
+      expect(res).toEqual({ insights: { healthScore: 85 } });
+    });
+  });
+
+  describe('proposeTaskActions', () => {
+    it('executes ProposeTaskActionsCommand', async () => {
+      commandBus.execute.mockResolvedValueOnce({
+        id: 'plan-1',
+        status: 'pending',
+      });
+
+      const res = await controller.proposeTaskActions('user-1', {
+        projectId: '11111111-1111-4111-a111-111111111111',
+        request: 'Reassign overdue tasks',
+      });
+
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        new ProposeTaskActionsCommand(
+          'user-1',
+          '11111111-1111-4111-a111-111111111111',
+          'Reassign overdue tasks',
+        ),
+      );
+      expect(res).toEqual({ id: 'plan-1', status: 'pending' });
+    });
+  });
+
+  describe('applyTaskActions', () => {
+    it('executes ApplyTaskActionsCommand', async () => {
+      commandBus.execute.mockResolvedValueOnce({
+        planId: 'plan-1',
+        status: 'applied',
+        appliedActionIds: ['action-1'],
+      });
+
+      const res = await controller.applyTaskActions('user-1', 'plan-1', {
+        actionIds: ['action-1'],
+      });
+
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        new ApplyTaskActionsCommand('user-1', 'plan-1', ['action-1']),
+      );
+      expect(res).toEqual({
+        planId: 'plan-1',
+        status: 'applied',
+        appliedActionIds: ['action-1'],
+      });
     });
   });
 });

@@ -99,6 +99,30 @@ export class GenerateProjectInsightsHandler
       }
     }
 
+    // Calculate average cycle time for completed tasks
+    let totalCycleTimeMs = 0;
+    let cycleTimeCount = 0;
+    for (const t of tasks) {
+      if (t.status === 'done' && t.createdAt && t.updatedAt) {
+        totalCycleTimeMs +=
+          new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime();
+        cycleTimeCount++;
+      }
+    }
+    const avgCycleTimeDays =
+      cycleTimeCount > 0
+        ? Number(
+            (totalCycleTimeMs / (cycleTimeCount * 1000 * 60 * 60 * 24)).toFixed(
+              1,
+            ),
+          )
+        : 0;
+
+    // Detect workload bottlenecks (> 5 active tasks)
+    const bottleneckAssignees = Array.from(workloadMap.values())
+      .filter((w) => w.taskCount >= 5 && w.name !== 'Unassigned')
+      .map((w) => w.name);
+
     // Sort overdue by priority/due date
     overdueTasks.sort((a, b) => (b.priority === 'urgent' ? 1 : -1));
     upcomingTasks.sort((a, b) => ((a.dueDate || '') > (b.dueDate || '') ? 1 : -1));
@@ -116,6 +140,13 @@ export class GenerateProjectInsightsHandler
     };
 
     const insights = await this.aiProvider.generateProjectInsights(input);
+    const risks = [...insights.risks];
+    if (bottleneckAssignees.length > 0) {
+      risks.push(
+        `Workload bottleneck: ${bottleneckAssignees.join(', ')} currently handling 5+ concurrent active items.`,
+      );
+    }
+
     return {
       projectId: command.projectId,
       projectName: project.name,
@@ -124,19 +155,38 @@ export class GenerateProjectInsightsHandler
       healthScore: insights.healthScore,
       status: insights.status,
       summary: insights.summary,
-      risks: insights.risks,
+      risks,
       nextBestActions: insights.nextBestActions,
       recommendations: insights.nextBestActions.map((nba, idx) => ({
         title: nba.title,
         rationale: nba.description,
-        urgency: (nba.priority === 'urgent' ? 'high' : nba.priority === 'low' ? 'low' : 'medium') as 'high' | 'medium' | 'low',
+        urgency: (nba.priority === 'urgent'
+          ? 'high'
+          : nba.priority === 'low'
+            ? 'low'
+            : 'medium') as 'high' | 'medium' | 'low',
         action: (nba.impact.toLowerCase().includes('workload')
           ? 'balance_workload'
           : nba.impact.toLowerCase().includes('review')
             ? 'review_task'
             : 'plan') as 'review_task' | 'balance_workload' | 'plan',
-        taskIds: overdueTasks.length > 0 && idx === 0 ? [tasks[0]?.id].filter(Boolean) : [],
+        taskIds:
+          overdueTasks.length > 0 && idx === 0
+            ? [tasks[0]?.id].filter(Boolean)
+            : [],
       })),
+      metrics: {
+        totalTasks,
+        completedTasks,
+        inProgressTasks,
+        todoTasks,
+        overdueCount: overdueTasks.length,
+        avgCycleTimeDays,
+        completionRate:
+          totalTasks > 0
+            ? Math.round((completedTasks / totalTasks) * 100)
+            : 0,
+      },
       insights,
     };
   }

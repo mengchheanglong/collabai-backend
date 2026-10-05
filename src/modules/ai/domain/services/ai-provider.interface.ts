@@ -106,6 +106,36 @@ export interface ProjectInsightsOutput {
   nextBestActions: NextBestAction[];
 }
 
+export interface TaskActionProposalInput {
+  request: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    assigneeId: string | null;
+    assigneeName?: string | null;
+    dueDate?: string | null;
+  }>;
+  members: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+export interface ProposedAction {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  rationale: string;
+  previous: { status: string; priority: string; assigneeId: string | null; dueDate: string | null };
+  changes: { status?: string; priority?: string; assigneeId?: string | null; dueDate?: string | null };
+}
+
+export interface ProposeTaskActionsOutput {
+  actions: ProposedAction[];
+}
+
 export interface IAiProvider {
   suggestSubtasks(input: SuggestSubtasksInput): Promise<string[]>;
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
@@ -116,4 +146,7 @@ export interface IAiProvider {
   generateProjectInsights(
     input: ProjectInsightsInput,
   ): Promise<ProjectInsightsOutput>;
+  proposeTaskActions(
+    input: TaskActionProposalInput,
+  ): Promise<ProposeTaskActionsOutput>;
 }

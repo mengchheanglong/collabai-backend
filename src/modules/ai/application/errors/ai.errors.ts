@@ -35,3 +35,19 @@ export class AiUnavailableError extends AiError {
     super(message);
   }
 }
+
+/** User lacks writer/admin permission for mutation operations. */
+export class InsufficientAiPermissionError extends AiError {
+  readonly code = 'INSUFFICIENT_AI_PERMISSION';
+  constructor(message = 'You do not have permission to execute this AI operation') {
+    super(message);
+  }
+}
+
+/** Action proposal plan not found or expired. */
+export class ProposalNotFoundError extends AiError {
+  readonly code = 'PROPOSAL_NOT_FOUND';
+  constructor(message = 'Proposal plan not found or has expired') {
+    super(message);
+  }
+}

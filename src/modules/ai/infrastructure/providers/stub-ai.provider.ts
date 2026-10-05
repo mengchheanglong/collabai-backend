@@ -11,9 +11,12 @@ import {
   NextBestAction,
   ProjectInsightsInput,
   ProjectInsightsOutput,
+  ProposedAction,
+  ProposeTaskActionsOutput,
   StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
+  TaskActionProposalInput,
   TaskSearchInterpretation,
 } from '../../domain/services/ai-provider.interface';
 
@@ -238,6 +241,71 @@ export class StubAiProvider implements IAiProvider {
       recommendations,
       nextBestActions,
     };
+  }
+
+  async proposeTaskActions(
+    input: TaskActionProposalInput,
+  ): Promise<ProposeTaskActionsOutput> {
+    const req = input.request.toLowerCase();
+    const actions: ProposedAction[] = [];
+    const tasks = input.tasks.filter((t) => t.status !== 'done');
+    const targetTasks = tasks.length > 0 ? tasks : input.tasks;
+
+    let targetMember = input.members[0];
+    for (const m of input.members) {
+      if (req.includes(m.name.toLowerCase())) {
+        targetMember = m;
+        break;
+      }
+    }
+
+    const count = Math.min(Math.max(1, targetTasks.length), 3);
+    for (let i = 0; i < count; i++) {
+      const t = targetTasks[i];
+      if (!t) continue;
+
+      const changes: ProposedAction['changes'] = {};
+      let rationale = `Action derived from requirement "${input.request.slice(0, 50)}"`;
+
+      if (req.includes('urgent') || req.includes('priority')) {
+        changes.priority = 'urgent';
+        rationale = `Escalated priority to urgent based on user request.`;
+      }
+      if (req.includes('reassign') || req.includes('assign') || targetMember) {
+        if (targetMember && targetMember.id !== t.assigneeId) {
+          changes.assigneeId = targetMember.id;
+          rationale += ` Reassigned to ${targetMember.name} to optimize sprint throughput.`;
+        }
+      }
+      if (req.includes('done') || req.includes('complete')) {
+        changes.status = 'done';
+        rationale = `Marked as done per user instruction.`;
+      } else if (req.includes('progress') || req.includes('start')) {
+        changes.status = 'in_progress';
+        rationale = `Moved to in-progress status.`;
+      }
+
+      if (Object.keys(changes).length === 0) {
+        changes.priority = t.priority === 'urgent' ? 'high' : 'urgent';
+        rationale = `Prioritized task to unblock dependent milestones.`;
+      }
+
+      actions.push({
+        id: `action-${i + 1}`,
+        taskId: t.id,
+        taskTitle: t.title,
+        rationale: rationale.trim(),
+        previous: {
+          status: t.status,
+          priority: t.priority,
+          assigneeId: t.assigneeId,
+          dueDate: t.dueDate ?? null,
+        },
+        changes,
+      });
+    }
+
+    return { actions };
   }
 }
 

@@ -13,7 +13,9 @@ import { buildErrorBody } from '../../../../common/http/error-body';
 import {
   AiError,
   AiUnavailableError,
+  InsufficientAiPermissionError,
   NotProjectMemberError,
+  ProposalNotFoundError,
   TaskNotFoundError,
 } from '../../application/errors/ai.errors';
 
@@ -37,8 +39,18 @@ export class AiExceptionFilter implements ExceptionFilter {
   }
 
   private statusFor(exception: AiError): number {
-    if (exception instanceof TaskNotFoundError) return HttpStatus.NOT_FOUND;
-    if (exception instanceof NotProjectMemberError) return HttpStatus.FORBIDDEN;
+    if (
+      exception instanceof TaskNotFoundError ||
+      exception instanceof ProposalNotFoundError
+    ) {
+      return HttpStatus.NOT_FOUND;
+    }
+    if (
+      exception instanceof NotProjectMemberError ||
+      exception instanceof InsufficientAiPermissionError
+    ) {
+      return HttpStatus.FORBIDDEN;
+    }
     if (exception instanceof AiUnavailableError) {
       return HttpStatus.SERVICE_UNAVAILABLE; // 503
     }

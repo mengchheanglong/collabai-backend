@@ -8,6 +8,7 @@ import {
   Body,
   Controller,
   HttpCode,
+  Param,
   Post,
   UseFilters,
   UseGuards,
@@ -26,6 +27,8 @@ import { SearchTasksCommand } from '../../application/commands/search-tasks.comm
 import { GenerateTasksCommand } from '../../application/commands/generate-tasks.command';
 import { ChatCommand } from '../../application/commands/chat.command';
 import { GenerateProjectInsightsCommand } from '../../application/commands/generate-project-insights.command';
+import { ProposeTaskActionsCommand } from '../../application/commands/propose-task-actions.command';
+import { ApplyTaskActionsCommand } from '../../application/commands/apply-task-actions.command';
 
 import {
   ChatDto,
@@ -36,6 +39,10 @@ import {
   SummarizeCommentsDto,
 } from '../../application/dtos/ai.dto';
 import { ProjectInsightsDto } from '../../application/dtos/project-insights.dto';
+import {
+  ProposeTaskActionsDto,
+  ApplyTaskActionsDto,
+} from '../../application/dtos/automation-proposals.dto';
 
 @ApiTags('AI')
 @ApiBearerAuth('access-token')
@@ -144,6 +151,35 @@ export class AiController {
   ) {
     return this.commandBus.execute(
       new GenerateProjectInsightsCommand(userId, dto.projectId),
+    );
+  }
+
+  @Post('automation/proposals')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Propose automated batch task changes from natural language',
+  })
+  async proposeTaskActions(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ProposeTaskActionsDto,
+  ) {
+    return this.commandBus.execute(
+      new ProposeTaskActionsCommand(userId, dto.projectId, dto.request),
+    );
+  }
+
+  @Post('automation/proposals/:planId/apply')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Approve and apply task action proposals to the project',
+  })
+  async applyTaskActions(
+    @CurrentUser('id') userId: string,
+    @Param('planId') planId: string,
+    @Body() dto: ApplyTaskActionsDto,
+  ) {
+    return this.commandBus.execute(
+      new ApplyTaskActionsCommand(userId, planId, dto.actionIds),
     );
   }
 }

@@ -11,9 +11,12 @@ import {
   IAiProvider,
   ProjectInsightsInput,
   ProjectInsightsOutput,
+  ProposedAction,
+  ProposeTaskActionsOutput,
   StructuredTask,
   SuggestSubtasksInput,
   SummarizeCommentsInput,
+  TaskActionProposalInput,
   TaskSearchInterpretation,
 } from '../../domain/services/ai-provider.interface';
 import { StubAiProvider } from './stub-ai.provider';
@@ -200,6 +203,34 @@ Workload: ${JSON.stringify(input.assigneeWorkload ?? [])}`;
     return res.choices[0]?.message?.content ?? '';
   }
 
+  async proposeTaskActions(
+    input: TaskActionProposalInput,
+  ): Promise<ProposeTaskActionsOutput> {
+    try {
+      const tasksSummary = input.tasks
+        .map(
+          (t) =>
+            `- ID: ${t.id}, Title: "${t.title}", Status: ${t.status}, Priority: ${t.priority}, Assignee: ${t.assigneeName || 'unassigned'}`,
+        )
+        .join('\n');
+      const membersSummary = input.members
+        .map((m) => `- ID: ${m.id}, Name: "${m.name}"`)
+        .join('\n');
+
+      const content = await this.complete(
+        'You are an AI project workflow coordinator. You analyze task boards and recommend batch actions based on natural language requests. Output ONLY valid JSON with format: {"actions":[{"id":"action-1","taskId":"string","taskTitle":"string","rationale":"string","previous":{"status":"string","priority":"string","assigneeId":"string|null","dueDate":"string|null"},"changes":{"status":"string?","priority":"string?","assigneeId":"string?","dueDate":"string?"}}]}. Do not include markdown formatting or backticks.',
+        `User Request: "${input.request}"\n\nProject Members:\n${membersSummary}\n\nProject Tasks:\n${tasksSummary}\n\nGenerate structured actions adhering to the schema.`,
+      );
+      const parsed = safeJsonProposals(content);
+      if (parsed && parsed.actions && parsed.actions.length > 0) {
+        return parsed;
+      }
+    } catch (err) {
+      this.warn('proposeTaskActions', err);
+    }
+    return this.fallback.proposeTaskActions(input);
+  }
+
   private warn(method: string, err: unknown): void {
     this.logger.warn(
       `DeepSeek ${method} failed — falling back to stub: ${err instanceof Error ? err.message : String(err)}`,
@@ -349,6 +380,30 @@ function safeJsonInsights(raw: string): ProjectInsightsOutput | null {
               impact: String(a.impact || '').trim(),
             })).filter((a: any) => a.title.length > 0)
           : [],
+      };
+    }
+  } catch {
+    // parse failed
+  }
+  return null;
+}
+
+function safeJsonProposals(raw: string): ProposeTaskActionsOutput | null {
+  try {
+    const trimmed = raw.trim().replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+    const parsed = JSON.parse(trimmed);
+    if (parsed && Array.isArray(parsed.actions)) {
+      return {
+        actions: parsed.actions
+          .map((a: any, idx: number) => ({
+            id: a.id || `action-${idx + 1}`,
+            taskId: String(a.taskId || ''),
+            taskTitle: String(a.taskTitle || 'Untitled Task'),
+            rationale: String(a.rationale || 'AI proposed update'),
+            previous: a.previous || {},
+            changes: a.changes || {},
+          }))
+          .filter((a: any) => Boolean(a.taskId)),
       };
     }
   } catch {
