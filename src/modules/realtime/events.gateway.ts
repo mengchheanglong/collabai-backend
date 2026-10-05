@@ -47,7 +47,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ? Array.from(
           Array.from(presence.values()).reduce((acc, u) => {
             if (!acc.has(u.userId)) {
-              acc.set(u.userId, { userId: u.userId, name: u.name, email: u.email });
+              acc.set(u.userId, {
+                userId: u.userId,
+                name: u.name || (u.email ? u.email.split('@')[0] : 'Teammate'),
+                email: u.email || '',
+              });
             }
             return acc;
           }, new Map<string, { userId: string; name: string; email: string }>()).values(),
@@ -82,10 +86,20 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      let dbUser: { name: string; email: string } | null = null;
+      try {
+        dbUser = await this.prisma.user.findUnique({
+          where: { id: payload.sub },
+          select: { name: true, email: true },
+        });
+      } catch (dbErr: any) {
+        this.logger.debug(`Could not look up socket user details: ${dbErr?.message}`);
+      }
+
       client.data.user = {
         id: payload.sub,
-        email: payload.email,
-        name: payload.name,
+        email: dbUser?.email || payload.email || '',
+        name: dbUser?.name || payload.name || dbUser?.email?.split('@')[0] || 'Teammate',
       };
 
       client.join(`user:${payload.sub}`);
@@ -179,8 +193,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     presence.set(client.id, {
       userId: client.data.user.id,
-      name: client.data.user.name,
-      email: client.data.user.email,
+      name: client.data.user.name || (client.data.user.email ? client.data.user.email.split('@')[0] : 'Teammate'),
+      email: client.data.user.email || '',
       socketId: client.id,
     });
     this.broadcastPresence(data.projectId);

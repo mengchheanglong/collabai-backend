@@ -56,6 +56,7 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
               title: true,
               content: true,
               fileType: true,
+              attachments: true,
               updatedAt: true,
             },
           },
@@ -80,15 +81,21 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
           project.documents && project.documents.length > 0
             ? project.documents
                 .map((d, i) => {
+                  const attachments = Array.isArray(d.attachments) ? d.attachments : [];
+                  const attNames = attachments
+                    .map((a: any) => `${a.name}${a.size ? ` (${Math.round(a.size / 1024)} KB)` : ''}`)
+                    .join(', ');
+                  const attInfo = attNames ? ` [Attached file(s): ${attNames}]` : '';
                   const cleanContent = d.content.trim();
-                  const snippet =
-                    cleanContent.length > 1500
+                  const snippet = cleanContent
+                    ? cleanContent.length > 1500
                       ? `${cleanContent.slice(0, 1500)}... [truncated]`
-                      : cleanContent || '(Empty document)';
+                      : cleanContent
+                    : `Uploaded file document: "${d.title}"${attInfo}`;
                   const format = d.fileType
                     ? ` [Format: ${d.fileType.toUpperCase()}]`
                     : '';
-                  return `### Document ${i + 1}: "${d.title}"${format} (ID: ${d.id})\n${snippet}`;
+                  return `### Document ${i + 1}: "${d.title}"${format}${attInfo} (ID: ${d.id})\n${snippet}`;
                 })
                 .join('\n\n')
             : 'No documentation recorded yet.';

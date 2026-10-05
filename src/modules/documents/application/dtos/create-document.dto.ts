@@ -17,11 +17,11 @@ export interface DocumentAttachment {
 }
 
 export class CreateDocumentDto {
-  @ApiProperty({ description: 'Title of the document', example: 'Product Requirements Document' })
+  @ApiPropertyOptional({ description: 'Title of the document (optional; defaults to uploaded filename)', example: 'Product Requirements Document' })
+  @IsOptional()
   @Trim()
   @IsString()
-  @IsTrimmedNotEmpty({ minLength: 1, maxLength: 200 })
-  title: string;
+  title?: string;
 
   @ApiPropertyOptional({ description: 'Markdown content of the document' })
   @IsOptional()

@@ -83,4 +83,34 @@ describe('CreateDocumentHandler', () => {
     );
     expect(result.id).toBe('doc-1');
   });
+
+  it('creates document with auto-derived title and empty content when title and text are omitted', async () => {
+    projectRepo.findMembership.mockResolvedValueOnce({
+      id: 'm-1',
+      projectId: 'proj-1',
+      userId: 'user-1',
+      role: 'member',
+      isActive: true,
+    } as any);
+
+    const result = await handler.execute(
+      new CreateDocumentCommand(
+        'user-1',
+        'proj-1',
+        undefined,
+        undefined,
+        [{ id: 'att-1', name: 'Specification.pdf', url: 'data:...', size: 1024 }],
+        'pdf',
+      ),
+    );
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Specification.pdf',
+        content: '',
+        fileType: 'pdf',
+      }),
+    );
+    expect(result.id).toBe('doc-1');
+  });
 });

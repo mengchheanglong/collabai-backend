@@ -31,11 +31,19 @@ export class GenerateTasksHandler implements ICommandHandler<GenerateTasksComman
         where: { projectId: command.projectId },
         orderBy: { updatedAt: 'desc' },
         take: 5,
-        select: { title: true, content: true },
+        select: { title: true, content: true, fileType: true, attachments: true },
       });
       if (docs.length > 0) {
         const docSnippets = docs
-          .map((d) => `- "${d.title}": ${d.content.trim().slice(0, 400)}`)
+          .map((d) => {
+            const cleanContent = d.content?.trim();
+            const attachments = Array.isArray(d.attachments) ? d.attachments : [];
+            const attNames = attachments.map((a: any) => a.name).join(', ');
+            const info = cleanContent
+              ? cleanContent.slice(0, 400)
+              : `Uploaded file${d.fileType ? ` (${d.fileType})` : ''}: ${attNames || d.title}`;
+            return `- "${d.title}": ${info}`;
+          })
           .join('\n');
         prompt = `${command.prompt}\n\nWorkspace Documentation Context:\n${docSnippets}`;
       }

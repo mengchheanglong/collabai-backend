@@ -34,11 +34,16 @@ export class CreateDocumentHandler implements ICommandHandler<CreateDocumentComm
       throw new DocumentForbiddenError();
     }
 
+    const derivedTitle =
+      command.title?.trim() ||
+      command.attachments?.[0]?.name ||
+      (command.fileType ? `Document.${command.fileType}` : 'Untitled document');
+
     const doc = DocumentEntity.create({
       id: uuidv4(),
       projectId: command.projectId,
-      title: command.title,
-      content: command.content,
+      title: derivedTitle,
+      content: command.content ?? '',
       attachments: command.attachments,
       fileType: command.fileType,
       createdById: command.userId,
