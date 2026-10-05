@@ -8,7 +8,10 @@ import {
   type IProjectRepository,
   PROJECT_REPOSITORY,
 } from '../../../projects/domain/repositories/project.repository.interface';
-import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
+import {
+  ProjectRoles,
+  VIEW_ONLY_MESSAGE,
+} from '../../../projects/domain/value-objects/project-role.value-object';
 import {
   InsufficientAiPermissionError,
   NotProjectMemberError,
@@ -29,9 +32,7 @@ export class AiAccessService {
     const membership = await this.projects.findMembership(projectId, userId);
     if (!membership) throw new NotProjectMemberError();
     if (!ProjectRoles.canWriteContent(membership.role)) {
-      throw new InsufficientAiPermissionError(
-        'You need write access to the project to execute task actions',
-      );
+      throw new InsufficientAiPermissionError(VIEW_ONLY_MESSAGE);
     }
   }
 }

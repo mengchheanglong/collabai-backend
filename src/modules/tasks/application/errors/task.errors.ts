@@ -3,6 +3,8 @@
 // Domain-specific task errors. Each carries a stable `code`; TaskExceptionFilter maps
 // `code` -> HTTP status. Mirrors the auth/projects error pattern.
 
+import { VIEW_ONLY_MESSAGE } from '../../../projects/domain/value-objects/project-role.value-object';
+
 export abstract class TaskError extends Error {
   abstract readonly code: string;
 
@@ -40,7 +42,7 @@ export class NotProjectMemberError extends TaskError {
 export class TaskWriteForbiddenError extends TaskError {
   readonly code = 'TASK_WRITE_FORBIDDEN';
   constructor(
-    message = 'You do not have permission to modify tasks in this project',
+    message = VIEW_ONLY_MESSAGE,
   ) {
     super(message);
   }

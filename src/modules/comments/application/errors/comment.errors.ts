@@ -3,6 +3,8 @@
 // Domain-specific comment errors. Each carries a stable `code`; CommentExceptionFilter
 // maps `code` -> HTTP status. Mirrors the auth/projects/tasks error pattern.
 
+import { VIEW_ONLY_MESSAGE } from '../../../projects/domain/value-objects/project-role.value-object';
+
 export abstract class CommentError extends Error {
   abstract readonly code: string;
 
@@ -40,7 +42,7 @@ export class NotProjectMemberError extends CommentError {
 export class CommentWriteForbiddenError extends CommentError {
   readonly code = 'COMMENT_WRITE_FORBIDDEN';
   constructor(
-    message = 'You do not have permission to comment in this project',
+    message = VIEW_ONLY_MESSAGE,
   ) {
     super(message);
   }

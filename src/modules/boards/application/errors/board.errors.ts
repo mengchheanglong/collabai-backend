@@ -8,8 +8,10 @@ export class BoardNotFoundError extends Error {
 }
 
 export class BoardForbiddenError extends Error {
-  constructor() {
-    super('You do not have permission to perform this action on the board');
+  constructor(
+    message = 'You do not have permission to perform this action on the board',
+  ) {
+    super(message);
     this.name = 'BoardForbiddenError';
   }
 }

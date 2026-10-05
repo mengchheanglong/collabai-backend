@@ -55,7 +55,11 @@ describe('CreateDocumentHandler', () => {
 
     await expect(
       handler.execute(new CreateDocumentCommand('user-viewer', 'proj-1', 'PRD', 'Content')),
-    ).rejects.toThrow(DocumentForbiddenError);
+    ).rejects.toThrow(
+      new DocumentForbiddenError(
+        'You have view-only access to this project. Ask an owner or admin for Member access to make changes.',
+      ),
+    );
 
     expect(repo.create).not.toHaveBeenCalled();
   });

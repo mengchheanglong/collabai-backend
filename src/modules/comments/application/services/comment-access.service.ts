@@ -49,7 +49,11 @@ export class CommentAccessService {
     const membership = await this.projects.findMembership(projectId, userId);
     if (!membership) throw new NotProjectMemberError();
     if (ProjectRoles.canManageMembers(membership.role)) return; // moderator
-    if (userId === authorId && ProjectRoles.canWriteContent(membership.role)) return;
+    // Viewers are read-only — say so, rather than "only your own comments".
+    if (!ProjectRoles.canWriteContent(membership.role)) {
+      throw new CommentWriteForbiddenError();
+    }
+    if (userId === authorId) return;
     throw new CommentModerationForbiddenError();
   }
 

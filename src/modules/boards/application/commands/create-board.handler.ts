@@ -34,7 +34,11 @@ export class CreateBoardHandler implements ICommandHandler<CreateBoardCommand> {
       command.userId,
     );
     if (!membership || !ProjectRoles.canEditProject(membership.role)) {
-      throw new BoardForbiddenError();
+      throw new BoardForbiddenError(
+        membership
+          ? 'Only project owners and admins can create, rename or delete boards.'
+          : undefined,
+      );
     }
 
     const name = command.name.trim();

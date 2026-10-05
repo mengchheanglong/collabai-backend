@@ -30,7 +30,9 @@ export class UpdateProjectHandler implements ICommandHandler<UpdateProjectComman
     );
     if (!membership) throw new NotProjectMemberError();
     if (!ProjectRoles.canEditProject(membership.role)) {
-      throw new InsufficientProjectPermissionError();
+      throw new InsufficientProjectPermissionError(
+        'Only project owners and admins can edit project settings.',
+      );
     }
 
     const project = await this.repo.findById(command.projectId);

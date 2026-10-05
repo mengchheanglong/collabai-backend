@@ -43,11 +43,13 @@ describe('CommentAccessService.requireAuthorOrModerator', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('blocks a viewer from editing even their own earlier comment', async () => {
+  it('tells a viewer they are view-only, even for their own earlier comment', async () => {
     as('viewer');
     await expect(
       access.requireAuthorOrModerator('proj-1', 'user-1', 'user-1'),
-    ).rejects.toThrow(CommentModerationForbiddenError);
+    ).rejects.toThrow(
+      'You have view-only access to this project. Ask an owner or admin for Member access to make changes.',
+    );
   });
 
   it('rejects non-members', async () => {

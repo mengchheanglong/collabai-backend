@@ -35,7 +35,11 @@ export class UpdateBoardHandler implements ICommandHandler<UpdateBoardCommand> {
       command.userId,
     );
     if (!membership || !ProjectRoles.canEditProject(membership.role)) {
-      throw new BoardForbiddenError();
+      throw new BoardForbiddenError(
+        membership
+          ? 'Only project owners and admins can create, rename or delete boards.'
+          : undefined,
+      );
     }
 
     board.applyUpdate(command.patch);

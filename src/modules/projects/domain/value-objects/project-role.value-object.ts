@@ -6,6 +6,10 @@
 
 export type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer';
 
+/** Shown whenever a viewer tries to change project content (same wording as the frontend). */
+export const VIEW_ONLY_MESSAGE =
+  'You have view-only access to this project. Ask an owner or admin for Member access to make changes.';
+
 export const PROJECT_ROLES: readonly ProjectRole[] = [
   'owner',
   'admin',
