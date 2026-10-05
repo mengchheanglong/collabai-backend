@@ -14,6 +14,7 @@ import { buildErrorBody } from '../../../../common/http/error-body';
 import {
   DuplicateProjectNameError,
   InsufficientProjectPermissionError,
+  InvitationNotFoundError,
   InvalidProjectRoleError,
   InviteeNotFoundError,
   LastOwnerError,
@@ -47,7 +48,8 @@ export class ProjectExceptionFilter implements ExceptionFilter {
     if (
       exception instanceof ProjectNotFoundError ||
       exception instanceof MemberNotFoundError ||
-      exception instanceof InviteeNotFoundError
+      exception instanceof InviteeNotFoundError ||
+      exception instanceof InvitationNotFoundError
     ) {
       return HttpStatus.NOT_FOUND; // 404
     }

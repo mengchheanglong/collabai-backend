@@ -42,12 +42,14 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
     );
     if (!actor) throw new NotProjectMemberError();
     if (!ProjectRoles.canManageMembers(actor.role)) {
-      throw new InsufficientProjectPermissionError();
+      throw new InsufficientProjectPermissionError(
+        'Only project owners and admins can invite members.',
+      );
     }
     // Adding at `admin` (a privileged role) requires the actor to be an owner.
     if (!this.domain.canAssignRole(actor.role, 'viewer', command.role)) {
       throw new InsufficientProjectPermissionError(
-        'Only an owner can grant the admin role',
+        'Only the project owner can grant the admin role.',
       );
     }
 
@@ -70,7 +72,11 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand>
         command.projectId,
         invitee.id,
       );
-      if (existing) throw new MemberAlreadyExistsError();
+      if (existing) {
+        throw new MemberAlreadyExistsError(
+          `${email} is already a member of this project.`,
+        );
+      }
 
       const member = ProjectMemberEntity.create({
         id: uuidv4(),

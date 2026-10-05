@@ -28,7 +28,9 @@ export class RevokeInvitationHandler
     );
     if (!actor) throw new NotProjectMemberError();
     if (!ProjectRoles.canManageMembers(actor.role)) {
-      throw new InsufficientProjectPermissionError();
+      throw new InsufficientProjectPermissionError(
+        'Only project owners and admins can revoke invitations.',
+      );
     }
 
     const invitation = await this.repo.findInvitationById(command.invitationId);

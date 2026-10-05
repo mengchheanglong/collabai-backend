@@ -10,6 +10,7 @@ import {
   PROJECT_REPOSITORY,
   ProjectView,
 } from '../../domain/repositories/project.repository.interface';
+import { ProjectRoles } from '../../domain/value-objects/project-role.value-object';
 import { ProjectDomainService } from '../../domain/services/project.domain.service';
 import {
   InsufficientProjectPermissionError,
@@ -47,7 +48,11 @@ export class RemoveMemberHandler implements ICommandHandler<RemoveMemberCommand>
         target.role,
       )
     ) {
-      throw new InsufficientProjectPermissionError();
+      throw new InsufficientProjectPermissionError(
+        ProjectRoles.canManageMembers(actor.role)
+          ? 'Only the project owner can remove an owner or admin.'
+          : 'Only project owners and admins can remove members.',
+      );
     }
 
     // Never orphan the project — the last owner cannot be removed (must transfer first).
@@ -55,7 +60,9 @@ export class RemoveMemberHandler implements ICommandHandler<RemoveMemberCommand>
       const owners = await this.repo.countOwners(command.projectId);
       if (this.domain.wouldLeaveNoOwner(target.role, owners)) {
         throw new LastOwnerError(
-          'Cannot remove the last owner. Assign another owner first.',
+          command.actingUserId === command.targetUserId
+            ? "You're the last owner. Make someone else an owner before leaving the project."
+            : 'The project must have at least one owner. Assign another owner first.',
         );
       }
     }

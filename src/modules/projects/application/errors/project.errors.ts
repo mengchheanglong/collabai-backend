@@ -69,6 +69,16 @@ export class InviteeNotFoundError extends ProjectError {
   }
 }
 
+/** The invitation no longer exists (accepted, revoked or never issued for this project). */
+export class InvitationNotFoundError extends ProjectError {
+  readonly code = 'INVITATION_NOT_FOUND';
+  constructor(
+    message = 'This invitation no longer exists — it may have been accepted or revoked.',
+  ) {
+    super(message);
+  }
+}
+
 /** Provided role is not one of owner/admin/member/viewer. */
 export class InvalidProjectRoleError extends ProjectError {
   readonly code = 'INVALID_PROJECT_ROLE';

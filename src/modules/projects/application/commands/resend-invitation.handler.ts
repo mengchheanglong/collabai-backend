@@ -11,6 +11,7 @@ import {
 import { ProjectRoles } from '../../domain/value-objects/project-role.value-object';
 import {
   InsufficientProjectPermissionError,
+  InvitationNotFoundError,
   NotProjectMemberError,
   ProjectNotFoundError,
 } from '../errors/project.errors';
@@ -34,12 +35,14 @@ export class ResendInvitationHandler implements ICommandHandler<ResendInvitation
     );
     if (!actor) throw new NotProjectMemberError();
     if (!ProjectRoles.canManageMembers(actor.role)) {
-      throw new InsufficientProjectPermissionError();
+      throw new InsufficientProjectPermissionError(
+        'Only project owners and admins can resend invitations.',
+      );
     }
 
     const invitation = await this.repo.findInvitationById(command.invitationId);
     if (!invitation || invitation.projectId !== command.projectId) {
-      return;
+      throw new InvitationNotFoundError();
     }
 
     const project = await this.repo.findViewById(command.projectId);

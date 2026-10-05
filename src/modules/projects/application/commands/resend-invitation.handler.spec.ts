@@ -4,6 +4,7 @@ import { ResendInvitationHandler } from './resend-invitation.handler';
 import { ResendInvitationCommand } from './resend-invitation.command';
 import {
   InsufficientProjectPermissionError,
+  InvitationNotFoundError,
   NotProjectMemberError,
   ProjectNotFoundError,
 } from '../errors/project.errors';
@@ -46,7 +47,7 @@ describe('ResendInvitationHandler', () => {
     ).rejects.toThrow(InsufficientProjectPermissionError);
   });
 
-  it('does nothing if invitation is not found', async () => {
+  it('reports a missing invitation (already accepted or revoked)', async () => {
     mockRepo.findMembership.mockResolvedValueOnce({
       projectId: 'proj-1',
       userId: 'user-1',
@@ -54,14 +55,14 @@ describe('ResendInvitationHandler', () => {
     });
     mockRepo.findInvitationById.mockResolvedValueOnce(null);
 
-    await handler.execute(
-      new ResendInvitationCommand('user-1', 'proj-1', 'inv-1'),
-    );
+    await expect(
+      handler.execute(new ResendInvitationCommand('user-1', 'proj-1', 'inv-1')),
+    ).rejects.toThrow(InvitationNotFoundError);
     expect(mockRepo.createInvitation).not.toHaveBeenCalled();
     expect(mockBus.publish).not.toHaveBeenCalled();
   });
 
-  it('does nothing if invitation belongs to a different project', async () => {
+  it('reports an invitation from a different project as not found', async () => {
     mockRepo.findMembership.mockResolvedValueOnce({
       projectId: 'proj-1',
       userId: 'user-1',
@@ -73,9 +74,9 @@ describe('ResendInvitationHandler', () => {
       email: 'guest@example.com',
     });
 
-    await handler.execute(
-      new ResendInvitationCommand('user-1', 'proj-1', 'inv-1'),
-    );
+    await expect(
+      handler.execute(new ResendInvitationCommand('user-1', 'proj-1', 'inv-1')),
+    ).rejects.toThrow(InvitationNotFoundError);
     expect(mockRepo.createInvitation).not.toHaveBeenCalled();
     expect(mockBus.publish).not.toHaveBeenCalled();
   });

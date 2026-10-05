@@ -10,6 +10,7 @@ import {
   PROJECT_REPOSITORY,
   ProjectView,
 } from '../../domain/repositories/project.repository.interface';
+import { ProjectRoles } from '../../domain/value-objects/project-role.value-object';
 import { ProjectDomainService } from '../../domain/services/project.domain.service';
 import {
   InsufficientProjectPermissionError,
@@ -33,6 +34,17 @@ export class UpdateMemberRoleHandler implements ICommandHandler<UpdateMemberRole
     );
     if (!actor) throw new NotProjectMemberError();
 
+    if (command.actingUserId === command.targetUserId) {
+      throw new InsufficientProjectPermissionError(
+        "You can't change your own role. Ask a project owner to do it.",
+      );
+    }
+    if (!ProjectRoles.canManageMembers(actor.role)) {
+      throw new InsufficientProjectPermissionError(
+        'Only project owners and admins can change member roles.',
+      );
+    }
+
     const target = await this.repo.findMembership(
       command.projectId,
       command.targetUserId,
@@ -47,7 +59,10 @@ export class UpdateMemberRoleHandler implements ICommandHandler<UpdateMemberRole
     }
 
     if (!this.domain.canAssignRole(actor.role, target.role, command.role)) {
-      throw new InsufficientProjectPermissionError();
+      // Managers reach this only when an admin touches an owner/admin role.
+      throw new InsufficientProjectPermissionError(
+        'Only the project owner can grant, change or remove the owner and admin roles.',
+      );
     }
 
     // Demoting/replacing the last owner would leave the project ownerless.
