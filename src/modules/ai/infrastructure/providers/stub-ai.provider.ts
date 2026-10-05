@@ -115,42 +115,200 @@ export class StubAiProvider implements IAiProvider {
   }
 
   async chat(input: ChatInput): Promise<string> {
-    const msg = input.message.toLowerCase();
+    const rawMsg = input.message.trim();
+    const msg = rawMsg.toLowerCase();
     const proj = input.context?.projectName ?? 'your project';
+    const docs = input.context?.documents ?? [];
 
+    // Helper: determine if previous conversation was about documents
+    const lastHistory =
+      input.history && input.history.length > 0
+        ? input.history[input.history.length - 1]
+        : undefined;
+    const historyWasAboutDocs =
+      lastHistory &&
+      (lastHistory.content.includes('📚 Project Documentation') ||
+        lastHistory.content.includes('Document 1:') ||
+        lastHistory.content.toLowerCase().includes('document') ||
+        lastHistory.content.toLowerCase().includes('srs'));
+
+    // Check if user specifically references a document by title or keyword
+    const matchedDoc = docs.find((d) => {
+      const titleLower = d.title.toLowerCase();
+      if (msg.includes(titleLower)) return true;
+      const words = titleLower
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 3);
+      const matchedWords = words.filter((w) => msg.includes(w));
+      return (
+        matchedWords.length >= 2 ||
+        (words.length === 1 && matchedWords.length === 1)
+      );
+    });
+
+    const isDocKeyword =
+      msg.includes('doc') ||
+      msg.includes('documentation') ||
+      msg.includes('spec') ||
+      msg.includes('specification') ||
+      msg.includes('srs') ||
+      msg.includes('prd') ||
+      msg.includes('guide') ||
+      msg.includes('manual') ||
+      msg.includes('requirement');
+
+    const isReferringToDoc =
+      Boolean(matchedDoc) ||
+      (historyWasAboutDocs &&
+        (msg.includes('it') ||
+          msg.includes('this') ||
+          msg.includes('summary') ||
+          msg.includes('summarize') ||
+          msg.includes('detail') ||
+          msg.includes('explain'))) ||
+      (isDocKeyword &&
+        (msg.includes('summary') ||
+          msg.includes('summarize') ||
+          msg.includes('what') ||
+          msg.includes('show') ||
+          msg.includes('explain') ||
+          msg.includes('about')));
+
+    // 1. Greetings
     if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
-      return `Hello! I'm CollabAI. How can I help you manage **${proj}** today? You can ask me to create tasks, update priorities, assign work, or brainstorm project ideas.`;
+      return `Hello! I'm CollabAI. How can I help you manage **${proj}** today? You can ask me to create tasks, update priorities, assign work, or explore project documentation.`;
     }
     if (msg.includes('how are you')) {
       return `I'm doing great and ready to assist you with **${proj}**! What would you like to work on next?`;
     }
+
+    // 2. Document Summary / Document Queries (prioritized before generic task summary)
+    if (isReferringToDoc) {
+      const targetDoc = matchedDoc || docs[0];
+      if (targetDoc) {
+        return this.formatDocumentSummary(targetDoc, proj);
+      }
+      if (input.context?.documentsSummary) {
+        return `### 📚 Project Documentation for **${proj}**\n\n${input.context.documentsSummary}\n\nLet me know if you would like me to explain any section, summarize key takeaways, or draft tasks based on this documentation!`;
+      }
+      return `No documentation found for **${proj}**. You can add guides, specs, or meeting notes in the Documentation tab!`;
+    }
+
+    // 3. What documents exist / listing documents
+    if (
+      isDocKeyword ||
+      msg.includes('what is in our document') ||
+      msg.includes('what documents')
+    ) {
+      if (input.context?.documentsSummary) {
+        return `### 📚 Project Documentation for **${proj}**\n\n${input.context.documentsSummary}\n\nLet me know if you would like me to explain any section, summarize key takeaways, or draft tasks based on this documentation!`;
+      }
+      return `No documentation recorded yet for **${proj}**. You can upload PDFs, Word documents, or write markdown specs in the Documentation tab!`;
+    }
+
+    // 4. Project Overview / Task Summary (explicit task / status / board overview)
     if (
       msg.includes('summary') ||
       msg.includes('status') ||
-      msg.includes('progress')
+      msg.includes('progress') ||
+      msg.includes('overview')
     ) {
       if (input.context?.tasksSummary) {
         return `### 📋 Project Overview for **${proj}**\n\n${input.context.tasksSummary}\n\nLet me know if you want to organize, prioritize, or assign any of these tasks!`;
       }
       return `Here to help track **${proj}**. Let me know what specific tasks or team members you'd like to check on.`;
     }
-    if (
-      msg.includes('doc') ||
-      msg.includes('documentation') ||
-      msg.includes('spec') ||
-      msg.includes('prd') ||
-      msg.includes('guide') ||
-      msg.includes('knowledge')
-    ) {
-      if (input.context?.documentsSummary) {
-        return `### 📚 Project Documentation for **${proj}**\n\n${input.context.documentsSummary}\n\nLet me know if you would like me to explain any section, summarize key takeaways, or draft tasks based on this documentation!`;
-      }
-      return `No documentation found for **${proj}**. You can add guides, specs, or meeting notes in the Documentation tab!`;
-    }
+
+    // 5. Help / capabilities
     if (msg.includes('help') || msg.includes('what can you do')) {
-      return `I can help you:\n- **Manage tasks**: create, assign, change status/priority, and set due dates.\n- **Brainstorm**: generate structured task lists and breakdown complex goals.\n- **Search & Filter**: find specific tasks and filter your board.\n- **Collaborate**: post comments and summarize team discussions.\n\nYou can talk to me naturally (e.g. *"create a task for Sunday outing"*, *"set priority to high and assign it to Mengchheang"*), or use slash commands like \`/create\`, \`/task\`, and \`/filter\`.`;
+      return `I can help you:\n- **Manage tasks**: create, assign, change status/priority, and set due dates.\n- **Read & summarize documentation**: upload PDFs, specifications, and PRDs, and ask me to summarize or extract tasks.\n- **Brainstorm**: generate structured task lists and breakdown complex goals.\n- **Search & Filter**: find specific tasks and filter your board.\n- **Collaborate**: post comments and summarize team discussions.\n\nYou can talk to me naturally (e.g. *"create a task for Sunday outing"*, *"summarize our SRS document"*, *"set priority to high and assign it to Mengchheang"*), or use slash commands like \`/create\`, \`/task\`, and \`/filter\`.`;
     }
-    return `I understand you're asking about "${input.message}". For **${proj}**, I can assist with planning, task updates, role assignments, and team coordination. How would you like to proceed?`;
+
+    return `I understand you're asking about "${input.message}". For **${proj}**, I can assist with planning, task updates, documentation analysis, and team coordination. How would you like to proceed?`;
+  }
+
+  private formatDocumentSummary(
+    doc: { title: string; content: string; fileType?: string | null },
+    proj: string,
+  ): string {
+    const rawContent = (doc.content || '').trim();
+    const format = doc.fileType ? doc.fileType.toUpperCase() : 'DOCUMENT';
+
+    if (!rawContent || rawContent.length < 50) {
+      return `### 📄 Summary: "${doc.title}" [${format}]\n\nThis document currently has limited text content recorded.\n\n- **Document Title**: ${doc.title}\n- **Format**: ${format}\n\nLet me know if you would like to edit or add more content to this document!`;
+    }
+
+    const lines = rawContent
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const meaningfulLines = lines.filter(
+      (l) =>
+        !l.startsWith('#') ||
+        l.replace(/^#+\s*/, '').toLowerCase() !== doc.title.toLowerCase(),
+    );
+
+    const introParagraphs: string[] = [];
+    const bulletPoints: string[] = [];
+    const sections: Array<{ title: string; items: string[] }> = [];
+    let currentSection: { title: string; items: string[] } | null = null;
+
+    for (let i = 0; i < meaningfulLines.length && i < 150; i++) {
+      const line = meaningfulLines[i];
+      if (/^(\d+\.|\d+\.\d+|#+|[A-Z\s]{4,}:)/.test(line) && line.length < 80) {
+        if (currentSection && currentSection.items.length > 0) {
+          sections.push(currentSection);
+        }
+        currentSection = { title: line.replace(/^#+\s*/, ''), items: [] };
+      } else if (/^[●•\-\*]\s*/.test(line)) {
+        const cleanBullet = line.replace(/^[●•\-\*]\s*/, '').trim();
+        if (currentSection) {
+          currentSection.items.push(cleanBullet);
+        } else {
+          bulletPoints.push(cleanBullet);
+        }
+      } else if (line.length > 30) {
+        if (currentSection) {
+          if (currentSection.items.length < 4) {
+            currentSection.items.push(line);
+          }
+        } else if (introParagraphs.length < 3) {
+          introParagraphs.push(line);
+        }
+      }
+    }
+    if (currentSection && currentSection.items.length > 0) {
+      sections.push(currentSection);
+    }
+
+    const overview =
+      introParagraphs.slice(0, 2).join(' ') ||
+      meaningfulLines.slice(0, 3).join(' ') ||
+      'Overview not explicitly specified.';
+
+    const keyHighlights =
+      bulletPoints.length > 0
+        ? bulletPoints.slice(0, 5).map((b) => `- ${b}`).join('\n')
+        : sections
+            .slice(0, 4)
+            .map(
+              (s) =>
+                `#### ${s.title}\n${s.items.slice(0, 3).map((item) => `- ${item}`).join('\n')}`,
+            )
+            .join('\n\n');
+
+    return `### 📄 Summary of **${doc.title}** [${format}]
+
+**Overview & Purpose:**
+${overview}
+
+${keyHighlights ? `**Key Requirements & Highlights:**\n${keyHighlights}\n\n` : ''}---
+💡 *Would you like me to:*
+- Break down any specific section or requirement?
+- Draft executable project tasks based on this specification?
+- Generate user stories or acceptance criteria?`;
   }
 
   async generateProjectInsights(

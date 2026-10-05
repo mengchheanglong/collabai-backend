@@ -21,6 +21,7 @@ import {
   DocumentForbiddenError,
   DocumentNotFoundError,
 } from '../errors/document.errors';
+import { DocumentExtractorService } from '../services/document-extractor.service';
 
 @CommandHandler(UpdateDocumentCommand)
 export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentCommand> {
@@ -28,6 +29,7 @@ export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentComm
     @Inject(DOCUMENT_REPOSITORY) private readonly repo: IDocumentRepository,
     @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
     private readonly events: EventEmitter2,
+    private readonly extractor: DocumentExtractorService = new DocumentExtractorService(),
   ) {}
 
   async execute(command: UpdateDocumentCommand): Promise<DocumentView> {
@@ -52,7 +54,35 @@ export class UpdateDocumentHandler implements ICommandHandler<UpdateDocumentComm
       }
     }
 
-    doc.update(command.fields);
+    const fields = { ...command.fields };
+
+    // If attachments are being updated, extract text if content is empty or placeholder
+    if (fields.attachments && fields.attachments.length > 0) {
+      let currentContent = fields.content ?? doc.content ?? '';
+      for (const att of fields.attachments) {
+        try {
+          const extractedText = await this.extractor.extractFromAttachment(att);
+          if (extractedText && extractedText.trim()) {
+            const isPlaceholder =
+              !currentContent ||
+              currentContent.trim() === '' ||
+              /^#\s+.*\n\nUploaded\s+(PDF|Word|file)\s+document:/i.test(currentContent.trim());
+
+            if (isPlaceholder) {
+              const title = fields.title ?? doc.title;
+              currentContent = `# ${title}\n\n${extractedText.trim()}`;
+            } else if (!currentContent.includes(extractedText.slice(0, 100))) {
+              currentContent = `${currentContent.trim()}\n\n---\n### Extracted File Content (${att.name})\n\n${extractedText.trim()}`;
+            }
+          }
+        } catch {
+          // Non-blocking extraction error
+        }
+      }
+      fields.content = currentContent;
+    }
+
+    doc.update(fields);
     await this.repo.update(doc);
 
     const view = await this.repo.findViewById(doc.id);

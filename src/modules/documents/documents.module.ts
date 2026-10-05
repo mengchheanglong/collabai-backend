@@ -16,6 +16,8 @@ import { DeleteDocumentHandler } from './application/commands/delete-document.ha
 import { GetDocumentsHandler } from './application/queries/get-documents.handler';
 import { GetDocumentHandler } from './application/queries/get-document.handler';
 
+import { DocumentExtractorService } from './application/services/document-extractor.service';
+
 const CommandHandlers = [
   CreateDocumentHandler,
   UpdateDocumentHandler,
@@ -29,9 +31,10 @@ const QueryHandlers = [GetDocumentsHandler, GetDocumentHandler];
   controllers: [DocumentsController],
   providers: [
     { provide: DOCUMENT_REPOSITORY, useClass: DocumentRepository },
+    DocumentExtractorService,
     ...CommandHandlers,
     ...QueryHandlers,
   ],
-  exports: [DOCUMENT_REPOSITORY],
+  exports: [DOCUMENT_REPOSITORY, DocumentExtractorService],
 })
 export class DocumentsModule {}

@@ -82,14 +82,20 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
             ? project.documents
                 .map((d, i) => {
                   const attachments = Array.isArray(d.attachments) ? d.attachments : [];
-                  const attNames = attachments
-                    .map((a: any) => `${a.name}${a.size ? ` (${Math.round(a.size / 1024)} KB)` : ''}`)
+                  const validAttachments = attachments.filter(
+                    (a: any) => a && typeof a === 'object' && a.name,
+                  );
+                  const attNames = validAttachments
+                    .map(
+                      (a: any) =>
+                        `${a.name}${a.size ? ` (${Math.round(a.size / 1024)} KB)` : ''}`,
+                    )
                     .join(', ');
                   const attInfo = attNames ? ` [Attached file(s): ${attNames}]` : '';
                   const cleanContent = d.content.trim();
                   const snippet = cleanContent
-                    ? cleanContent.length > 1500
-                      ? `${cleanContent.slice(0, 1500)}... [truncated]`
+                    ? cleanContent.length > 8000
+                      ? `${cleanContent.slice(0, 8000)}... [truncated]`
                       : cleanContent
                     : `Uploaded file document: "${d.title}"${attInfo}`;
                   const format = d.fileType

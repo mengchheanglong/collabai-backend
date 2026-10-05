@@ -1,13 +1,14 @@
 // src/modules/documents/application/dtos/update-document.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 import {
   IsTrimmedNotEmpty,
   SanitizeHtml,
   Trim,
 } from '../../../../common/decorators/sanitizers.decorator';
 
-import { DocumentAttachment } from './create-document.dto';
+import { DocumentAttachmentDto } from './create-document.dto';
 
 export class UpdateDocumentDto {
   @ApiPropertyOptional({ description: 'Title of the document' })
@@ -23,9 +24,15 @@ export class UpdateDocumentDto {
   @IsString()
   content?: string;
 
-  @ApiPropertyOptional({ description: 'Attached files (e.g. PDF, Word, Markdown, etc.)' })
+  @ApiPropertyOptional({
+    description: 'Attached files (e.g. PDF, Word, Markdown, etc.)',
+    type: [DocumentAttachmentDto],
+  })
   @IsOptional()
-  attachments?: DocumentAttachment[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DocumentAttachmentDto)
+  attachments?: DocumentAttachmentDto[];
 
   @ApiPropertyOptional({ description: 'File type format (e.g. pdf, docx, doc, md, etc.)' })
   @IsOptional()

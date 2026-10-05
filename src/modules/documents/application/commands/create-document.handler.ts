@@ -19,6 +19,7 @@ import {
 } from '../../../projects/domain/value-objects/project-role.value-object';
 import { DocumentEntity } from '../../domain/entities/document.entity';
 import { DocumentForbiddenError, DocumentNotFoundError } from '../errors/document.errors';
+import { DocumentExtractorService } from '../services/document-extractor.service';
 
 @CommandHandler(CreateDocumentCommand)
 export class CreateDocumentHandler implements ICommandHandler<CreateDocumentCommand> {
@@ -26,6 +27,7 @@ export class CreateDocumentHandler implements ICommandHandler<CreateDocumentComm
     @Inject(DOCUMENT_REPOSITORY) private readonly repo: IDocumentRepository,
     @Inject(PROJECT_REPOSITORY) private readonly projectRepo: IProjectRepository,
     private readonly events: EventEmitter2,
+    private readonly extractor: DocumentExtractorService = new DocumentExtractorService(),
   ) {}
 
   async execute(command: CreateDocumentCommand): Promise<DocumentView> {
@@ -45,11 +47,36 @@ export class CreateDocumentHandler implements ICommandHandler<CreateDocumentComm
       command.attachments?.[0]?.name ||
       (command.fileType ? `Document.${command.fileType}` : 'Untitled document');
 
+    let content = command.content ?? '';
+
+    // If attachments are provided, extract text from supported file types (PDF, Word, Text, Markdown)
+    if (command.attachments && command.attachments.length > 0) {
+      for (const att of command.attachments) {
+        try {
+          const extractedText = await this.extractor.extractFromAttachment(att);
+          if (extractedText && extractedText.trim()) {
+            const isPlaceholder =
+              !content ||
+              content.trim() === '' ||
+              /^#\s+.*\n\nUploaded\s+(PDF|Word|file)\s+document:/i.test(content.trim());
+
+            if (isPlaceholder) {
+              content = `# ${derivedTitle}\n\n${extractedText.trim()}`;
+            } else if (!content.includes(extractedText.slice(0, 100))) {
+              content = `${content.trim()}\n\n---\n### Extracted File Content (${att.name})\n\n${extractedText.trim()}`;
+            }
+          }
+        } catch {
+          // Non-blocking extraction error
+        }
+      }
+    }
+
     const doc = DocumentEntity.create({
       id: uuidv4(),
       projectId: command.projectId,
       title: derivedTitle,
-      content: command.content ?? '',
+      content,
       attachments: command.attachments,
       fileType: command.fileType,
       createdById: command.userId,
