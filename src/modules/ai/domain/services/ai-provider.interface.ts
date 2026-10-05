@@ -51,11 +51,21 @@ export interface GenerateTasksInput {
   count: number;
 }
 
+export interface ChatDocumentContext {
+  id: string;
+  title: string;
+  content: string;
+  fileType?: string | null;
+  updatedAt?: Date;
+}
+
 export interface ChatContext {
   projectName?: string;
   projectDescription?: string;
   tasksSummary?: string;
   membersSummary?: string;
+  documentsSummary?: string;
+  documents?: ChatDocumentContext[];
 }
 
 export interface ChatInput {

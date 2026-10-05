@@ -5,6 +5,7 @@
 // endpoints work end-to-end without any external dependency.
 
 import {
+  ChatInput,
   GenerateDescriptionInput,
   GenerateTasksInput,
   IAiProvider,
@@ -113,16 +114,7 @@ export class StubAiProvider implements IAiProvider {
     };
   }
 
-  async chat(input: {
-    message: string;
-    context?: {
-      projectName?: string;
-      projectDescription?: string;
-      tasksSummary?: string;
-      membersSummary?: string;
-    };
-    history?: Array<{ role: 'user' | 'assistant'; content: string }>;
-  }): Promise<string> {
+  async chat(input: ChatInput): Promise<string> {
     const msg = input.message.toLowerCase();
     const proj = input.context?.projectName ?? 'your project';
 
@@ -141,6 +133,19 @@ export class StubAiProvider implements IAiProvider {
         return `### 📋 Project Overview for **${proj}**\n\n${input.context.tasksSummary}\n\nLet me know if you want to organize, prioritize, or assign any of these tasks!`;
       }
       return `Here to help track **${proj}**. Let me know what specific tasks or team members you'd like to check on.`;
+    }
+    if (
+      msg.includes('doc') ||
+      msg.includes('documentation') ||
+      msg.includes('spec') ||
+      msg.includes('prd') ||
+      msg.includes('guide') ||
+      msg.includes('knowledge')
+    ) {
+      if (input.context?.documentsSummary) {
+        return `### 📚 Project Documentation for **${proj}**\n\n${input.context.documentsSummary}\n\nLet me know if you would like me to explain any section, summarize key takeaways, or draft tasks based on this documentation!`;
+      }
+      return `No documentation found for **${proj}**. You can add guides, specs, or meeting notes in the Documentation tab!`;
     }
     if (msg.includes('help') || msg.includes('what can you do')) {
       return `I can help you:\n- **Manage tasks**: create, assign, change status/priority, and set due dates.\n- **Brainstorm**: generate structured task lists and breakdown complex goals.\n- **Search & Filter**: find specific tasks and filter your board.\n- **Collaborate**: post comments and summarize team discussions.\n\nYou can talk to me naturally (e.g. *"create a task for Sunday outing"*, *"set priority to high and assign it to Mengchheang"*), or use slash commands like \`/create\`, \`/task\`, and \`/filter\`.`;

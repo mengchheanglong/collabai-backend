@@ -47,4 +47,28 @@ describe('StubAiProvider', () => {
       expect(i.q).toBe('login page');
     });
   });
+
+  describe('chat', () => {
+    it('answers documentation queries using documentsSummary context', async () => {
+      const reply = await provider.chat({
+        message: 'what is in our project documentation?',
+        context: {
+          projectName: 'Alpha',
+          documentsSummary: '### Document 1: "Auth Spec"\nJWT auth with refresh tokens.',
+        },
+      });
+      expect(reply).toContain('Project Documentation');
+      expect(reply).toContain('Auth Spec');
+    });
+
+    it('falls back when no documentation is present', async () => {
+      const reply = await provider.chat({
+        message: 'show me the doc specs',
+        context: {
+          projectName: 'Alpha',
+        },
+      });
+      expect(reply).toContain('No documentation found for **Alpha**');
+    });
+  });
 });

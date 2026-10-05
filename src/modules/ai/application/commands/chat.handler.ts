@@ -48,6 +48,17 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
               },
             },
           },
+          documents: {
+            take: 15,
+            orderBy: { updatedAt: 'desc' },
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              fileType: true,
+              updatedAt: true,
+            },
+          },
         },
       });
 
@@ -65,11 +76,36 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
           })
           .join('\n');
 
+        const documentsSummary =
+          project.documents && project.documents.length > 0
+            ? project.documents
+                .map((d, i) => {
+                  const cleanContent = d.content.trim();
+                  const snippet =
+                    cleanContent.length > 1500
+                      ? `${cleanContent.slice(0, 1500)}... [truncated]`
+                      : cleanContent || '(Empty document)';
+                  const format = d.fileType
+                    ? ` [Format: ${d.fileType.toUpperCase()}]`
+                    : '';
+                  return `### Document ${i + 1}: "${d.title}"${format} (ID: ${d.id})\n${snippet}`;
+                })
+                .join('\n\n')
+            : 'No documentation recorded yet.';
+
         context = {
           projectName: project.name,
           projectDescription: project.description ?? '',
           membersSummary: membersSummary || 'No members listed.',
           tasksSummary: tasksSummary || 'No tasks created yet.',
+          documentsSummary,
+          documents: project.documents.map((d) => ({
+            id: d.id,
+            title: d.title,
+            content: d.content,
+            fileType: d.fileType,
+            updatedAt: d.updatedAt,
+          })),
         };
       }
     }

@@ -20,7 +20,7 @@ import { isValidUuid } from '../../common/utils/uuid.util';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: true,
     credentials: true,
   },
 })
@@ -345,6 +345,30 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // --- Domain Event Listeners -> Socket Broadcasts ---
 
+  private formatTaskPayload(task: any) {
+    if (!task) return null;
+    return {
+      ...task,
+      id: task.id,
+      _id: task.id,
+      assigneeId: task.assignedTo ?? task.assigneeId ?? null,
+      createdById: task.createdBy ?? task.createdById,
+      labels: (task.labels || []).map((l: any) =>
+        typeof l === 'string' ? l : (l?.label?.name ?? l?.name ?? l)
+      ),
+      subtasks: (task.subtasks || []).map((s: any) => ({
+        id: s.id,
+        _id: s.id,
+        title: s.title,
+        done: s.done ?? s.completed ?? false,
+      })),
+      createdAt:
+        task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
+      updatedAt:
+        task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
+    };
+  }
+
   @OnEvent(TaskCreatedEvent.eventName)
   async handleTaskCreated(event: TaskCreatedEvent) {
     if (!this.server) return;
@@ -359,7 +383,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`project:${event.projectId}`).emit('task:created', {
       projectId: event.projectId,
       actorId: event.actorId,
-      data: { task },
+      data: { task: this.formatTaskPayload(task) },
       createdAt: new Date().toISOString(),
     });
   }
@@ -375,6 +399,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
     });
 
+    const mappedTask = this.formatTaskPayload(task);
+
     this.server.to(`project:${event.projectId}`).emit('task:moved', {
       projectId: event.projectId,
       actorId: event.actorId,
@@ -383,7 +409,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         fromStatus: event.fromStatus,
         toStatus: event.toStatus,
         position: event.position,
-        task,
+        task: mappedTask,
       },
       createdAt: new Date().toISOString(),
     });
@@ -400,7 +426,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`project:${event.projectId}`).emit('task:updated', {
       projectId: event.projectId,
       actorId: event.actorId,
-      data: { task: event.task },
+      data: { task: this.formatTaskPayload(event.task) },
       createdAt: new Date().toISOString(),
     });
   }

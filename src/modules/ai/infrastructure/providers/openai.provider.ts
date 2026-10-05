@@ -146,7 +146,11 @@ Context Information:
 - Active Project: ${input.context?.projectName ?? 'None'}
 - Project Description: ${input.context?.projectDescription ?? 'None'}
 - Team Members: ${input.context?.membersSummary ?? 'None'}
-- Tasks Overview: ${input.context?.tasksSummary ?? 'None'}`;
+- Tasks Overview: ${input.context?.tasksSummary ?? 'None'}
+- Project Documentation & Knowledge Base:
+${input.context?.documentsSummary ?? 'No documentation recorded yet.'}
+
+When answering questions regarding project specifications, architecture, requirements, or meeting notes, consult the Project Documentation & Knowledge Base above. Mention the document title when referencing details from a document.`;
 
       const messages: Array<{
         role: 'system' | 'user' | 'assistant';
