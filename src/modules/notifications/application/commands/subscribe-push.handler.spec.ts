@@ -14,6 +14,7 @@ describe('SubscribePushHandler', () => {
       findByUserId: jest.fn(),
       findByEndpoint: jest.fn(),
       deleteByEndpoint: jest.fn(),
+      deleteByEndpointAndUserId: jest.fn().mockResolvedValue(undefined),
       deleteByEndpoints: jest.fn(),
     };
     handler = new SubscribePushHandler(repo);

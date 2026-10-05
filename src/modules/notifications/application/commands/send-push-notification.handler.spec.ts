@@ -17,6 +17,7 @@ describe('SendPushNotificationHandler', () => {
       findByUserId: jest.fn(),
       findByEndpoint: jest.fn(),
       deleteByEndpoint: jest.fn(),
+      deleteByEndpointAndUserId: jest.fn(),
       deleteByEndpoints: jest.fn(),
     };
     webPush = {

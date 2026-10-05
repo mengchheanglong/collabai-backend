@@ -112,7 +112,11 @@ describe('BoardsController', () => {
 
       queryBus.execute.mockResolvedValueOnce(mockWithTasks);
 
-      const res = await controller.getBoard('user-1', mockBoardView.id, 'true');
+      const res = (await controller.getBoard(
+        'user-1',
+        mockBoardView.id,
+        'true',
+      )) as any;
       expect(queryBus.execute).toHaveBeenCalledWith(
         new GetBoardQuery('user-1', mockBoardView.id, true),
       );
