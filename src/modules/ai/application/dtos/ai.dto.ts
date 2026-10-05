@@ -118,11 +118,11 @@ export class GenerateTasksDto {
   @IsTrimmedNotEmpty({ minLength: 2, maxLength: 5000 })
   prompt: string;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 15, default: 5 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 5 })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(15)
+  @Max(50)
   count?: number;
 }
 

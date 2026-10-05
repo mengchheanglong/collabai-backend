@@ -40,12 +40,14 @@ export class GenerateTasksHandler implements ICommandHandler<GenerateTasksComman
             const attachments = Array.isArray(d.attachments) ? d.attachments : [];
             const attNames = attachments.map((a: any) => a.name).join(', ');
             const info = cleanContent
-              ? cleanContent.slice(0, 400)
+              ? cleanContent.length > 8000
+                ? `${cleanContent.slice(0, 8000)}... [truncated]`
+                : cleanContent
               : `Uploaded file${d.fileType ? ` (${d.fileType})` : ''}: ${attNames || d.title}`;
-            return `- "${d.title}": ${info}`;
+            return `### Document: "${d.title}"\n${info}`;
           })
-          .join('\n');
-        prompt = `${command.prompt}\n\nWorkspace Documentation Context:\n${docSnippets}`;
+          .join('\n\n');
+        prompt = `${command.prompt}\n\nProject Documentation Context:\n${docSnippets}`;
       }
     }
     const tasks = await this.ai.generateTasks({

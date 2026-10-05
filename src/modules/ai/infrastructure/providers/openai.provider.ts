@@ -150,7 +150,13 @@ Context Information:
 - Project Documentation & Knowledge Base:
 ${input.context?.documentsSummary ?? 'No documentation recorded yet.'}
 
-When answering questions regarding project specifications, architecture, requirements, or meeting notes, consult the Project Documentation & Knowledge Base above. Mention the document title when referencing details from a document.`;
+When answering questions regarding project specifications, architecture, requirements, or meeting notes, consult the Project Documentation & Knowledge Base above. Mention the document title when referencing details from a document.
+
+CRITICAL BEHAVIOR RULES:
+- You are directly connected to the project workspace and board. NEVER claim that you lack tools/functions to write to the database or that you cannot create tasks.
+- NEVER instruct the user to copy-paste formatted blocks (such as "Title: ... Priority: ... Assignee: ...") into the UI.
+- NEVER ask the user to choose between copy-paste formats, CSV imports, or manual button clicking.
+- When the user asks you to create, draft, or plan tasks, provide clear, concise, actionable task items with titles, priorities, and brief descriptions directly in your response.`;
 
       const messages: Array<{
         role: 'system' | 'user' | 'assistant';
