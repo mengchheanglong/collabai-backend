@@ -89,6 +89,7 @@ describe('DeleteDocumentHandler', () => {
       projectId: 'proj-1',
       documentId: 'doc-1',
       actorId: 'user-1',
+      title: 'Doc to Delete',
     });
   });
 });

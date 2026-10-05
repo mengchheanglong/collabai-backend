@@ -16,6 +16,7 @@ import { BoardsModule } from './modules/boards/boards.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { authThrottlers } from './config/throttler.config';
 
 @Module({
@@ -42,6 +43,7 @@ import { authThrottlers } from './config/throttler.config';
     SyncModule,
     DocumentsModule,
     RealtimeModule,
+    ActivityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

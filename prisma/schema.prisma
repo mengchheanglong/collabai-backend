@@ -263,6 +263,7 @@ model Activity {
   action    String   // created, updated, deleted, moved
   oldValue  String?
   newValue  String?
+  message   String?  // human-readable line, e.g. "Dara created task Build login page"
   createdAt DateTime @default(now())
 
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)

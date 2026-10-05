@@ -31,6 +31,7 @@ export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
       projectId: task.projectId,
       boardId: task.boardId,
       actorId: command.actingUserId,
+      title: task.title,
     });
   }
 }

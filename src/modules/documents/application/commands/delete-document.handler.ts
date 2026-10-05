@@ -41,6 +41,7 @@ export class DeleteDocumentHandler implements ICommandHandler<DeleteDocumentComm
       projectId,
       documentId: command.documentId,
       actorId: command.userId,
+      title: doc.title,
     });
   }
 }
