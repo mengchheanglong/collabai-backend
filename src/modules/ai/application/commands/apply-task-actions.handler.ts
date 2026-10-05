@@ -81,6 +81,13 @@ export class ApplyTaskActionsHandler
           select: { assignedTo: true },
         });
         if (!current) continue;
+        // Members may only change tasks that are theirs or unassigned.
+        if (
+          !actorRole ||
+          !ProjectRoles.canWorkOnTask(actorRole, command.userId, current.assignedTo ?? null)
+        ) {
+          continue;
+        }
         // Same assignment rule as the task API: members can't give tasks to others.
         if (
           action.changes.assigneeId !== undefined &&

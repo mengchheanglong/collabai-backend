@@ -13,6 +13,7 @@ import {
 import { ProjectRoles } from '../../../projects/domain/value-objects/project-role.value-object';
 import {
   NotProjectMemberError,
+  NotYourTaskError,
   TaskAssignForbiddenError,
   TaskWriteForbiddenError,
 } from '../errors/task.errors';
@@ -52,6 +53,20 @@ export class TaskAccessService {
     if (!membership) throw new NotProjectMemberError();
     if (!ProjectRoles.canChangeAssignee(membership.role, userId, current, next)) {
       throw new TaskAssignForbiddenError();
+    }
+  }
+
+  /** Throws unless `userId` may change a task currently assigned to `assigneeId`. */
+  async requireCanWorkOnTask(
+    projectId: string,
+    userId: string,
+    assigneeId: string | null,
+  ): Promise<void> {
+    const membership = await this.projects.findMembership(projectId, userId);
+    if (!membership) throw new NotProjectMemberError();
+    if (!ProjectRoles.canWriteContent(membership.role)) throw new TaskWriteForbiddenError();
+    if (!ProjectRoles.canWorkOnTask(membership.role, userId, assigneeId)) {
+      throw new NotYourTaskError();
     }
   }
 

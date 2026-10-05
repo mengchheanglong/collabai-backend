@@ -10,6 +10,10 @@ export type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer';
 export const ASSIGN_FORBIDDEN_MESSAGE =
   'Only project owners and admins can assign tasks to other people. You can take an unassigned task yourself or remove yourself from a task.';
 
+/** Shown when a member tries to change a task assigned to someone else. */
+export const NOT_YOUR_TASK_MESSAGE =
+  "Only the task's assignee or a project owner/admin can change this task.";
+
 /** Shown whenever a viewer tries to change project content (same wording as the frontend). */
 export const VIEW_ONLY_MESSAGE =
   'You have view-only access to this project. Ask an owner or admin for Member access to make changes.';
@@ -72,6 +76,16 @@ export const ProjectRoles = {
     if (this.canManageMembers(role)) return true;
     if (!this.canWriteContent(role)) return false;
     return (current === null && next === actorId) || (current === actorId && next === null);
+  },
+
+  /**
+   * Who may change a task (edit, move, delete, subtasks): owners/admins always; members
+   * when the task is theirs or unassigned; viewers never. Comments stay open to members.
+   */
+  canWorkOnTask(role: ProjectRole, actorId: string, assigneeId: string | null): boolean {
+    if (this.canManageMembers(role)) return true;
+    if (!this.canWriteContent(role)) return false;
+    return assigneeId === null || assigneeId === actorId;
   },
 
   /** Members and above may create/modify content (tasks, comments); viewers are read-only. */

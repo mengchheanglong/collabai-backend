@@ -22,7 +22,11 @@ export class DeleteSubtaskHandler implements ICommandHandler<DeleteSubtaskComman
   async execute(command: DeleteSubtaskCommand): Promise<TaskView> {
     const task = await this.repo.findById(command.taskId);
     if (!task) throw new TaskNotFoundError();
-    await this.access.requireWriter(task.projectId, command.actingUserId);
+    await this.access.requireCanWorkOnTask(
+      task.projectId,
+      command.actingUserId,
+      task.assigneeId ?? null,
+    );
 
     const subtask = await this.repo.findSubtask(command.subtaskId);
     if (!subtask || subtask.taskId !== task.id) {

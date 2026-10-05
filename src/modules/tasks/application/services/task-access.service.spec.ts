@@ -59,3 +59,32 @@ describe('TaskAccessService.requireCanAssign', () => {
     );
   });
 });
+
+describe('TaskAccessService.requireCanWorkOnTask', () => {
+  const as = (role: string) =>
+    new TaskAccessService({
+      findMembership: jest.fn().mockResolvedValue({ role }),
+    } as any);
+
+  it('lets the assignee and admins tick subtasks', async () => {
+    await expect(as('member').requireCanWorkOnTask('p', 'm1', 'm1')).resolves.toBeUndefined();
+    await expect(as('admin').requireCanWorkOnTask('p', 'a1', 'm1')).resolves.toBeUndefined();
+    await expect(as('owner').requireCanWorkOnTask('p', 'o1', 'm1')).resolves.toBeUndefined();
+  });
+
+  it('lets any member work on an unassigned task', async () => {
+    await expect(as('member').requireCanWorkOnTask('p', 'm1', null)).resolves.toBeUndefined();
+  });
+
+  it("stops other members changing someone else's subtasks", async () => {
+    await expect(as('member').requireCanWorkOnTask('p', 'm2', 'm1')).rejects.toThrow(
+      "Only the task's assignee or a project owner/admin can change this task.",
+    );
+  });
+
+  it('keeps viewers read-only', async () => {
+    await expect(as('viewer').requireCanWorkOnTask('p', 'v1', 'v1')).rejects.toThrow(
+      TaskWriteForbiddenError,
+    );
+  });
+});

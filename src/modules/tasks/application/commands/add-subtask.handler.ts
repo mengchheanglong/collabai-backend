@@ -24,7 +24,11 @@ export class AddSubtaskHandler implements ICommandHandler<AddSubtaskCommand> {
   async execute(command: AddSubtaskCommand): Promise<TaskView> {
     const task = await this.repo.findById(command.taskId);
     if (!task) throw new TaskNotFoundError();
-    await this.access.requireWriter(task.projectId, command.actingUserId);
+    await this.access.requireCanWorkOnTask(
+      task.projectId,
+      command.actingUserId,
+      task.assigneeId ?? null,
+    );
 
     const maxOrder = await this.repo.maxSubtaskOrder(task.id);
     const subtask = SubtaskEntity.create({

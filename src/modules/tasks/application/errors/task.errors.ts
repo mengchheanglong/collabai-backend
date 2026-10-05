@@ -5,6 +5,7 @@
 
 import {
   ASSIGN_FORBIDDEN_MESSAGE,
+  NOT_YOUR_TASK_MESSAGE,
   VIEW_ONLY_MESSAGE,
 } from '../../../projects/domain/value-objects/project-role.value-object';
 
@@ -71,6 +72,14 @@ export class InvalidTaskFieldError extends TaskError {
 export class TaskAssignForbiddenError extends TaskError {
   readonly code = 'TASK_ASSIGN_FORBIDDEN';
   constructor(message = ASSIGN_FORBIDDEN_MESSAGE) {
+    super(message);
+  }
+}
+
+/** A member tried to change a task assigned to someone else. */
+export class NotYourTaskError extends TaskError {
+  readonly code = 'NOT_YOUR_TASK';
+  constructor(message = NOT_YOUR_TASK_MESSAGE) {
     super(message);
   }
 }

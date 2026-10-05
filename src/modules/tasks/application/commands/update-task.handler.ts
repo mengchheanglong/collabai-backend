@@ -29,7 +29,11 @@ export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
   async execute(command: UpdateTaskCommand): Promise<TaskView> {
     const task = await this.repo.findById(command.taskId);
     if (!task) throw new TaskNotFoundError();
-    await this.access.requireWriter(task.projectId, command.actingUserId);
+    await this.access.requireCanWorkOnTask(
+      task.projectId,
+      command.actingUserId,
+      task.assigneeId ?? null,
+    );
 
     const newAssignee = command.fields.assigneeId;
     if (newAssignee !== undefined) {

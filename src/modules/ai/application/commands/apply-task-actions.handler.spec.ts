@@ -141,4 +141,17 @@ describe('ApplyTaskActionsHandler', () => {
     expect(mockPrisma.task.update).not.toHaveBeenCalled();
     expect(result.appliedActionIds).toEqual([]);
   });
+
+  it("skips changes to a task assigned to someone else when the user is a member", async () => {
+    mockAccess.roleOf.mockResolvedValueOnce('member');
+    mockPrisma.task.findFirst.mockResolvedValueOnce({ assignedTo: 'user-9' });
+    proposalPlanStore.set('plan-others', planWith('plan-others', { priority: 'urgent' }));
+
+    const result = await handler.execute(
+      new ApplyTaskActionsCommand('user-1', 'plan-others', ['action-1']),
+    );
+
+    expect(mockPrisma.task.update).not.toHaveBeenCalled();
+    expect(result.appliedActionIds).toEqual([]);
+  });
 });
