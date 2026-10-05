@@ -62,7 +62,10 @@ const CommandHandlers = [
       useFactory: (config: ConfigService) => {
         const provider = config.get<string>('AI_PROVIDER')?.toLowerCase();
 
-        if (provider === 'deepseek') {
+        if (
+          provider === 'deepseek' ||
+          (!provider && config.get<string>('DEEPSEEK_API_KEY'))
+        ) {
           const apiKey = config.get<string>('DEEPSEEK_API_KEY');
           const model = config.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat';
           if (apiKey) return new DeepSeekProvider(apiKey, model);
