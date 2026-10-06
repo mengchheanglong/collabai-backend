@@ -73,7 +73,10 @@ export class ChatHandler implements ICommandHandler<ChatCommand> {
             const assigned = t.assignee
               ? `assigned to ${t.assignee.name}`
               : 'unassigned';
-            return `- [${t.status.toUpperCase()}] ${t.title} (Priority: ${t.priority}, ${assigned})`;
+            const due = t.dueDate
+              ? `, due: ${t.dueDate.toISOString().split('T')[0]}`
+              : '';
+            return `- [${t.status.toUpperCase()}] ${t.title} (Priority: ${t.priority}, ${assigned}${due})`;
           })
           .join('\n');
 
